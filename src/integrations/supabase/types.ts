@@ -14,16 +14,571 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      communication_reads: {
+        Row: {
+          communication_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          communication_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          communication_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_reads_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communications: {
+        Row: {
+          created_at: string
+          from_admin_id: string
+          id: string
+          message: string
+          message_type: Database["public"]["Enums"]["message_type"]
+          metadata: Json | null
+          scheduled_send_at: string | null
+          sent_at: string | null
+          target_group_id: string | null
+          target_type: Database["public"]["Enums"]["target_type"]
+          target_user_id: string | null
+          title: string
+          trip_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_admin_id: string
+          id?: string
+          message: string
+          message_type: Database["public"]["Enums"]["message_type"]
+          metadata?: Json | null
+          scheduled_send_at?: string | null
+          sent_at?: string | null
+          target_group_id?: string | null
+          target_type: Database["public"]["Enums"]["target_type"]
+          target_user_id?: string | null
+          title: string
+          trip_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_admin_id?: string
+          id?: string
+          message?: string
+          message_type?: Database["public"]["Enums"]["message_type"]
+          metadata?: Json | null
+          scheduled_send_at?: string | null
+          sent_at?: string | null
+          target_group_id?: string | null
+          target_type?: Database["public"]["Enums"]["target_type"]
+          target_user_id?: string | null
+          title?: string
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communications_from_admin_id_fkey"
+            columns: ["from_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_target_group_id_fkey"
+            columns: ["target_group_id"]
+            isOneToOne: false
+            referencedRelation: "tourist_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          descriere: string | null
+          document_category: Database["public"]["Enums"]["document_category"]
+          expiry_date: string | null
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          is_mandatory: boolean
+          is_offline_priority: boolean
+          metadata: Json | null
+          nume: string
+          target_user_id: string | null
+          trip_id: string
+          upload_date: string
+          uploaded_by_admin_id: string
+          visibility_type: Database["public"]["Enums"]["visibility_type"]
+        }
+        Insert: {
+          descriere?: string | null
+          document_category: Database["public"]["Enums"]["document_category"]
+          expiry_date?: string | null
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          is_mandatory?: boolean
+          is_offline_priority?: boolean
+          metadata?: Json | null
+          nume: string
+          target_user_id?: string | null
+          trip_id: string
+          upload_date?: string
+          uploaded_by_admin_id: string
+          visibility_type: Database["public"]["Enums"]["visibility_type"]
+        }
+        Update: {
+          descriere?: string | null
+          document_category?: Database["public"]["Enums"]["document_category"]
+          expiry_date?: string | null
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_mandatory?: boolean
+          is_offline_priority?: boolean
+          metadata?: Json | null
+          nume?: string
+          target_user_id?: string | null
+          trip_id?: string
+          upload_date?: string
+          uploaded_by_admin_id?: string
+          visibility_type?: Database["public"]["Enums"]["visibility_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_uploaded_by_admin_id_fkey"
+            columns: ["uploaded_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          joined_at: string
+          role_in_group: Database["public"]["Enums"]["group_role"]
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          joined_at?: string
+          role_in_group?: Database["public"]["Enums"]["group_role"]
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          joined_at?: string
+          role_in_group?: Database["public"]["Enums"]["group_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tourist_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itinerary_activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          address: string | null
+          booking_reference: string | null
+          cost_estimate: number | null
+          day_id: string
+          description: string | null
+          display_order: number
+          end_time: string | null
+          id: string
+          images: string[] | null
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          metadata: Json | null
+          start_time: string | null
+          tips_and_notes: string | null
+          title: string
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          address?: string | null
+          booking_reference?: string | null
+          cost_estimate?: number | null
+          day_id: string
+          description?: string | null
+          display_order?: number
+          end_time?: string | null
+          id?: string
+          images?: string[] | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          metadata?: Json | null
+          start_time?: string | null
+          tips_and_notes?: string | null
+          title: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          address?: string | null
+          booking_reference?: string | null
+          cost_estimate?: number | null
+          day_id?: string
+          description?: string | null
+          display_order?: number
+          end_time?: string | null
+          id?: string
+          images?: string[] | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          metadata?: Json | null
+          start_time?: string | null
+          tips_and_notes?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_activities_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itinerary_days: {
+        Row: {
+          date: string
+          day_number: number
+          id: string
+          overview: string | null
+          title: string
+          trip_id: string
+        }
+        Insert: {
+          date: string
+          day_number: number
+          id?: string
+          overview?: string | null
+          title: string
+          trip_id: string
+        }
+        Update: {
+          date?: string
+          day_number?: number
+          id?: string
+          overview?: string | null
+          title?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_days_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offline_cache_status: {
+        Row: {
+          cache_size: number
+          cached_at: string
+          resource_id: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          cache_size?: number
+          cached_at?: string
+          resource_id: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          cache_size?: number
+          cached_at?: string
+          resource_id?: string
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_cache_status_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_cache_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          nume: string
+          prenume: string
+          role: Database["public"]["Enums"]["user_role"]
+          telefon: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id: string
+          is_active?: boolean
+          metadata?: Json | null
+          nume: string
+          prenume: string
+          role?: Database["public"]["Enums"]["user_role"]
+          telefon?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          nume?: string
+          prenume?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          telefon?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tourist_groups: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          id: string
+          invite_code: string
+          is_active: boolean
+          metadata: Json | null
+          nume_grup: string
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          invite_code: string
+          is_active?: boolean
+          metadata?: Json | null
+          nume_grup: string
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          invite_code?: string
+          is_active?: boolean
+          metadata?: Json | null
+          nume_grup?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tourist_groups_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          budget_estimat: number | null
+          cover_image_url: string | null
+          created_at: string
+          created_by_admin_id: string
+          descriere: string | null
+          destinatie: string
+          end_date: string
+          group_id: string
+          id: string
+          metadata: Json | null
+          nume: string
+          oras: string
+          start_date: string
+          status: Database["public"]["Enums"]["trip_status"]
+          tara: string
+          updated_at: string
+        }
+        Insert: {
+          budget_estimat?: number | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by_admin_id: string
+          descriere?: string | null
+          destinatie: string
+          end_date: string
+          group_id: string
+          id?: string
+          metadata?: Json | null
+          nume: string
+          oras: string
+          start_date: string
+          status?: Database["public"]["Enums"]["trip_status"]
+          tara: string
+          updated_at?: string
+        }
+        Update: {
+          budget_estimat?: number | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by_admin_id?: string
+          descriere?: string | null
+          destinatie?: string
+          end_date?: string
+          group_id?: string
+          id?: string
+          metadata?: Json | null
+          nume?: string
+          oras?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["trip_status"]
+          tara?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_created_by_admin_id_fkey"
+            columns: ["created_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tourist_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      user_in_group: {
+        Args: { group_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      activity_type:
+        | "transport"
+        | "meal"
+        | "attraction"
+        | "accommodation"
+        | "free_time"
+        | "custom"
+      document_category:
+        | "identity"
+        | "transport"
+        | "accommodation"
+        | "insurance"
+        | "itinerary"
+        | "custom"
+      group_role: "primary" | "member"
+      message_type: "info" | "urgent" | "reminder" | "update"
+      resource_type: "documents" | "itinerary" | "maps" | "images"
+      target_type: "broadcast" | "group" | "individual"
+      trip_status: "draft" | "confirmed" | "active" | "completed" | "cancelled"
+      user_role: "admin" | "tourist"
+      visibility_type: "group" | "individual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +705,30 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      activity_type: [
+        "transport",
+        "meal",
+        "attraction",
+        "accommodation",
+        "free_time",
+        "custom",
+      ],
+      document_category: [
+        "identity",
+        "transport",
+        "accommodation",
+        "insurance",
+        "itinerary",
+        "custom",
+      ],
+      group_role: ["primary", "member"],
+      message_type: ["info", "urgent", "reminder", "update"],
+      resource_type: ["documents", "itinerary", "maps", "images"],
+      target_type: ["broadcast", "group", "individual"],
+      trip_status: ["draft", "confirmed", "active", "completed", "cancelled"],
+      user_role: ["admin", "tourist"],
+      visibility_type: ["group", "individual"],
+    },
   },
 } as const
