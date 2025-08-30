@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Plane, Users, FileText, MessageSquare, Settings } from "lucide-react";
+import { MapPin, Plane, Users, FileText, MessageSquare, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist";
@@ -11,6 +12,7 @@ interface NavigationProps {
 const Navigation = ({ userRole = "admin" }: NavigationProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { profile, signOut } = useAuth();
 
   const adminNavItems = [
     { id: "dashboard", label: "Dashboard", icon: MapPin },
@@ -79,10 +81,16 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
           {/* User Actions */}
           <div className="flex items-center space-x-3">
             <Badge variant="secondary" className="bg-accent text-accent-foreground">
-              {userRole === "admin" ? "Administrator" : "Turist"}
+              {profile?.nume ? `${profile.nume} ${profile.prenume}` : (userRole === "admin" ? "Administrator" : "Turist")}
             </Badge>
-            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-              Profil
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={signOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Ieșire
             </Button>
           </div>
         </div>
