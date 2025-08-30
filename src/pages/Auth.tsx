@@ -75,13 +75,25 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const fillDemoData = (type: 'admin' | 'tourist') => {
+  const createDemoTourist = async () => {
+    // Create demo tourist account if it doesn't exist
+    await signUp("turist@travelpro.ro", "turist123", {
+      nume: "Turist",
+      prenume: "Demo", 
+      telefon: "+40700000000",
+      role: "tourist"
+    });
+  };
+
+  const fillDemoData = async (type: 'admin' | 'tourist') => {
     if (type === 'admin') {
       setLoginData({
         email: "admin@travelpro.ro",
         password: "admin123"
       });
     } else {
+      // Create tourist account first if needed
+      await createDemoTourist();
       setLoginData({
         email: "turist@travelpro.ro", 
         password: "turist123"
