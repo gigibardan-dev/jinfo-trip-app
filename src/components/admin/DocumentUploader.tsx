@@ -134,7 +134,7 @@ const DocumentUploader = () => {
         .select(`
           *,
           trips(nume, destinatie),
-          profiles(nume, prenume)
+          profiles!documents_target_user_id_fkey(nume, prenume)
         `)
         .order('upload_date', { ascending: false });
 
