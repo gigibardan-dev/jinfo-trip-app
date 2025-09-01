@@ -14,6 +14,7 @@ import DocumentsPage from "./pages/admin/DocumentsPage";
 import CommunicationsPage from "./pages/admin/CommunicationsPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import MessagesPage from "./pages/tourist/MessagesPage";
+import Footer from "./components/shared/Footer";
 
 const queryClient = new QueryClient();
 
@@ -21,23 +22,28 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/documents" element={<TouristDocuments />} />
-            <Route path="/tourists" element={<TouristsPage />} />
-            <Route path="/trips" element={<TripsPage />} />
-            <Route path="/admin-documents" element={<DocumentsPage />} />
-            <Route path="/communications" element={<CommunicationsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <div className="min-h-screen flex flex-col">
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/documents" element={<TouristDocuments />} />
+                <Route path="/tourists" element={<TouristsPage />} />
+                <Route path="/trips" element={<TripsPage />} />
+                <Route path="/admin-documents" element={<DocumentsPage />} />
+                <Route path="/communications" element={<CommunicationsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/messages" element={<MessagesPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+            <Footer />
+          </BrowserRouter>
+        </div>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
