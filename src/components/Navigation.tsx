@@ -36,6 +36,8 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
     setActiveTab(id);
     if (id === "dashboard") {
       navigate("/");
+    } else if (id === "documents" && userRole === "admin") {
+      navigate("/admin-documents");
     } else {
       navigate(`/${id}`);
     }

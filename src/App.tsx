@@ -8,6 +8,11 @@ import TouristDocuments from "./components/TouristDocuments";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import TouristsPage from "./pages/admin/TouristsPage";
+import TripsPage from "./pages/admin/TripsPage";
+import DocumentsPage from "./pages/admin/DocumentsPage";
+import CommunicationsPage from "./pages/admin/CommunicationsPage";
+import SettingsPage from "./pages/admin/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +27,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/documents" element={<TouristDocuments />} />
+            <Route path="/tourists" element={<TouristsPage />} />
+            <Route path="/trips" element={<TripsPage />} />
+            <Route path="/admin-documents" element={<DocumentsPage />} />
+            <Route path="/communications" element={<CommunicationsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
