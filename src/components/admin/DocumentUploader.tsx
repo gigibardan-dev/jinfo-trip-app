@@ -198,27 +198,37 @@ const DocumentUploader = () => {
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // In a real implementation, you would upload to Supabase Storage here
-      // For now, we'll simulate the upload and create a document record
+      // Generate unique file name
       const fileName = `${Date.now()}_${formData.file.name}`;
-      const fileUrl = `https://example.com/uploads/${fileName}`;
+      const filePath = `${formData.trip_id}/${fileName}`;
+      
+      // Update progress to show upload starting
+      setUploadProgress(20);
+
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, formData.file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+      
+      setUploadProgress(60);
+
+      // Get public URL for the uploaded file
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      setUploadProgress(80);
       
       const documentData = {
         nume: formData.nume,
         descriere: formData.descriere,
         file_type: formData.file.type,
-        file_url: fileUrl,
+        file_url: urlData.publicUrl,
         file_size: formData.file.size,
         document_category: formData.document_category,
         visibility_type: formData.visibility_type,
@@ -236,7 +246,6 @@ const DocumentUploader = () => {
 
       if (error) throw error;
 
-      clearInterval(progressInterval);
       setUploadProgress(100);
 
       toast({
@@ -260,10 +269,27 @@ const DocumentUploader = () => {
     }
   };
 
-  const handleDelete = async (documentId: string) => {
+  const handleDelete = async (documentId: string, fileUrl: string) => {
     if (!confirm("Ești sigur că vrei să ștergi acest document?")) return;
 
     try {
+      // Extract file path from URL to delete from storage
+      const urlParts = fileUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const tripFolder = urlParts[urlParts.length - 2];
+      const filePath = `${tripFolder}/${fileName}`;
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.warn('Error deleting from storage:', storageError);
+        // Continue with database deletion even if storage deletion fails
+      }
+
+      // Delete from database
       const { error } = await supabase
         .from('documents')
         .delete()
@@ -288,23 +314,32 @@ const DocumentUploader = () => {
 
   const handleView = async (doc: Document) => {
     try {
-      // Determină tipul de document și deschide-l corespunzător
       const fileType = doc.file_type.toLowerCase();
+      let viewUrl = doc.file_url;
       
-      if (fileType.includes('image')) {
-        // Pentru imagini, deschide într-un modal/tab nou
-        window.open(doc.file_url, '_blank');
-      } else if (fileType.includes('pdf')) {
-        // Pentru PDF-uri, deschide direct în browser
-        window.open(doc.file_url, '_blank');
+      // For secure viewing, get signed URL
+      if (!doc.file_url.includes('supabase')) {
+        // If it's a storage URL, get signed URL
+        const urlParts = doc.file_url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const tripFolder = urlParts[urlParts.length - 2];
+        const filePath = `${tripFolder}/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(filePath, 300); // 5 minutes for viewing
+
+        if (!error && data) {
+          viewUrl = data.signedUrl;
+        }
+      }
+      
+      if (fileType.includes('image') || fileType.includes('pdf')) {
+        window.open(viewUrl, '_blank');
       } else {
-        // Pentru alte tipuri de documente (Word, Excel), descarcă direct
-        const link = document.createElement('a');
-        link.href = doc.file_url;
-        link.download = doc.nume;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // For office documents, download them
+        handleDownload(doc);
+        return;
       }
       
       toast({
@@ -312,6 +347,7 @@ const DocumentUploader = () => {
         description: `Se vizualizează ${doc.nume}`,
       });
     } catch (error) {
+      console.error('View error:', error);
       toast({
         title: "Eroare",
         description: "Nu s-a putut deschide documentul.",
@@ -322,8 +358,20 @@ const DocumentUploader = () => {
 
   const handleDownload = async (doc: Document) => {
     try {
+      // Get signed URL for secure download
+      const urlParts = doc.file_url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const tripFolder = urlParts[urlParts.length - 2];
+      const filePath = `${tripFolder}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 60); // 60 seconds expiry
+
+      if (error) throw error;
+
       const link = document.createElement('a');
-      link.href = doc.file_url;
+      link.href = data.signedUrl;
       link.download = doc.nume;
       document.body.appendChild(link);
       link.click();
@@ -334,10 +382,19 @@ const DocumentUploader = () => {
         description: `Se descarcă ${doc.nume}`,
       });
     } catch (error) {
+      console.error('Download error:', error);
+      // Fallback to direct URL
+      const link = document.createElement('a');
+      link.href = doc.file_url;
+      link.download = doc.nume;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
       toast({
-        title: "Eroare",
-        description: "Nu s-a putut descărca documentul.",
-        variant: "destructive",
+        title: "Descărcare inițiată",
+        description: `Se descarcă ${doc.nume}`,
       });
     }
   };
@@ -732,7 +789,7 @@ const DocumentUploader = () => {
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    onClick={() => handleDelete(document.id)}
+                    onClick={() => handleDelete(document.id, document.file_url)}
                     className="text-destructive hover:text-destructive"
                     title="Șterge document"
                   >

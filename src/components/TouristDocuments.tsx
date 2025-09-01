@@ -161,9 +161,38 @@ const TouristDocuments = () => {
 
   const handleDownload = async (doc: TouristDocument) => {
     try {
+      // Get signed URL for secure download
+      const urlParts = doc.file_url.split('/');
+      if (urlParts.length >= 2) {
+        const fileName = urlParts[urlParts.length - 1];
+        const tripFolder = urlParts[urlParts.length - 2];
+        const filePath = `${tripFolder}/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(filePath, 60); // 60 seconds expiry
+
+        if (!error && data) {
+          const link = document.createElement('a');
+          link.href = data.signedUrl;
+          link.download = doc.nume;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Descărcare inițiată",
+            description: `Se descarcă ${doc.nume}`,
+          });
+          return;
+        }
+      }
+      
+      // Fallback to direct download
       const link = document.createElement('a');
       link.href = doc.file_url;
       link.download = doc.nume;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -183,17 +212,29 @@ const TouristDocuments = () => {
 
   const handleView = async (doc: TouristDocument) => {
     try {
-      // Determină tipul de document și deschide-l corespunzător
       const fileType = doc.file_type.toLowerCase();
+      let viewUrl = doc.file_url;
       
-      if (fileType.includes('image')) {
-        // Pentru imagini, deschide într-un modal/tab nou
-        window.open(doc.file_url, '_blank');
-      } else if (fileType.includes('pdf')) {
-        // Pentru PDF-uri, deschide direct în browser
-        window.open(doc.file_url, '_blank');
+      // For secure viewing, get signed URL
+      const urlParts = doc.file_url.split('/');
+      if (urlParts.length >= 2) {
+        const fileName = urlParts[urlParts.length - 1];
+        const tripFolder = urlParts[urlParts.length - 2];
+        const filePath = `${tripFolder}/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(filePath, 300); // 5 minutes for viewing
+
+        if (!error && data) {
+          viewUrl = data.signedUrl;
+        }
+      }
+      
+      if (fileType.includes('image') || fileType.includes('pdf')) {
+        window.open(viewUrl, '_blank');
       } else {
-        // Pentru alte tipuri de documente (Word, Excel), descarcă direct
+        // For office documents, download them
         handleDownload(doc);
         return;
       }
@@ -203,6 +244,7 @@ const TouristDocuments = () => {
         description: `Se vizualizează ${doc.nume}`,
       });
     } catch (error) {
+      console.error('View error:', error);
       toast({
         title: "Eroare",
         description: "Nu s-a putut deschide documentul.",
