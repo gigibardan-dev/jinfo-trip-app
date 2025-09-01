@@ -188,10 +188,10 @@ const TouristDashboard = () => {
   };
 
   const quickActions = [
-    { label: "Vezi Itinerariu", icon: Calendar, color: "primary" },
-    { label: "Documente", icon: FileText, color: "accent" },
-    { label: "Hărți Offline", icon: MapPin, color: "success" },
-    { label: "Check-in", icon: Camera, color: "warning" }
+    { label: "Vezi Itinerariu", icon: Calendar, color: "primary", path: "/itinerary" },
+    { label: "Documente", icon: FileText, color: "accent", path: "/documents" },
+    { label: "Hărți Offline", icon: MapPin, color: "success", path: "/maps" },
+    { label: "Check-in", icon: Camera, color: "warning", path: "/checkin" }
   ];
 
   const getStatusColor = (status: string) => {

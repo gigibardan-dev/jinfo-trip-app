@@ -113,16 +113,6 @@ const EnhancedCircuitManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validare obligatorie
-    if (!formData.group_id) {
-      toast({
-        title: "Eroare",
-        description: "Trebuie să selectezi un grup pentru circuit.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Validare date
     if (new Date(formData.end_date) <= new Date(formData.start_date)) {
       toast({
@@ -132,23 +122,33 @@ const EnhancedCircuitManager = () => {
       });
       return;
     }
+
+    // Validare pentru status activ - trebuie să aibă grup
+    if ((formData.status === 'active' || formData.status === 'confirmed') && !formData.group_id) {
+      toast({
+        title: "Eroare",
+        description: "Circuitele confirmate sau active trebuie să aibă un grup asignat.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       const tripData = {
-  nume: formData.nume.trim(),
-  destinatie: formData.destinatie.trim(),
-  tara: formData.tara.trim(),
-  oras: null, // Adaugă câmpul chiar dacă nu îl folosești
-  descriere: formData.descriere.trim(),
-  start_date: formData.start_date,
-  end_date: formData.end_date,
-  group_id: formData.group_id,
-  status: formData.status,
-  created_by_admin_id: user!.id,
-  budget_estimat: null, // Adaugă
-  cover_image_url: null, // Adaugă
-  metadata: null // Adaugă dacă există în schema
-};
+        nume: formData.nume.trim(),
+        destinatie: formData.destinatie.trim(),
+        tara: formData.tara.trim(),
+        oras: null,
+        descriere: formData.descriere.trim(),
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        group_id: formData.group_id || null, // Allow null group_id for drafts
+        status: formData.status,
+        created_by_admin_id: user!.id,
+        budget_estimat: null,
+        cover_image_url: null,
+        metadata: null
+      };
 
       if (editingTrip) {
         const { error } = await supabase
@@ -381,16 +381,16 @@ const EnhancedCircuitManager = () => {
                   <TabsContent value="settings" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="group_id">Grup Participanți *</Label>
+                        <Label htmlFor="group_id">Grup Participanți</Label>
                         <Select 
                           value={formData.group_id} 
                           onValueChange={(value) => setFormData({ ...formData, group_id: value })}
-                          required
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Selectează grupul" />
+                            <SelectValue placeholder="Selectează grupul (opțional)" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="">Fără grup (doar schiță)</SelectItem>
                             {groups.map((group) => (
                               <SelectItem key={group.id} value={group.id}>
                                 {group.nume_grup}
@@ -398,6 +398,11 @@ const EnhancedCircuitManager = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        {!formData.group_id && (formData.status === 'active' || formData.status === 'confirmed') && (
+                          <p className="text-sm text-destructive">
+                            Grupul este obligatoriu pentru circuitele confirmate/active
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="status">Status Circuit</Label>
@@ -417,10 +422,10 @@ const EnhancedCircuitManager = () => {
                     </div>
 
                     {groups.length === 0 && (
-                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Atenție:</strong> Nu există grupuri active. 
-                          <br />Trebuie să creezi un grup înainte de a putea crea un circuit.
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>Info:</strong> Nu există grupuri active. 
+                          <br />Poți crea circuitul ca schiță și îl vei putea asigna la un grup mai târziu.
                         </p>
                       </div>
                     )}
@@ -433,7 +438,6 @@ const EnhancedCircuitManager = () => {
                     <Button 
                       type="submit" 
                       className="bg-gradient-hero"
-                      disabled={groups.length === 0}
                     >
                       {editingTrip ? 'Actualizează' : 'Creează'}
                     </Button>

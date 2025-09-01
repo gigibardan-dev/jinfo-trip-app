@@ -476,11 +476,11 @@ export type Database = {
           descriere: string | null
           destinatie: string
           end_date: string
-          group_id: string
+          group_id: string | null
           id: string
           metadata: Json | null
           nume: string
-          oras: string
+          oras: string | null
           start_date: string
           status: Database["public"]["Enums"]["trip_status"]
           tara: string
@@ -494,11 +494,11 @@ export type Database = {
           descriere?: string | null
           destinatie: string
           end_date: string
-          group_id: string
+          group_id?: string | null
           id?: string
           metadata?: Json | null
           nume: string
-          oras: string
+          oras?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["trip_status"]
           tara: string
@@ -512,11 +512,11 @@ export type Database = {
           descriere?: string | null
           destinatie?: string
           end_date?: string
-          group_id?: string
+          group_id?: string | null
           id?: string
           metadata?: Json | null
           nume?: string
-          oras?: string
+          oras?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["trip_status"]
           tara?: string
