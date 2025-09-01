@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          metadata: Json | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          metadata?: Json | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_reads: {
         Row: {
           communication_id: string
@@ -120,6 +165,80 @@ export type Database = {
             columns: ["trip_id"]
             isOneToOne: false
             referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          created_at: string
+          group_id: string | null
+          id: string
+          metadata: Json | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_type?: Database["public"]["Enums"]["conversation_type"]
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tourist_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -565,6 +684,7 @@ export type Database = {
         | "accommodation"
         | "free_time"
         | "custom"
+      conversation_type: "direct" | "group" | "broadcast"
       document_category:
         | "identity"
         | "transport"
@@ -714,6 +834,7 @@ export const Constants = {
         "free_time",
         "custom",
       ],
+      conversation_type: ["direct", "group", "broadcast"],
       document_category: [
         "identity",
         "transport",

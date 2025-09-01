@@ -13,6 +13,7 @@ import TripsPage from "./pages/admin/TripsPage";
 import DocumentsPage from "./pages/admin/DocumentsPage";
 import CommunicationsPage from "./pages/admin/CommunicationsPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import MessagesPage from "./pages/tourist/MessagesPage";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/admin-documents" element={<DocumentsPage />} />
             <Route path="/communications" element={<CommunicationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
