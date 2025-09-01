@@ -383,14 +383,14 @@ const EnhancedCircuitManager = () => {
                       <div className="space-y-2">
                         <Label htmlFor="group_id">Grup Participanți</Label>
                         <Select 
-                          value={formData.group_id} 
-                          onValueChange={(value) => setFormData({ ...formData, group_id: value })}
+                          value={formData.group_id || "no-group"} 
+                          onValueChange={(value) => setFormData({ ...formData, group_id: value === "no-group" ? "" : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selectează grupul (opțional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Fără grup (doar schiță)</SelectItem>
+                            <SelectItem value="no-group">Fără grup (doar schiță)</SelectItem>
                             {groups.map((group) => (
                               <SelectItem key={group.id} value={group.id}>
                                 {group.nume_grup}
