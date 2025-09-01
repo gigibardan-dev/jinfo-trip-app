@@ -286,6 +286,62 @@ const DocumentUploader = () => {
     }
   };
 
+  const handleView = async (doc: Document) => {
+    try {
+      // Determină tipul de document și deschide-l corespunzător
+      const fileType = doc.file_type.toLowerCase();
+      
+      if (fileType.includes('image')) {
+        // Pentru imagini, deschide într-un modal/tab nou
+        window.open(doc.file_url, '_blank');
+      } else if (fileType.includes('pdf')) {
+        // Pentru PDF-uri, deschide direct în browser
+        window.open(doc.file_url, '_blank');
+      } else {
+        // Pentru alte tipuri de documente (Word, Excel), descarcă direct
+        const link = document.createElement('a');
+        link.href = doc.file_url;
+        link.download = doc.nume;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      toast({
+        title: "Document deschis",
+        description: `Se vizualizează ${doc.nume}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut deschide documentul.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      const link = document.createElement('a');
+      link.href = doc.file_url;
+      link.download = doc.nume;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Descărcare inițiată",
+        description: `Se descarcă ${doc.nume}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut descărca documentul.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       nume: "",
@@ -656,11 +712,21 @@ const DocumentUploader = () => {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" className="flex-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => handleView(document)}
+                  >
                     <Eye className="w-3 h-3 mr-1" />
                     Vizualizează
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDownload(document)}
+                    title="Descarcă document"
+                  >
                     <Download className="w-3 h-3" />
                   </Button>
                   <Button 
@@ -668,6 +734,7 @@ const DocumentUploader = () => {
                     variant="outline" 
                     onClick={() => handleDelete(document.id)}
                     className="text-destructive hover:text-destructive"
+                    title="Șterge document"
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>

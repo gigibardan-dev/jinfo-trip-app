@@ -159,20 +159,53 @@ const TouristDocuments = () => {
     }
   };
 
-  const handleDownload = async (document: TouristDocument) => {
+  const handleDownload = async (doc: TouristDocument) => {
     try {
-      // În implementarea reală, aici ai descărca fișierul din Supabase Storage
-      // Pentru moment, simulăm descărcarea
-      window.open(document.file_url, '_blank');
+      const link = document.createElement('a');
+      link.href = doc.file_url;
+      link.download = doc.nume;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
       toast({
         title: "Descărcare inițiată",
-        description: `Se descarcă ${document.nume}`,
+        description: `Se descarcă ${doc.nume}`,
       });
     } catch (error) {
       toast({
         title: "Eroare",
         description: "Nu s-a putut descărca documentul.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleView = async (doc: TouristDocument) => {
+    try {
+      // Determină tipul de document și deschide-l corespunzător
+      const fileType = doc.file_type.toLowerCase();
+      
+      if (fileType.includes('image')) {
+        // Pentru imagini, deschide într-un modal/tab nou
+        window.open(doc.file_url, '_blank');
+      } else if (fileType.includes('pdf')) {
+        // Pentru PDF-uri, deschide direct în browser
+        window.open(doc.file_url, '_blank');
+      } else {
+        // Pentru alte tipuri de documente (Word, Excel), descarcă direct
+        handleDownload(doc);
+        return;
+      }
+      
+      toast({
+        title: "Document deschis",
+        description: `Se vizualizează ${doc.nume}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut deschide documentul.",
         variant: "destructive",
       });
     }
@@ -319,7 +352,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.mandatory.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
                 ))}
               </div>
             </div>
@@ -334,7 +367,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expiring.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
                 ))}
               </div>
             </div>
@@ -349,7 +382,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expired.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
                 ))}
               </div>
             </div>
@@ -364,7 +397,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.regular.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
                 ))}
               </div>
             </div>
@@ -377,10 +410,12 @@ const TouristDocuments = () => {
 
 const DocumentCard = ({ 
   document, 
-  onDownload 
+  onDownload,
+  onView 
 }: { 
   document: TouristDocument; 
   onDownload: (doc: TouristDocument) => void; 
+  onView: (doc: TouristDocument) => void; 
 }) => {
   const formatFileSizeCard = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -479,7 +514,13 @@ const DocumentCard = ({
             <Download className="w-3 h-3 mr-1" />
             Descarcă
           </Button>
-          <Button size="sm" variant="outline" className="px-3">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="px-3"
+            onClick={() => onView(document)}
+            title="Vizualizează document"
+          >
             <Eye className="w-3 h-3" />
           </Button>
         </div>
