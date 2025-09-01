@@ -1,19 +1,34 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  Plane, 
-  FileText, 
-  AlertTriangle, 
-  TrendingUp, 
+import GroupManager from "./admin/GroupManager";
+
+
+import {
+  Users,
+  Plane,
+  FileText,
+  AlertTriangle,
+  TrendingUp,
   Calendar,
   MapPin,
-  Plus
+  Plus,
+  ArrowLeft
 } from "lucide-react";
 
+// Import componentele pentru navigare
+import EnhancedTripManager from "./admin/EnhancedTripManager";
+import TouristManager from "./admin/TouristManager";
+import DocumentUploader from "./admin/DocumentUploader";
+
+type ActiveView = 'dashboard' | 'trips' | 'tourists' | 'documents' | 'groups';
+
 const AdminDashboard = () => {
-  const stats = [
+  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+
+  // === MOCK DATA - TO BE REPLACED WITH REAL DATA ===
+  const MOCK_stats = [
     {
       title: "Călătorii Active",
       value: "12",
@@ -44,7 +59,7 @@ const AdminDashboard = () => {
     }
   ];
 
-  const recentTrips = [
+  const MOCK_recentTrips = [
     {
       id: 1,
       name: "Paris - City of Light",
@@ -73,6 +88,91 @@ const AdminDashboard = () => {
       progress: 35
     }
   ];
+  // === END MOCK DATA ===
+
+  // Navigation handlers
+  const handleNewTrip = () => {
+    setActiveView('trips');
+  };
+
+  const handleAddTourists = () => {
+    setActiveView('tourists');
+  };
+
+  const handleUploadDocuments = () => {
+    setActiveView('documents');
+  };
+  const handleManageGroups = () => {
+    setActiveView('groups');
+  };
+
+  const handleBackToDashboard = () => {
+    setActiveView('dashboard');
+  };
+
+  // Render views based on active selection
+  const renderActiveView = () => {
+    switch (activeView) {
+      case 'trips':
+        return (
+          <div>
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Înapoi la Dashboard
+            </Button>
+            <EnhancedTripManager />
+          </div>
+        );
+      case 'tourists':
+        return (
+          <div>
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Înapoi la Dashboard
+            </Button>
+            <TouristManager />
+          </div>
+        );
+      case 'documents':
+        return (
+          <div>
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Înapoi la Dashboard
+            </Button>
+            <DocumentUploader />
+          </div>
+        );
+      case 'groups':
+        return (
+          <div>
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Înapoi la Dashboard
+            </Button>
+            <GroupManager />
+          </div>
+        );
+      default:
+        return renderDashboard();
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -92,28 +192,53 @@ const AdminDashboard = () => {
     }
   };
 
-  return (
+  const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Quick Actions */}
+      {/* Quick Actions - WITH NAVIGATION */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <Button className="bg-gradient-hero text-primary-foreground hover:opacity-90">
+        <Button
+          className="bg-gradient-hero text-primary-foreground hover:opacity-90"
+          onClick={handleNewTrip}
+        >
           <Plus className="w-4 h-4 mr-2" />
-          Călătorie Nouă
+          Circuit Nou
         </Button>
-        <Button variant="outline">
+
+        <Button
+          variant="outline"
+          onClick={handleAddTourists}
+        >
           <Users className="w-4 h-4 mr-2" />
           Adaugă Turiști
         </Button>
-        <Button variant="outline">
+
+        <Button
+          variant="outline"
+          onClick={handleUploadDocuments}
+        >
           <FileText className="w-4 h-4 mr-2" />
           Upload Documente
         </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleManageGroups}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          Gestionare Grupuri
+        </Button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - MOCK DATA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="shadow-soft border-0">
+        {MOCK_stats.map((stat, index) => (
+          <Card key={index} className="shadow-soft border-0 relative">
+            {/* Mock Data Badge */}
+            <div className="absolute top-2 right-2">
+              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                MOCK
+              </Badge>
+            </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
@@ -132,9 +257,15 @@ const AdminDashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Trips */}
+        {/* Recent Trips - MOCK DATA */}
         <div className="lg:col-span-2">
-          <Card className="shadow-soft border-0">
+          <Card className="shadow-soft border-0 relative">
+            {/* Mock Data Badge */}
+            <div className="absolute top-4 right-4 z-10">
+              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                MOCK DATA
+              </Badge>
+            </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plane className="w-5 h-5 text-primary" />
@@ -143,7 +274,7 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentTrips.map((trip) => (
+                {MOCK_recentTrips.map((trip) => (
                   <div
                     key={trip.id}
                     className="border rounded-lg p-4 hover:shadow-medium transition-shadow"
@@ -160,7 +291,7 @@ const AdminDashboard = () => {
                           {trip.startDate}
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col sm:items-end gap-2">
                         <Badge className={getStatusColor(trip.status)}>
                           {getStatusText(trip.status)}
@@ -173,7 +304,7 @@ const AdminDashboard = () => {
                             {trip.progress}%
                           </div>
                           <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className="h-full bg-primary transition-all"
                               style={{ width: `${trip.progress}%` }}
                             />
@@ -188,10 +319,16 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Alerts & Activity */}
+        {/* Alerts & Activity - MOCK DATA */}
         <div className="space-y-6">
           {/* Alerts */}
-          <Card className="shadow-soft border-0">
+          <Card className="shadow-soft border-0 relative">
+            {/* Mock Data Badge */}
+            <div className="absolute top-4 right-4 z-10">
+              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                MOCK
+              </Badge>
+            </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning" />
@@ -207,7 +344,7 @@ const AdminDashboard = () => {
                     <p className="text-muted-foreground">5 pașapoarte necesită reînnoire</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 p-3 bg-accent/10 rounded-lg">
                   <TrendingUp className="w-4 h-4 text-accent mt-0.5" />
                   <div className="text-sm">
@@ -215,7 +352,7 @@ const AdminDashboard = () => {
                     <p className="text-muted-foreground">Călătoria la Roma este completă</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg">
                   <Calendar className="w-4 h-4 text-primary mt-0.5" />
                   <div className="text-sm">
@@ -227,8 +364,14 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Stats */}
-          <Card className="shadow-soft border-0">
+          {/* Quick Stats - MOCK DATA */}
+          <Card className="shadow-soft border-0 relative">
+            {/* Mock Data Badge */}
+            <div className="absolute top-4 right-4 z-10">
+              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                MOCK
+              </Badge>
+            </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-success" />
@@ -246,7 +389,7 @@ const AdminDashboard = () => {
                     <div className="w-[96%] h-full bg-success rounded-full" />
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Documente complete</span>
@@ -256,7 +399,7 @@ const AdminDashboard = () => {
                     <div className="w-[89%] h-full bg-primary rounded-full" />
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Utilizare offline</span>
@@ -271,6 +414,12 @@ const AdminDashboard = () => {
           </Card>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {renderActiveView()}
     </div>
   );
 };

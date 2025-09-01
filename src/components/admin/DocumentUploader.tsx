@@ -139,7 +139,7 @@ const DocumentUploader = () => {
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
-      setDocuments(data || []);
+      setDocuments((data as any) || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast({

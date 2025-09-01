@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,35 +18,28 @@ interface Trip {
   nume: string;
   destinatie: string;
   tara: string;
-  oras: string;
   descriere: string;
   start_date: string;
   end_date: string;
   status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
-  cover_image_url: string;
-  budget_estimat: number;
   group_id: string;
   tourist_groups?: {
     nume_grup: string;
   };
-  metadata?: any;
 }
 
 interface TripFormData {
   nume: string;
   destinatie: string;
   tara: string;
-  oras: string;
   descriere: string;
   start_date: string;
   end_date: string;
-  budget_estimat: string;
   group_id: string;
-  cover_image_url: string;
   status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
 }
 
-const EnhancedTripManager = () => {
+const EnhancedCircuitManager = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,13 +52,10 @@ const EnhancedTripManager = () => {
     nume: "",
     destinatie: "",
     tara: "",
-    oras: "",
     descriere: "",
     start_date: "",
     end_date: "",
-    budget_estimat: "",
     group_id: "",
-    cover_image_url: "",
     status: "draft"
   });
 
@@ -97,7 +87,7 @@ const EnhancedTripManager = () => {
       console.error('Error fetching trips:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-au putut încărca turele.",
+        description: "Nu s-au putut încărca circuitele.",
         variant: "destructive",
       });
     } finally {
@@ -109,7 +99,7 @@ const EnhancedTripManager = () => {
     try {
       const { data, error } = await supabase
         .from('tourist_groups')
-        .select('*')
+        .select('id, nume_grup')
         .eq('is_active', true)
         .order('nume_grup');
 
@@ -123,12 +113,42 @@ const EnhancedTripManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validare obligatorie
+    if (!formData.group_id) {
+      toast({
+        title: "Eroare",
+        description: "Trebuie să selectezi un grup pentru circuit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validare date
+    if (new Date(formData.end_date) <= new Date(formData.start_date)) {
+      toast({
+        title: "Eroare",
+        description: "Data de sfârșit trebuie să fie după data de start.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const tripData = {
-        ...formData,
-        budget_estimat: formData.budget_estimat ? parseFloat(formData.budget_estimat) : null,
-        created_by_admin_id: user!.id
-      };
+  nume: formData.nume.trim(),
+  destinatie: formData.destinatie.trim(),
+  tara: formData.tara.trim(),
+  oras: null, // Adaugă câmpul chiar dacă nu îl folosești
+  descriere: formData.descriere.trim(),
+  start_date: formData.start_date,
+  end_date: formData.end_date,
+  group_id: formData.group_id,
+  status: formData.status,
+  created_by_admin_id: user!.id,
+  budget_estimat: null, // Adaugă
+  cover_image_url: null, // Adaugă
+  metadata: null // Adaugă dacă există în schema
+};
 
       if (editingTrip) {
         const { error } = await supabase
@@ -139,7 +159,7 @@ const EnhancedTripManager = () => {
         if (error) throw error;
         toast({
           title: "Succes",
-          description: "Tura a fost actualizată cu succes.",
+          description: "Circuitul a fost actualizat cu succes.",
         });
       } else {
         const { error } = await supabase
@@ -149,7 +169,7 @@ const EnhancedTripManager = () => {
         if (error) throw error;
         toast({
           title: "Succes",
-          description: "Tura a fost creată cu succes.",
+          description: "Circuitul a fost creat cu succes.",
         });
       }
 
@@ -157,11 +177,11 @@ const EnhancedTripManager = () => {
       setEditingTrip(null);
       resetForm();
       fetchTrips();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving trip:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut salva tura.",
+        description: error.message || "Nu s-a putut salva circuitul.",
         variant: "destructive",
       });
     }
@@ -173,20 +193,17 @@ const EnhancedTripManager = () => {
       nume: trip.nume,
       destinatie: trip.destinatie,
       tara: trip.tara,
-      oras: trip.oras,
       descriere: trip.descriere || "",
       start_date: trip.start_date,
       end_date: trip.end_date,
-      budget_estimat: trip.budget_estimat?.toString() || "",
       group_id: trip.group_id,
-      cover_image_url: trip.cover_image_url || "",
       status: trip.status
     });
     setShowDialog(true);
   };
 
   const handleDelete = async (tripId: string) => {
-    if (!confirm("Ești sigur că vrei să ștergi această tură?")) return;
+    if (!confirm("Ești sigur că vrei să ștergi acest circuit?")) return;
 
     try {
       const { error } = await supabase
@@ -198,14 +215,14 @@ const EnhancedTripManager = () => {
 
       toast({
         title: "Succes",
-        description: "Tura a fost ștearsă cu succes.",
+        description: "Circuitul a fost șters cu succes.",
       });
       fetchTrips();
     } catch (error) {
       console.error('Error deleting trip:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut șterge tura.",
+        description: "Nu s-a putut șterge circuitul.",
         variant: "destructive",
       });
     }
@@ -216,13 +233,10 @@ const EnhancedTripManager = () => {
       nume: "",
       destinatie: "",
       tara: "",
-      oras: "",
       descriere: "",
       start_date: "",
       end_date: "",
-      budget_estimat: "",
       group_id: "",
-      cover_image_url: "",
       status: "draft"
     });
   };
@@ -232,6 +246,7 @@ const EnhancedTripManager = () => {
       case 'active': return 'bg-success text-success-foreground';
       case 'completed': return 'bg-primary text-primary-foreground';
       case 'cancelled': return 'bg-destructive text-destructive-foreground';
+      case 'confirmed': return 'bg-blue-500 text-white';
       case 'draft': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
@@ -239,9 +254,10 @@ const EnhancedTripManager = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Activă';
-      case 'completed': return 'Finalizată';
-      case 'cancelled': return 'Anulată';
+      case 'active': return 'În Desfășurare';
+      case 'completed': return 'Finalizat';
+      case 'cancelled': return 'Anulat';
+      case 'confirmed': return 'Confirmat';
       case 'draft': return 'Schiță';
       default: return status;
     }
@@ -249,13 +265,14 @@ const EnhancedTripManager = () => {
 
   const filteredTrips = trips.filter(trip => {
     const matchesSearch = trip.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.destinatie.toLowerCase().includes(searchTerm.toLowerCase());
+                         trip.destinatie.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         trip.tara.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   if (loading) {
-    return <div className="text-center py-8">Se încarcă turele...</div>;
+    return <div className="text-center py-8">Se încarcă circuitele...</div>;
   }
 
   return (
@@ -263,8 +280,8 @@ const EnhancedTripManager = () => {
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Gestionare Ture Avansată</h2>
-          <p className="text-muted-foreground">Creează și gestionează călătoriile cu instrumente avansate</p>
+          <h2 className="text-2xl font-bold">Gestionare Circuite</h2>
+          <p className="text-muted-foreground">Creează și gestionează circuitele turistice</p>
         </div>
         
         {profile?.role === 'admin' && (
@@ -272,13 +289,14 @@ const EnhancedTripManager = () => {
             <DialogTrigger asChild>
               <Button onClick={() => { resetForm(); setEditingTrip(null); }} className="bg-gradient-hero">
                 <Plus className="w-4 h-4 mr-2" />
-                Tură Nouă
+                Circuit Nou
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>
-                  {editingTrip ? 'Editează Tura' : 'Tură Nouă'}
+                <DialogTitle className="flex items-center gap-2">
+                  <Route className="w-5 h-5" />
+                  {editingTrip ? 'Editează Circuitul' : 'Circuit Nou'}
                 </DialogTitle>
               </DialogHeader>
               
@@ -291,43 +309,35 @@ const EnhancedTripManager = () => {
                 
                 <form onSubmit={handleSubmit}>
                   <TabsContent value="basic" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nume">Numele Circuitului *</Label>
+                      <Input
+                        id="nume"
+                        value={formData.nume}
+                        onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
+                        placeholder="ex: Circuitul Europei de Est"
+                        required
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="nume">Nume Tură *</Label>
-                        <Input
-                          id="nume"
-                          value={formData.nume}
-                          onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="destinatie">Destinație *</Label>
+                        <Label htmlFor="destinatie">Destinații *</Label>
                         <Input
                           id="destinatie"
                           value={formData.destinatie}
                           onChange={(e) => setFormData({ ...formData, destinatie: e.target.value })}
+                          placeholder="ex: Budapesta, Viena, Praga"
                           required
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="tara">Țară *</Label>
+                        <Label htmlFor="tara">Țări *</Label>
                         <Input
                           id="tara"
                           value={formData.tara}
                           onChange={(e) => setFormData({ ...formData, tara: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="oras">Oraș *</Label>
-                        <Input
-                          id="oras"
-                          value={formData.oras}
-                          onChange={(e) => setFormData({ ...formData, oras: e.target.value })}
+                          placeholder="ex: Ungaria, Austria, Cehia"
                           required
                         />
                       </div>
@@ -335,7 +345,7 @@ const EnhancedTripManager = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="start_date">Data Start *</Label>
+                        <Label htmlFor="start_date">Data Plecare *</Label>
                         <Input
                           id="start_date"
                           type="date"
@@ -345,7 +355,7 @@ const EnhancedTripManager = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="end_date">Data Sfârșit *</Label>
+                        <Label htmlFor="end_date">Data Întoarcere *</Label>
                         <Input
                           id="end_date"
                           type="date"
@@ -359,42 +369,24 @@ const EnhancedTripManager = () => {
 
                   <TabsContent value="details" className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="descriere">Descriere Detaliată</Label>
+                      <Label htmlFor="descriere">Descrierea Circuitului</Label>
                       <RichTextEditor
                         content={formData.descriere}
                         onChange={(content) => setFormData({ ...formData, descriere: content })}
-                        placeholder="Descrie tura în detaliu..."
+                        placeholder="Descrie circuitul, obiectivele turistice, serviciile incluse..."
                       />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="budget_estimat">Budget Estimat (EUR)</Label>
-                        <Input
-                          id="budget_estimat"
-                          type="number"
-                          value={formData.budget_estimat}
-                          onChange={(e) => setFormData({ ...formData, budget_estimat: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cover_image_url">URL Imagine Principală</Label>
-                        <Input
-                          id="cover_image_url"
-                          type="url"
-                          value={formData.cover_image_url}
-                          onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="settings" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="group_id">Grup *</Label>
-                        <Select value={formData.group_id} onValueChange={(value) => setFormData({ ...formData, group_id: value })}>
+                        <Label htmlFor="group_id">Grup Participanți *</Label>
+                        <Select 
+                          value={formData.group_id} 
+                          onValueChange={(value) => setFormData({ ...formData, group_id: value })}
+                          required
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Selectează grupul" />
                           </SelectTrigger>
@@ -408,27 +400,41 @@ const EnhancedTripManager = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
+                        <Label htmlFor="status">Status Circuit</Label>
                         <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="draft">Schiță</SelectItem>
-                            <SelectItem value="active">Activă</SelectItem>
-                            <SelectItem value="completed">Finalizată</SelectItem>
-                            <SelectItem value="cancelled">Anulată</SelectItem>
+                            <SelectItem value="confirmed">Confirmat</SelectItem>
+                            <SelectItem value="active">În Desfășurare</SelectItem>
+                            <SelectItem value="completed">Finalizat</SelectItem>
+                            <SelectItem value="cancelled">Anulat</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
+
+                    {groups.length === 0 && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Atenție:</strong> Nu există grupuri active. 
+                          <br />Trebuie să creezi un grup înainte de a putea crea un circuit.
+                        </p>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <div className="flex justify-end gap-2 mt-6">
                     <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                       Anulează
                     </Button>
-                    <Button type="submit" className="bg-gradient-hero">
+                    <Button 
+                      type="submit" 
+                      className="bg-gradient-hero"
+                      disabled={groups.length === 0}
+                    >
                       {editingTrip ? 'Actualizează' : 'Creează'}
                     </Button>
                   </div>
@@ -443,7 +449,7 @@ const EnhancedTripManager = () => {
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="flex-1">
           <Input
-            placeholder="Caută ture..."
+            placeholder="Caută circuite..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
@@ -458,7 +464,8 @@ const EnhancedTripManager = () => {
             <SelectContent>
               <SelectItem value="all">Toate</SelectItem>
               <SelectItem value="draft">Schiță</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="confirmed">Confirmate</SelectItem>
+              <SelectItem value="active">În Desfășurare</SelectItem>
               <SelectItem value="completed">Finalizate</SelectItem>
               <SelectItem value="cancelled">Anulate</SelectItem>
             </SelectContent>
@@ -474,20 +481,10 @@ const EnhancedTripManager = () => {
         </div>
       </div>
 
-      {/* Trips Grid */}
+      {/* Circuits Grid */}
       <div className={viewMode === 'grid' ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredTrips.map((trip) => (
-          <Card key={trip.id} className="group hover:shadow-soft transition-all duration-300 border-border/20">
-            {trip.cover_image_url && viewMode === 'grid' && (
-              <div className="aspect-video overflow-hidden">
-                <img 
-                  src={trip.cover_image_url} 
-                  alt={trip.nume}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            )}
-            
+          <Card key={trip.id} className="group hover:shadow-soft transition-all duration-300 border-border/20">            
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -496,7 +493,10 @@ const EnhancedTripManager = () => {
                   </CardTitle>
                   <div className="flex items-center text-sm text-muted-foreground mt-1">
                     <MapPin className="w-4 h-4 mr-1" />
-                    {trip.destinatie}, {trip.tara}
+                    {trip.destinatie}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {trip.tara}
                   </div>
                 </div>
                 <Badge className={getStatusColor(trip.status)}>
@@ -515,18 +515,12 @@ const EnhancedTripManager = () => {
                 
                 <div className="flex items-center text-sm">
                   <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                  {trip.tourist_groups?.nume_grup}
+                  {trip.tourist_groups?.nume_grup || 'Grup nespecificat'}
                 </div>
-
-                {trip.budget_estimat && (
-                  <div className="text-sm">
-                    <span className="font-medium">Budget:</span> €{trip.budget_estimat}
-                  </div>
-                )}
 
                 {trip.descriere && (
                   <div 
-                    className="text-sm text-muted-foreground line-clamp-2 prose prose-sm"
+                    className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: trip.descriere }}
                   />
                 )}
@@ -555,14 +549,14 @@ const EnhancedTripManager = () => {
 
       {filteredTrips.length === 0 && (
         <div className="text-center py-12">
-          <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nicio tură găsită</h3>
+          <Route className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">Niciun circuit găsit</h3>
           <p className="text-muted-foreground mb-4">
             {searchTerm || filterStatus !== 'all' 
               ? 'Încearcă să modifici filtrele de căutare.'
               : profile?.role === 'admin' 
-                ? 'Începe prin a crea prima tură.' 
-                : 'Nu există ture disponibile momentan.'
+                ? 'Începe prin a crea primul circuit.' 
+                : 'Nu există circuite disponibile momentan.'
             }
           </p>
         </div>
@@ -571,4 +565,4 @@ const EnhancedTripManager = () => {
   );
 };
 
-export default EnhancedTripManager;
+export default EnhancedCircuitManager;
