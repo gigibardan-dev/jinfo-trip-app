@@ -86,6 +86,8 @@ const activityTemplates = [
   { title: "Prânz", type: "meal", icon: Utensils, time: "13:00" },
   { title: "Transport local", type: "transport", icon: Car, time: "" },
   { title: "Vizită obiectiv", type: "attraction", icon: Camera, time: "" },
+  { title: "Timp liber la dispoziție", type: "free_time", icon: Clock, time: "" },
+  { title: "Excursie opțională", type: "attraction", icon: Camera, time: "" },
 ];
 
 const activityTypeConfig = {

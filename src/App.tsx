@@ -14,6 +14,7 @@ import DocumentsPage from "./pages/admin/DocumentsPage";
 import CommunicationsPage from "./pages/admin/CommunicationsPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import MessagesPage from "./pages/tourist/MessagesPage";
+import ItineraryPage from "./pages/tourist/ItineraryPage";
 import Footer from "./components/shared/Footer";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/communications" element={<CommunicationsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
+                <Route path="/itinerary" element={<ItineraryPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
