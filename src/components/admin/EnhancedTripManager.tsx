@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route } from "lucide-react";
+import ItineraryManager from "@/components/ItineraryManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,8 @@ const EnhancedCircuitManager = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showItinerary, setShowItinerary] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [formData, setFormData] = useState<TripFormData>({
     nume: "",
     destinatie: "",
@@ -531,6 +534,18 @@ const EnhancedCircuitManager = () => {
 
                 {profile?.role === 'admin' && (
                   <div className="flex gap-2 pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        setSelectedTrip(trip);
+                        setShowItinerary(true);
+                      }}
+                      className="flex-1"
+                    >
+                      <Route className="w-4 h-4 mr-1" />
+                      Itinerariu
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => handleEdit(trip)} className="flex-1">
                       <Edit className="w-4 h-4 mr-1" />
                       Editează
@@ -565,6 +580,28 @@ const EnhancedCircuitManager = () => {
           </p>
         </div>
       )}
+
+      {/* Itinerary Management Dialog */}
+      <Dialog open={showItinerary} onOpenChange={setShowItinerary}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Route className="w-5 h-5" />
+              Gestionează Itinerariu - {selectedTrip?.nume}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-6 pt-4">
+            {selectedTrip && (
+              <ItineraryManager
+                tripId={selectedTrip.id}
+                tripName={selectedTrip.nume}
+                startDate={selectedTrip.start_date}
+                endDate={selectedTrip.end_date}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
