@@ -243,6 +243,48 @@ export type Database = {
           },
         ]
       }
+      daily_reports: {
+        Row: {
+          activities_completed: string[] | null
+          created_at: string
+          guide_user_id: string
+          id: string
+          issues_encountered: string | null
+          notes_for_admin: string | null
+          participant_count: number | null
+          report_date: string
+          solutions_applied: string | null
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          activities_completed?: string[] | null
+          created_at?: string
+          guide_user_id: string
+          id?: string
+          issues_encountered?: string | null
+          notes_for_admin?: string | null
+          participant_count?: number | null
+          report_date: string
+          solutions_applied?: string | null
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          activities_completed?: string[] | null
+          created_at?: string
+          guide_user_id?: string
+          id?: string
+          issues_encountered?: string | null
+          notes_for_admin?: string | null
+          participant_count?: number | null
+          report_date?: string
+          solutions_applied?: string | null
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           descriere: string | null
@@ -357,6 +399,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      guide_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by_admin_id: string
+          guide_user_id: string
+          id: string
+          is_active: boolean
+          trip_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by_admin_id: string
+          guide_user_id: string
+          id?: string
+          is_active?: boolean
+          trip_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by_admin_id?: string
+          guide_user_id?: string
+          id?: string
+          is_active?: boolean
+          trip_id?: string
+        }
+        Relationships: []
       }
       itinerary_activities: {
         Row: {
@@ -697,7 +766,7 @@ export type Database = {
       resource_type: "documents" | "itinerary" | "maps" | "images"
       target_type: "broadcast" | "group" | "individual"
       trip_status: "draft" | "confirmed" | "active" | "completed" | "cancelled"
-      user_role: "admin" | "tourist"
+      user_role: "admin" | "tourist" | "guide"
       visibility_type: "group" | "individual"
     }
     CompositeTypes: {
@@ -848,7 +917,7 @@ export const Constants = {
       resource_type: ["documents", "itinerary", "maps", "images"],
       target_type: ["broadcast", "group", "individual"],
       trip_status: ["draft", "confirmed", "active", "completed", "cancelled"],
-      user_role: ["admin", "tourist"],
+      user_role: ["admin", "tourist", "guide"],
       visibility_type: ["group", "individual"],
     },
   },
