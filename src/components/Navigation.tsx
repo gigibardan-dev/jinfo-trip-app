@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 interface NavigationProps {
-  userRole?: "admin" | "tourist";
+  userRole?: "admin" | "tourist" | "guide";
 }
 
 const Navigation = ({ userRole = "admin" }: NavigationProps) => {
@@ -20,7 +20,14 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
     { id: "tourists", label: "Turiști", icon: Users },
     { id: "documents", label: "Documente", icon: FileText },
     { id: "communications", label: "Comunicări", icon: MessageSquare },
+    { id: "guides", label: "Ghizi", icon: Users },
     { id: "settings", label: "Setări", icon: Settings },
+  ];
+
+  const guideNavItems = [
+    { id: "guide-dashboard", label: "Dashboard", icon: MapPin },
+    { id: "guide-itinerary", label: "Itinerariu", icon: Plane },
+    { id: "guide-reports", label: "Rapoarte", icon: FileText },
   ];
 
   const touristNavItems = [
@@ -30,7 +37,8 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
     { id: "messages", label: "Mesaje", icon: MessageSquare },
   ];
 
-  const navItems = userRole === "admin" ? adminNavItems : touristNavItems;
+  const navItems = userRole === "admin" ? adminNavItems : 
+                   userRole === "guide" ? guideNavItems : touristNavItems;
 
   const handleNavigation = (id: string) => {
     setActiveTab(id);
