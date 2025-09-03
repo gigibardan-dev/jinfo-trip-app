@@ -736,7 +736,15 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      guide_assigned_to_trip: {
+        Args: { trip_uuid: string }
+        Returns: boolean
+      }
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_guide: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
