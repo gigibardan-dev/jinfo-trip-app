@@ -42,26 +42,39 @@ const GuideDashboard = () => {
 
   const fetchAssignments = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('guide_assignments')
-        .select(`
-          *,
-          trips (
-            id,
-            nume,
-            destinatie,
-            start_date,
-            end_date,
-            status,
-            created_by_admin_id
-          )
-        `)
+        .select('*')
         .eq('guide_user_id', user?.id)
         .eq('is_active', true)
         .order('assigned_at', { ascending: false });
 
-      if (error) throw error;
-      setAssignments(data || []);
+      if (assignmentsError) throw assignmentsError;
+
+      if (!assignmentsData || assignmentsData.length === 0) {
+        setAssignments([]);
+        return;
+      }
+
+      // Get unique trip IDs
+      const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
+
+      // Fetch trip details
+      const { data: tripsData, error: tripsError } = await supabase
+        .from('trips')
+        .select('id, nume, destinatie, start_date, end_date, status, created_by_admin_id')
+        .in('id', tripIds);
+
+      if (tripsError) throw tripsError;
+
+      // Combine assignments with trip data
+      const assignmentsWithTrips = assignmentsData.map(assignment => ({
+        ...assignment,
+        trips: tripsData?.find(trip => trip.id === assignment.trip_id) || null
+      }));
+
+      setAssignments(assignmentsWithTrips);
     } catch (error) {
       console.error('Error fetching assignments:', error);
       toast({

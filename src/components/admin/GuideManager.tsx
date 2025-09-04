@@ -96,50 +96,85 @@ const GuideManager = () => {
       // Fetch assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('guide_assignments')
-        .select(`
-          *,
-          trips (
-            id,
-            nume,
-            destinatie,
-            start_date,
-            end_date,
-            status
-          ),
-          guides:profiles!guide_assignments_guide_user_id_fkey (
-            id,
-            nume,
-            prenume,
-            email
-          )
-        `)
+        .select('*')
         .order('assigned_at', { ascending: false });
 
       if (assignmentsError) throw assignmentsError;
-      setAssignments(assignmentsData || []);
+
+      if (assignmentsData && assignmentsData.length > 0) {
+        // Get unique trip and guide IDs
+        const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
+        const guideIds = [...new Set(assignmentsData.map(a => a.guide_user_id))];
+
+        // Fetch trip details
+        const { data: tripsData, error: tripsError } = await supabase
+          .from('trips')
+          .select('id, nume, destinatie, start_date, end_date, status')
+          .in('id', tripIds);
+
+        if (tripsError) throw tripsError;
+
+        // Fetch guide details
+        const { data: guidesData, error: guidesError } = await supabase
+          .from('profiles')
+          .select('id, nume, prenume, email, is_active, created_at')
+          .in('id', guideIds);
+
+        if (guidesError) throw guidesError;
+
+        // Combine assignments with trip and guide data
+        const assignmentsWithData = assignmentsData.map(assignment => ({
+          ...assignment,
+          trips: tripsData?.find(trip => trip.id === assignment.trip_id) || null,
+          guides: guidesData?.find(guide => guide.id === assignment.guide_user_id) || null
+        }));
+
+        setAssignments(assignmentsWithData);
+      } else {
+        setAssignments([]);
+      }
 
       // Fetch recent reports
       const { data: reportsData, error: reportsError } = await supabase
         .from('daily_reports')
-        .select(`
-          *,
-          trips (
-            id,
-            nume,
-            destinatie
-          ),
-          guides:profiles!daily_reports_guide_user_id_fkey (
-            id,
-            nume,
-            prenume,
-            email
-          )
-        `)
+        .select('*')
         .order('report_date', { ascending: false })
         .limit(50);
 
       if (reportsError) throw reportsError;
-      setReports(reportsData || []);
+
+      if (reportsData && reportsData.length > 0) {
+        // Get unique trip and guide IDs
+        const tripIds = [...new Set(reportsData.map(r => r.trip_id))];
+        const guideIds = [...new Set(reportsData.map(r => r.guide_user_id))];
+
+        // Fetch trip details
+        const { data: tripsData, error: tripsError } = await supabase
+          .from('trips')
+          .select('id, nume, destinatie, start_date, end_date, status')
+          .in('id', tripIds);
+
+        if (tripsError) throw tripsError;
+
+        // Fetch guide details
+        const { data: guidesData, error: guidesError } = await supabase
+          .from('profiles')
+          .select('id, nume, prenume, email, is_active, created_at')
+          .in('id', guideIds);
+
+        if (guidesError) throw guidesError;
+
+        // Combine reports with trip and guide data
+        const reportsWithData = reportsData.map(report => ({
+          ...report,
+          trips: tripsData?.find(trip => trip.id === report.trip_id) || null,
+          guides: guidesData?.find(guide => guide.id === report.guide_user_id) || null
+        }));
+
+        setReports(reportsWithData);
+      } else {
+        setReports([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
