@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import StatsCard from "@/components/shared/StatsCard";
+import { StatsCard } from "@/components/shared/StatsCard";
 
 interface Trip {
   id: string;
