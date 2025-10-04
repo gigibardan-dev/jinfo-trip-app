@@ -44,54 +44,12 @@ const TouristDashboard = () => {
   const [currentTrip, setCurrentTrip] = useState<UserTrip | null>(null);
   const [userGroups, setUserGroups] = useState<GroupInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [todayActivities, setTodayActivities] = useState<any[]>([]);
+  const [groupMemberCount, setGroupMemberCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
-
-  // === MOCK DATA - FOR UI DEVELOPMENT ===
-  const MOCK_todaySchedule = [
-    {
-      time: "09:00",
-      title: "Mic dejun la hotel",
-      location: "Hotel Le Marais",
-      status: "completed",
-      type: "meal"
-    },
-    {
-      time: "10:30",
-      title: "Tur ghidat Montmartre",
-      location: "Sacré-Cœur",
-      status: "completed",
-      type: "attraction"
-    },
-    {
-      time: "14:30",
-      title: "Vizită Muzeul Luvru",
-      location: "Musée du Louvre",
-      status: "upcoming",
-      type: "attraction"
-    },
-    {
-      time: "18:00",
-      title: "Croazieră pe Sena",
-      location: "Port de la Bourdonnais",
-      status: "upcoming",
-      type: "transport"
-    }
-  ];
-
-  const MOCK_groupStats = {
-    totalMembers: 24,
-    checkedInToday: 18,
-    newMessages: 3
-  };
-
-  const MOCK_offlineStatus = [
-    { name: "Hărți", status: "synced" },
-    { name: "Itinerariu", status: "synced" },
-    { name: "Documente", status: "partial" }
-  ];
-  // === END MOCK DATA ===
 
   useEffect(() => {
     if (user && profile?.role === 'tourist') {
@@ -137,11 +95,42 @@ const TouristDashboard = () => {
         const activeTrip = trips?.find(trip => trip.status === 'active') || trips?.[0];
         setCurrentTrip(activeTrip || null);
 
-        // 4. Setează informații despre grupuri
+        // 4. Setează informații despre grupuri și număr membrii
+        if (activeTrip) {
+          const { data: membersCount, error: countError } = await supabase
+            .from('group_members')
+            .select('id', { count: 'exact' })
+            .eq('group_id', activeTrip.group_id);
+          
+          if (!countError) {
+            setGroupMemberCount(membersCount?.length || 0);
+          }
+
+          // 5. Fetch today's activities
+          const today = new Date().toISOString().split('T')[0];
+          const { data: itineraryDays, error: daysError } = await supabase
+            .from('itinerary_days')
+            .select('id')
+            .eq('trip_id', activeTrip.id)
+            .eq('date', today);
+
+          if (!daysError && itineraryDays && itineraryDays.length > 0) {
+            const { data: activities, error: activitiesError } = await supabase
+              .from('itinerary_activities')
+              .select('*')
+              .eq('day_id', itineraryDays[0].id)
+              .order('display_order');
+
+            if (!activitiesError) {
+              setTodayActivities(activities || []);
+            }
+          }
+        }
+
         const groupsInfo = memberGroups.map(mg => ({
           id: mg.group_id,
           nume_grup: mg.tourist_groups.nume_grup,
-          member_count: 0 // TODO: Calculate real member count
+          member_count: 0
         }));
         setUserGroups(groupsInfo);
       }
@@ -209,6 +198,8 @@ const TouristDashboard = () => {
       case "attraction": return "🏛️";
       case "transport": return "🚢";
       case "accommodation": return "🏨";
+      case "free_time": return "🎯";
+      case "custom": return "📍";
       default: return "📍";
     }
   };
@@ -308,16 +299,9 @@ const TouristDashboard = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Schedule - MOCK DATA */}
+        {/* Today's Schedule */}
         <div className="lg:col-span-2">
-          <Card className="shadow-soft border-0 relative">
-            {/* Mock Data Badge */}
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK SCHEDULE
-              </Badge>
-            </div>
-            
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" />
@@ -325,58 +309,52 @@ const TouristDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {MOCK_todaySchedule.map((activity, index) => (
-                  <div
-                    key={index}
-                    className={`border rounded-lg p-4 transition-all ${
-                      activity.status === "upcoming" 
-                        ? "border-primary bg-primary/5 shadow-soft" 
-                        : activity.status === "completed"
-                        ? "border-success bg-success/5"
-                        : "border-border"
-                    }`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="text-2xl">{getActivityIcon(activity.type)}</div>
-                      
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{activity.title}</h3>
-                          <Badge className={getStatusColor(activity.status)}>
-                            {activity.status === "completed" ? "Completat" : 
-                             activity.status === "upcoming" ? "Urmează" : "În desfășurare"}
-                          </Badge>
-                        </div>
+              {todayActivities.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Nu există activități programate pentru astăzi</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {todayActivities.map((activity, index) => (
+                    <div
+                      key={activity.id}
+                      className="border rounded-lg p-4 transition-all hover:shadow-soft"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="text-2xl">{getActivityIcon(activity.activity_type)}</div>
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {activity.time}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">{activity.title}</h3>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {activity.location}
+                          
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {activity.start_time && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {activity.start_time.substring(0, 5)}
+                              </div>
+                            )}
+                            {activity.location_name && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {activity.location_name}
+                              </div>
+                            )}
                           </div>
+
+                          {activity.description && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {activity.description}
+                            </p>
+                          )}
                         </div>
-                        
-                        {activity.status === "upcoming" && index === 2 && (
-                          <div className="mt-3 flex gap-2">
-                            <Button size="sm" className="bg-primary">
-                              <Navigation className="w-3 h-3 mr-1" />
-                              Navigație
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <FileText className="w-3 h-3 mr-1" />
-                              Detalii
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -423,14 +401,8 @@ const TouristDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Group Info - MIXED: Real group name, Mock stats */}
-          <Card className="shadow-soft border-0 relative">
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK STATS
-              </Badge>
-            </div>
-            
+          {/* Group Info */}
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="text-lg">Informații Grup</CardTitle>
             </CardHeader>
@@ -438,15 +410,11 @@ const TouristDashboard = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Membri totali</span>
-                  <span className="font-medium">{MOCK_groupStats.totalMembers}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Check-in azi</span>
-                  <span className="font-medium text-success">{MOCK_groupStats.checkedInToday}/{MOCK_groupStats.totalMembers}</span>
+                  <span className="font-medium">{groupMemberCount}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Mesaje noi</span>
-                  <Badge variant="destructive">{MOCK_groupStats.newMessages}</Badge>
+                  <Badge variant="secondary">{unreadMessages}</Badge>
                 </div>
                 
                 <Button variant="outline" className="w-full mt-4">
@@ -456,35 +424,20 @@ const TouristDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Offline Status - MOCK DATA */}
-          <Card className="shadow-soft border-0 relative">
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK OFFLINE
-              </Badge>
-            </div>
-            
+          {/* Documents Status */}
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <WifiOff className="w-5 h-5 text-success" />
-                Status Offline
+                <FileText className="w-5 h-5 text-primary" />
+                Documente
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {MOCK_offlineStatus.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm">{item.name}</span>
-                    <Badge className={getOfflineStatusBadge(item.status)}>
-                      {item.status === 'synced' ? 'Sincronizat' :
-                       item.status === 'partial' ? 'Parțial' : 'Învechit'}
-                    </Badge>
-                  </div>
-                ))}
-                
-                <Button variant="outline" className="w-full mt-4">
-                  <WifiOff className="w-4 h-4 mr-2" />
-                  Forțează Sincronizare
+              <div className="space-y-3 text-sm text-muted-foreground text-center py-4">
+                <FileText className="w-12 h-12 mx-auto opacity-50" />
+                <p>Verifică documentele în secțiunea dedicată</p>
+                <Button variant="outline" size="sm" className="w-full mt-2">
+                  Vezi Documente
                 </Button>
               </div>
             </CardContent>

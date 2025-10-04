@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import GroupManager from "./admin/GroupManager";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   Users,
@@ -14,7 +15,8 @@ import {
   Calendar,
   MapPin,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  UserCheck
 } from "lucide-react";
 
 // Import componentele pentru navigare
@@ -26,69 +28,105 @@ type ActiveView = 'dashboard' | 'trips' | 'tourists' | 'documents' | 'groups';
 
 const AdminDashboard = () => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [stats, setStats] = useState({
+    activeTrips: 0,
+    tourists: 0,
+    documents: 0,
+    guides: 0
+  });
+  const [recentTrips, setRecentTrips] = useState<any[]>([]);
+  const [expiringDocuments, setExpiringDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // === MOCK DATA - TO BE REPLACED WITH REAL DATA ===
-  const MOCK_stats = [
-    {
-      title: "Călătorii Active",
-      value: "12",
-      change: "+2 această lună",
-      icon: Plane,
-      color: "text-primary"
-    },
-    {
-      title: "Turiști Înregistrați",
-      value: "284",
-      change: "+18 această săptămână",
-      icon: Users,
-      color: "text-success"
-    },
-    {
-      title: "Documente Uploadate",
-      value: "1,547",
-      change: "+156 azi",
-      icon: FileText,
-      color: "text-accent"
-    },
-    {
-      title: "Alerte Active",
-      value: "3",
-      change: "Necesită atenție",
-      icon: AlertTriangle,
-      color: "text-warning"
-    }
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const MOCK_recentTrips = [
-    {
-      id: 1,
-      name: "Paris - City of Light",
-      destination: "Paris, Franța",
-      startDate: "15 Mar 2024",
-      tourists: 24,
-      status: "active",
-      progress: 65
-    },
-    {
-      id: 2,
-      name: "Alpine Adventure",
-      destination: "Zermatt, Elveția",
-      startDate: "22 Mar 2024",
-      tourists: 18,
-      status: "confirmed",
-      progress: 90
-    },
-    {
-      id: 3,
-      name: "Mediterranean Escape",
-      destination: "Santorini, Grecia",
-      startDate: "5 Apr 2024",
-      tourists: 32,
-      status: "draft",
-      progress: 35
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch active trips count
+      const { data: activeTripsData, error: tripsError } = await supabase
+        .from('trips')
+        .select('id', { count: 'exact' })
+        .in('status', ['active', 'confirmed']);
+      
+      if (tripsError) throw tripsError;
+
+      // Fetch tourists count
+      const { data: touristsData, error: touristsError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact' })
+        .eq('role', 'tourist')
+        .eq('is_active', true);
+      
+      if (touristsError) throw touristsError;
+
+      // Fetch documents count
+      const { data: documentsData, error: documentsError } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact' });
+      
+      if (documentsError) throw documentsError;
+
+      // Fetch guides count
+      const { data: guidesData, error: guidesError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact' })
+        .eq('role', 'guide')
+        .eq('is_active', true);
+      
+      if (guidesError) throw guidesError;
+
+      setStats({
+        activeTrips: activeTripsData?.length || 0,
+        tourists: touristsData?.length || 0,
+        documents: documentsData?.length || 0,
+        guides: guidesData?.length || 0
+      });
+
+      // Fetch recent trips with group info
+      const { data: tripsData, error: recentTripsError } = await supabase
+        .from('trips')
+        .select(`
+          *,
+          tourist_groups (
+            nume_grup
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (recentTripsError) throw recentTripsError;
+      setRecentTrips(tripsData || []);
+
+      // Fetch expiring documents (within 30 days)
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      
+      const { data: expiringDocs, error: expiringError } = await supabase
+        .from('documents')
+        .select('id, nume, expiry_date, trip_id')
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
+        .gte('expiry_date', new Date().toISOString().split('T')[0])
+        .order('expiry_date', { ascending: true })
+        .limit(5);
+      
+      if (expiringError) throw expiringError;
+      setExpiringDocuments(expiringDocs || []);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-au putut încărca datele dashboard-ului.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
-  // === END MOCK DATA ===
+  };
 
   // Navigation handlers
   const handleNewTrip = () => {
@@ -192,7 +230,43 @@ const AdminDashboard = () => {
     }
   };
 
-  const renderDashboard = () => (
+  const renderDashboard = () => {
+    if (loading) {
+      return <div className="text-center py-8">Se încarcă datele...</div>;
+    }
+
+    const statsCards = [
+      {
+        title: "Călătorii Active",
+        value: stats.activeTrips.toString(),
+        change: "Active sau confirmate",
+        icon: Plane,
+        color: "text-primary"
+      },
+      {
+        title: "Turiști Înregistrați",
+        value: stats.tourists.toString(),
+        change: "Activi în sistem",
+        icon: Users,
+        color: "text-success"
+      },
+      {
+        title: "Documente Uploadate",
+        value: stats.documents.toString(),
+        change: "Total documente",
+        icon: FileText,
+        color: "text-accent"
+      },
+      {
+        title: "Ghizi Activi",
+        value: stats.guides.toString(),
+        change: "Disponibili",
+        icon: UserCheck,
+        color: "text-warning"
+      }
+    ];
+
+    return (
     <div className="space-y-6">
       {/* Quick Actions - WITH NAVIGATION */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -229,16 +303,10 @@ const AdminDashboard = () => {
         </Button>
       </div>
 
-      {/* Stats Grid - MOCK DATA */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {MOCK_stats.map((stat, index) => (
-          <Card key={index} className="shadow-soft border-0 relative">
-            {/* Mock Data Badge */}
-            <div className="absolute top-2 right-2">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK
-              </Badge>
-            </div>
+        {statsCards.map((stat, index) => (
+          <Card key={index} className="shadow-soft border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
@@ -257,15 +325,9 @@ const AdminDashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Trips - MOCK DATA */}
+        {/* Recent Trips */}
         <div className="lg:col-span-2">
-          <Card className="shadow-soft border-0 relative">
-            {/* Mock Data Badge */}
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK DATA
-              </Badge>
-            </div>
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plane className="w-5 h-5 text-primary" />
@@ -273,62 +335,53 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {MOCK_recentTrips.map((trip) => (
-                  <div
-                    key={trip.id}
-                    className="border rounded-lg p-4 hover:shadow-medium transition-shadow"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <h3 className="font-semibold">{trip.name}</h3>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {trip.destination}
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {trip.startDate}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:items-end gap-2">
-                        <Badge className={getStatusColor(trip.status)}>
-                          {getStatusText(trip.status)}
-                        </Badge>
-                        <div className="text-sm text-muted-foreground">
-                          {trip.tourists} turiști
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs text-muted-foreground">
-                            {trip.progress}%
+              {recentTrips.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Plane className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Nu există călătorii încă</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentTrips.map((trip) => (
+                    <div
+                      key={trip.id}
+                      className="border rounded-lg p-4 hover:shadow-medium transition-shadow"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <h3 className="font-semibold">{trip.nume}</h3>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            {trip.destinatie}, {trip.tara}
                           </div>
-                          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${trip.progress}%` }}
-                            />
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {new Date(trip.start_date).toLocaleDateString('ro-RO')} - 
+                            {new Date(trip.end_date).toLocaleDateString('ro-RO')}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:items-end gap-2">
+                          <Badge className={getStatusColor(trip.status)}>
+                            {getStatusText(trip.status)}
+                          </Badge>
+                          <div className="text-sm text-muted-foreground">
+                            {trip.tourist_groups?.nume_grup || 'Fără grup'}
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Alerts & Activity - MOCK DATA */}
+        {/* Alerts & Activity */}
         <div className="space-y-6">
           {/* Alerts */}
-          <Card className="shadow-soft border-0 relative">
-            {/* Mock Data Badge */}
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK
-              </Badge>
-            </div>
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning" />
@@ -336,77 +389,74 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-warning/10 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-warning mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Documente expirate</p>
-                    <p className="text-muted-foreground">5 pașapoarte necesită reînnoire</p>
-                  </div>
+              {expiringDocuments.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  Nu există alerte în acest moment
                 </div>
-
-                <div className="flex items-start gap-3 p-3 bg-accent/10 rounded-lg">
-                  <TrendingUp className="w-4 h-4 text-accent mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Capacitate maximă</p>
-                    <p className="text-muted-foreground">Călătoria la Roma este completă</p>
-                  </div>
+              ) : (
+                <div className="space-y-3">
+                  {expiringDocuments.map((doc) => (
+                    <div key={doc.id} className="flex items-start gap-3 p-3 bg-warning/10 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-warning mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium">Document expiră curând</p>
+                        <p className="text-muted-foreground">
+                          {doc.nume} - {new Date(doc.expiry_date).toLocaleDateString('ro-RO')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg">
-                  <Calendar className="w-4 h-4 text-primary mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Deadline apropiat</p>
-                    <p className="text-muted-foreground">Itinerariu Paris - 2 zile</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Quick Stats - MOCK DATA */}
-          <Card className="shadow-soft border-0 relative">
-            {/* Mock Data Badge */}
-            <div className="absolute top-4 right-4 z-10">
-              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                MOCK
-              </Badge>
-            </div>
+          {/* Quick Stats */}
+          <Card className="shadow-soft border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-success" />
-                Performanță
+                Statistici Rapide
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Satisfacție clienți</span>
-                    <span className="font-medium">4.8/5</span>
+                    <span>Circuite active</span>
+                    <span className="font-medium">{stats.activeTrips}</span>
                   </div>
                   <div className="w-full h-2 bg-muted rounded-full">
-                    <div className="w-[96%] h-full bg-success rounded-full" />
+                    <div 
+                      className="h-full bg-success rounded-full transition-all" 
+                      style={{ width: `${Math.min(100, (stats.activeTrips / Math.max(1, stats.activeTrips + 5)) * 100)}%` }}
+                    />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Documente complete</span>
-                    <span className="font-medium">89%</span>
+                    <span>Turiști activi</span>
+                    <span className="font-medium">{stats.tourists}</span>
                   </div>
                   <div className="w-full h-2 bg-muted rounded-full">
-                    <div className="w-[89%] h-full bg-primary rounded-full" />
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all" 
+                      style={{ width: `${Math.min(100, (stats.tourists / Math.max(1, stats.tourists + 10)) * 100)}%` }}
+                    />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Utilizare offline</span>
-                    <span className="font-medium">67%</span>
+                    <span>Ghizi disponibili</span>
+                    <span className="font-medium">{stats.guides}</span>
                   </div>
                   <div className="w-full h-2 bg-muted rounded-full">
-                    <div className="w-[67%] h-full bg-accent rounded-full" />
+                    <div 
+                      className="h-full bg-accent rounded-full transition-all" 
+                      style={{ width: `${Math.min(100, (stats.guides / Math.max(1, stats.guides + 3)) * 100)}%` }}
+                    />
                   </div>
                 </div>
               </div>
@@ -416,6 +466,7 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
+  };
 
   return (
     <div className="space-y-6">
