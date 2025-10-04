@@ -174,7 +174,7 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
           start_time: newActivity.start_time || null,
           end_time: newActivity.end_time || null,
           location_name: newActivity.location_name || null,
-          activity_type: newActivity.activity_type,
+          activity_type: newActivity.activity_type as "transport" | "accommodation" | "custom" | "meal" | "attraction" | "free_time",
           display_order: maxOrder + 1,
         })
         .select()
@@ -231,7 +231,7 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
           start_time: activity.start_time,
           end_time: activity.end_time,
           location_name: activity.location_name,
-          activity_type: activity.activity_type,
+          activity_type: activity.activity_type as "transport" | "accommodation" | "custom" | "meal" | "attraction" | "free_time",
         })
         .eq('id', activity.id);
 

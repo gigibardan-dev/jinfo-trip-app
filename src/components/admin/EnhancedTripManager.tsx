@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +24,7 @@ interface Trip {
   end_date: string;
   status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   group_id: string;
+  cover_image_url?: string | null;
   tourist_groups?: {
     nume_grup: string;
   };
@@ -64,6 +65,41 @@ const EnhancedCircuitManager = () => {
 
   const { user, profile } = useAuth();
   const { toast } = useToast();
+
+  const updateItineraryDates = async (tripId: string, newStartDate: string, newEndDate: string) => {
+    try {
+      const { data: existingDays, error: fetchError } = await supabase
+        .from('itinerary_days')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('day_number');
+
+      if (fetchError) throw fetchError;
+
+      if (!existingDays || existingDays.length === 0) return;
+
+      const start = new Date(newStartDate);
+      const updatedDays = existingDays.map((day, index) => {
+        const newDate = new Date(start);
+        newDate.setDate(start.getDate() + index);
+        return {
+          id: day.id,
+          date: newDate.toISOString().split('T')[0]
+        };
+      });
+
+      for (const day of updatedDays) {
+        const { error: updateError } = await supabase
+          .from('itinerary_days')
+          .update({ date: day.date })
+          .eq('id', day.id);
+
+        if (updateError) throw updateError;
+      }
+    } catch (error) {
+      console.error('Error updating itinerary dates:', error);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -154,12 +190,22 @@ const EnhancedCircuitManager = () => {
       };
 
       if (editingTrip) {
+        const oldStartDate = editingTrip.start_date;
+        const oldEndDate = editingTrip.end_date;
+        const hasDateChanged = oldStartDate !== formData.start_date || oldEndDate !== formData.end_date;
+
         const { error } = await supabase
           .from('trips')
           .update(tripData)
           .eq('id', editingTrip.id);
 
         if (error) throw error;
+
+        // Update itinerary dates if trip dates changed
+        if (hasDateChanged) {
+          await updateItineraryDates(editingTrip.id, formData.start_date, formData.end_date);
+        }
+
         toast({
           title: "Succes",
           description: "Circuitul a fost actualizat cu succes.",
@@ -203,6 +249,112 @@ const EnhancedCircuitManager = () => {
       status: trip.status
     });
     setShowDialog(true);
+  };
+
+  const handleDuplicate = async (trip: Trip) => {
+    if (!confirm(`Ești sigur că vrei să duplici circuitul "${trip.nume}"?`)) return;
+
+    try {
+      // Create duplicate trip with draft status and no group
+      const { data: newTrip, error: tripError } = await supabase
+        .from('trips')
+        .insert([{
+          nume: `${trip.nume} (Copie)`,
+          destinatie: trip.destinatie,
+          tara: trip.tara,
+          descriere: trip.descriere,
+          start_date: trip.start_date,
+          end_date: trip.end_date,
+          status: 'draft',
+          group_id: null,
+          created_by_admin_id: user!.id,
+          budget_estimat: null,
+          cover_image_url: trip.cover_image_url || null,
+          metadata: null
+        }])
+        .select()
+        .single();
+
+      if (tripError) throw tripError;
+
+      // Duplicate itinerary days and activities
+      const { data: days, error: daysError } = await supabase
+        .from('itinerary_days')
+        .select('*')
+        .eq('trip_id', trip.id)
+        .order('day_number');
+
+      if (daysError) throw daysError;
+
+      if (days && days.length > 0) {
+        const newDays = await Promise.all(days.map(async (day) => {
+          const { data: newDay, error: dayError } = await supabase
+            .from('itinerary_days')
+            .insert([{
+              trip_id: newTrip.id,
+              day_number: day.day_number,
+              date: day.date,
+              title: day.title,
+              overview: day.overview
+            }])
+            .select()
+            .single();
+
+          if (dayError) throw dayError;
+
+          // Duplicate activities for this day
+          const { data: activities, error: activitiesError } = await supabase
+            .from('itinerary_activities')
+            .select('*')
+            .eq('day_id', day.id)
+            .order('display_order');
+
+          if (activitiesError) throw activitiesError;
+
+          if (activities && activities.length > 0) {
+            const newActivities = activities.map(activity => ({
+              day_id: newDay.id,
+              title: activity.title,
+              description: activity.description,
+              activity_type: activity.activity_type,
+              start_time: activity.start_time,
+              end_time: activity.end_time,
+              location_name: activity.location_name,
+              address: activity.address,
+              cost_estimate: activity.cost_estimate,
+              booking_reference: activity.booking_reference,
+              tips_and_notes: activity.tips_and_notes,
+              display_order: activity.display_order,
+              latitude: activity.latitude,
+              longitude: activity.longitude,
+              images: activity.images,
+              metadata: activity.metadata
+            }));
+
+            const { error: activitiesInsertError } = await supabase
+              .from('itinerary_activities')
+              .insert(newActivities);
+
+            if (activitiesInsertError) throw activitiesInsertError;
+          }
+
+          return newDay;
+        }));
+      }
+
+      toast({
+        title: "Succes",
+        description: "Circuitul a fost duplicat cu succes.",
+      });
+      fetchTrips();
+    } catch (error) {
+      console.error('Error duplicating trip:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut duplica circuitul.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = async (tripId: string) => {
@@ -301,6 +453,9 @@ const EnhancedCircuitManager = () => {
                   <Route className="w-5 h-5" />
                   {editingTrip ? 'Editează Circuitul' : 'Circuit Nou'}
                 </DialogTitle>
+                <DialogDescription>
+                  Completează informațiile pentru circuit.
+                </DialogDescription>
               </DialogHeader>
               
               <Tabs defaultValue="basic" className="w-full">
@@ -533,7 +688,7 @@ const EnhancedCircuitManager = () => {
                 )}
 
                 {profile?.role === 'admin' && (
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-2 flex-wrap">
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -549,6 +704,10 @@ const EnhancedCircuitManager = () => {
                     <Button size="sm" variant="outline" onClick={() => handleEdit(trip)} className="flex-1">
                       <Edit className="w-4 h-4 mr-1" />
                       Editează
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDuplicate(trip)} className="flex-1">
+                      <Plus className="w-4 h-4 mr-1" />
+                      Duplică
                     </Button>
                     <Button 
                       size="sm" 
@@ -583,14 +742,17 @@ const EnhancedCircuitManager = () => {
 
       {/* Itinerary Management Dialog */}
       <Dialog open={showItinerary} onOpenChange={setShowItinerary}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
-          <DialogHeader className="p-6 pb-0">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <Route className="w-5 h-5" />
               Gestionează Itinerariu - {selectedTrip?.nume}
             </DialogTitle>
+            <DialogDescription>
+              Vizualizează și gestionează itinerarul complet al circuitului.
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-auto p-6 pt-4">
+          <div className="flex-1 overflow-y-auto p-6">
             {selectedTrip && (
               <ItineraryManager
                 tripId={selectedTrip.id}

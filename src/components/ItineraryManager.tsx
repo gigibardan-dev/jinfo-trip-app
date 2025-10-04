@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -526,6 +526,9 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                               <DialogTitle>
                                 {editingActivity ? 'Editează Activitatea' : 'Activitate Nouă'}
                               </DialogTitle>
+                              <DialogDescription>
+                                Completează detaliile activității pentru această zi.
+                              </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSaveActivity} className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
