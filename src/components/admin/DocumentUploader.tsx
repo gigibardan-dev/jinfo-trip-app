@@ -217,18 +217,14 @@ const DocumentUploader = () => {
       
       setUploadProgress(60);
 
-      // Get public URL for the uploaded file
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath);
-
+      // Store only the file path (not public URL since bucket is private)
       setUploadProgress(80);
       
       const documentData = {
         nume: formData.nume,
         descriere: formData.descriere,
         file_type: formData.file.type,
-        file_url: urlData.publicUrl,
+        file_url: filePath, // Store just the path
         file_size: formData.file.size,
         document_category: formData.document_category,
         visibility_type: formData.visibility_type,
@@ -273,16 +269,11 @@ const DocumentUploader = () => {
     if (!confirm("Ești sigur că vrei să ștergi acest document?")) return;
 
     try {
-      // Extract file path from URL to delete from storage
-      const urlParts = fileUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const tripFolder = urlParts[urlParts.length - 2];
-      const filePath = `${tripFolder}/${fileName}`;
-
+      // fileUrl is already the file path in storage
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
-        .remove([filePath]);
+        .remove([fileUrl]);
 
       if (storageError) {
         console.warn('Error deleting from storage:', storageError);
@@ -315,24 +306,15 @@ const DocumentUploader = () => {
   const handleView = async (doc: Document) => {
     try {
       const fileType = doc.file_type.toLowerCase();
-      let viewUrl = doc.file_url;
       
-      // For secure viewing, get signed URL
-      if (!doc.file_url.includes('supabase')) {
-        // If it's a storage URL, get signed URL
-        const urlParts = doc.file_url.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        const tripFolder = urlParts[urlParts.length - 2];
-        const filePath = `${tripFolder}/${fileName}`;
+      // Get signed URL for secure viewing (file_url is the storage path)
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.file_url, 300); // 5 minutes for viewing
 
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(filePath, 300); // 5 minutes for viewing
-
-        if (!error && data) {
-          viewUrl = data.signedUrl;
-        }
-      }
+      if (error) throw error;
+      
+      const viewUrl = data.signedUrl;
       
       if (fileType.includes('image') || fileType.includes('pdf')) {
         window.open(viewUrl, '_blank');
@@ -358,15 +340,10 @@ const DocumentUploader = () => {
 
   const handleDownload = async (doc: Document) => {
     try {
-      // Get signed URL for secure download
-      const urlParts = doc.file_url.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const tripFolder = urlParts[urlParts.length - 2];
-      const filePath = `${tripFolder}/${fileName}`;
-
+      // Get signed URL for secure download (file_url is the storage path)
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, 60); // 60 seconds expiry
+        .createSignedUrl(doc.file_url, 60); // 60 seconds expiry
 
       if (error) throw error;
 
