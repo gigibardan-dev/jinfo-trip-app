@@ -161,10 +161,19 @@ const TouristDocuments = () => {
 
   const handleDownload = async (doc: TouristDocument) => {
     try {
-      // Get signed URL for secure download (file_url is the storage path)
+      // Extract path from URL if it's a full URL (old format)
+      let filePath = doc.file_url;
+      if (filePath.includes('supabase.co/storage')) {
+        const urlParts = filePath.split('/storage/v1/object/public/documents/');
+        if (urlParts.length > 1) {
+          filePath = decodeURIComponent(urlParts[1]);
+        }
+      }
+      
+      // Get signed URL for secure download
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(doc.file_url, 60); // 60 seconds expiry
+        .createSignedUrl(filePath, 60); // 60 seconds expiry
 
       if (error) throw error;
 
@@ -193,10 +202,19 @@ const TouristDocuments = () => {
     try {
       const fileType = doc.file_type.toLowerCase();
       
-      // Get signed URL for secure viewing (file_url is the storage path)
+      // Extract path from URL if it's a full URL (old format)
+      let filePath = doc.file_url;
+      if (filePath.includes('supabase.co/storage')) {
+        const urlParts = filePath.split('/storage/v1/object/public/documents/');
+        if (urlParts.length > 1) {
+          filePath = decodeURIComponent(urlParts[1]);
+        }
+      }
+      
+      // Get signed URL for secure viewing
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(doc.file_url, 300); // 5 minutes for viewing
+        .createSignedUrl(filePath, 300); // 5 minutes for viewing
 
       if (error) throw error;
       

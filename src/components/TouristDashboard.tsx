@@ -97,13 +97,13 @@ const TouristDashboard = () => {
 
         // 4. Setează informații despre grupuri și număr membrii
         if (activeTrip) {
-          const { data: membersCount, error: countError } = await supabase
+          const { count, error: countError } = await supabase
             .from('group_members')
-            .select('id', { count: 'exact' })
+            .select('*', { count: 'exact', head: true })
             .eq('group_id', activeTrip.group_id);
           
-          if (!countError) {
-            setGroupMemberCount(membersCount?.length || 0);
+          if (!countError && count !== null) {
+            setGroupMemberCount(count);
           }
 
           // 5. Fetch today's activities
