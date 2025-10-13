@@ -64,14 +64,18 @@ export const MessagingSystem = () => {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = profile?.role === 'admin';
+  const isGuide = profile?.role === 'guide';
+  const canInitiateChat = isAdmin || isGuide;
 
   useEffect(() => {
     if (user) {
       fetchConversations();
-      fetchTourists();
-      fetchGroups();
+      if (canInitiateChat) {
+        fetchTourists();
+        fetchGroups();
+      }
     }
-  }, [user]);
+  }, [user, canInitiateChat]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -125,33 +129,128 @@ export const MessagingSystem = () => {
   };
 
   const fetchTourists = async () => {
-    if (!isAdmin) return;
+    if (!canInitiateChat) return;
     
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, nume, prenume, email, is_active')
-        .eq('role', 'tourist')
-        .eq('is_active', true);
+      // If guide, only fetch tourists from assigned groups
+      if (isGuide && !isAdmin) {
+        const { data: assignments, error: assignError } = await supabase
+          .from('guide_assignments')
+          .select('trip_id')
+          .eq('guide_user_id', user?.id)
+          .eq('is_active', true);
 
-      if (error) throw error;
-      setTourists(data || []);
+        if (assignError) throw assignError;
+
+        if (!assignments || assignments.length === 0) {
+          setTourists([]);
+          return;
+        }
+
+        const tripIds = assignments.map(a => a.trip_id);
+        const { data: trips, error: tripsError } = await supabase
+          .from('trips')
+          .select('group_id')
+          .in('id', tripIds)
+          .not('group_id', 'is', null);
+
+        if (tripsError) throw tripsError;
+
+        if (!trips || trips.length === 0) {
+          setTourists([]);
+          return;
+        }
+
+        const groupIds = [...new Set(trips.map(t => t.group_id).filter(Boolean))];
+        const { data: members, error: membersError } = await supabase
+          .from('group_members')
+          .select('user_id')
+          .in('group_id', groupIds);
+
+        if (membersError) throw membersError;
+
+        if (!members || members.length === 0) {
+          setTourists([]);
+          return;
+        }
+
+        const userIds = [...new Set(members.map(m => m.user_id))];
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nume, prenume, email, is_active')
+          .in('id', userIds)
+          .eq('is_active', true);
+
+        if (error) throw error;
+        setTourists(data || []);
+      } else {
+        // Admin can see all tourists
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nume, prenume, email, is_active')
+          .eq('role', 'tourist')
+          .eq('is_active', true);
+
+        if (error) throw error;
+        setTourists(data || []);
+      }
     } catch (error) {
       console.error('Error fetching tourists:', error);
     }
   };
 
   const fetchGroups = async () => {
-    if (!isAdmin) return;
+    if (!canInitiateChat) return;
 
     try {
-      const { data, error } = await supabase
-        .from('tourist_groups')
-        .select('id, nume_grup, is_active')
-        .eq('is_active', true);
+      // If guide, only fetch groups from assigned trips
+      if (isGuide && !isAdmin) {
+        const { data: assignments, error: assignError } = await supabase
+          .from('guide_assignments')
+          .select('trip_id')
+          .eq('guide_user_id', user?.id)
+          .eq('is_active', true);
 
-      if (error) throw error;
-      setGroups(data || []);
+        if (assignError) throw assignError;
+
+        if (!assignments || assignments.length === 0) {
+          setGroups([]);
+          return;
+        }
+
+        const tripIds = assignments.map(a => a.trip_id);
+        const { data: trips, error: tripsError } = await supabase
+          .from('trips')
+          .select('group_id')
+          .in('id', tripIds)
+          .not('group_id', 'is', null);
+
+        if (tripsError) throw tripsError;
+
+        if (!trips || trips.length === 0) {
+          setGroups([]);
+          return;
+        }
+
+        const groupIds = [...new Set(trips.map(t => t.group_id).filter(Boolean))];
+        const { data, error } = await supabase
+          .from('tourist_groups')
+          .select('id, nume_grup, is_active')
+          .in('id', groupIds)
+          .eq('is_active', true);
+
+        if (error) throw error;
+        setGroups(data || []);
+      } else {
+        // Admin can see all groups
+        const { data, error } = await supabase
+          .from('tourist_groups')
+          .select('id, nume_grup, is_active')
+          .eq('is_active', true);
+
+        if (error) throw error;
+        setGroups(data || []);
+      }
     } catch (error) {
       console.error('Error fetching groups:', error);
     }
@@ -277,7 +376,7 @@ export const MessagingSystem = () => {
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Mesaje</h3>
-            {isAdmin && (
+            {canInitiateChat && (
               <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
