@@ -89,9 +89,26 @@ const ItineraryPage = () => {
 
   const fetchUserTrips = async () => {
     try {
+      // Get user's groups first
+      const { data: memberGroups, error: groupsError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user!.id);
+
+      if (groupsError) throw groupsError;
+
+      if (!memberGroups || memberGroups.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const groupIds = memberGroups.map(g => g.group_id);
+
+      // Get trips for user's groups only
       const { data, error } = await supabase
         .from("trips")
         .select("id, nume, destinatie, start_date, end_date")
+        .in("group_id", groupIds)
         .eq("status", "active")
         .order("start_date", { ascending: true });
 
@@ -239,7 +256,7 @@ const ItineraryPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+      <Navigation userRole="tourist" />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Itinerariul Meu</h1>
