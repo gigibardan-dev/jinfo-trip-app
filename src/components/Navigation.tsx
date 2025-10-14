@@ -28,6 +28,8 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
     { id: "guide-dashboard", label: "Dashboard", icon: MapPin },
     { id: "guide-itinerary", label: "Itinerariu", icon: Plane },
     { id: "guide-reports", label: "Rapoarte", icon: FileText },
+    { id: "guide-documents", label: "Documente", icon: FileText },
+    { id: "guide-messages", label: "Mesaje", icon: MessageSquare },
   ];
 
   const touristNavItems = [
