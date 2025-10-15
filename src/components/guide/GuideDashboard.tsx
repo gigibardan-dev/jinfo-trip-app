@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/shared/StatsCard";
+import { useNavigate } from "react-router-dom";
 
 interface Trip {
   id: string;
@@ -29,6 +30,7 @@ interface Assignment {
 
 const GuideDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [todayReports, setTodayReports] = useState<any[]>([]);
@@ -255,10 +257,10 @@ const GuideDashboard = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button size="sm" className="flex-1">
+                        <Button size="sm" className="flex-1" onClick={() => navigate('/guide-itinerary')}>
                           Gestionează Itinerariu
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate('/guide-reports')}>
                           {hasReport ? "Editează Raport" : "Completează Raport"}
                         </Button>
                       </div>
@@ -307,7 +309,7 @@ const GuideDashboard = () => {
                         <span>Sfârșit: {formatDate(trip.end_date)}</span>
                       </div>
 
-                      <Button size="sm" className="w-full">
+                      <Button size="sm" className="w-full" onClick={() => navigate('/guide-itinerary')}>
                         Vezi Detalii
                       </Button>
                     </CardContent>
@@ -355,7 +357,7 @@ const GuideDashboard = () => {
                         <span>Sfârșit: {formatDate(trip.end_date)}</span>
                       </div>
 
-                      <Button size="sm" variant="outline" className="w-full">
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => navigate('/guide-reports')}>
                         Vezi Rapoarte
                       </Button>
                     </CardContent>

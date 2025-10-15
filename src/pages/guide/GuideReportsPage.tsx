@@ -57,20 +57,34 @@ const GuideReportsPage = () => {
 
   const fetchAssignedTrips = async () => {
     try {
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from("guide_assignments")
-        .select("trip_id, trips(id, nume, destinatie, start_date, end_date)")
-        .eq("guide_user_id", user!.id)
-        .eq("is_active", true);
+      // First fetch assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('guide_assignments')
+        .select('*')
+        .eq('guide_user_id', user!.id)
+        .eq('is_active', true);
 
       if (assignmentsError) throw assignmentsError;
 
-      const tripsData = assignments
-        ?.map((a: any) => a.trips)
-        .filter((t: any) => t !== null) || [];
+      if (!assignmentsData || assignmentsData.length === 0) {
+        setTrips([]);
+        setLoading(false);
+        return;
+      }
 
-      setTrips(tripsData);
-      if (tripsData.length > 0) {
+      // Get unique trip IDs
+      const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
+
+      // Fetch trip details
+      const { data: tripsData, error: tripsError } = await supabase
+        .from('trips')
+        .select('id, nume, destinatie, start_date, end_date')
+        .in('id', tripIds);
+
+      if (tripsError) throw tripsError;
+
+      setTrips(tripsData || []);
+      if (tripsData && tripsData.length > 0) {
         setSelectedTripId(tripsData[0].id);
       }
     } catch (error) {
