@@ -744,6 +744,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_conversation_participant: {
+        Args: { conversation_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
       is_guide: {
         Args: Record<PropertyKey, never>
         Returns: boolean
