@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, MapPin, Plus, Edit, Save, X, AlertTriangle } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Plus, 
+  Edit, 
+  Save, 
+  X, 
+  AlertTriangle,
+  Coffee,
+  Plane,
+  Hotel,
+  Camera,
+  Car,
+  GripVertical,
+  Utensils
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 interface Trip {
   id: string;
@@ -47,13 +64,24 @@ interface GuideItineraryManagerProps {
   tripId: string;
 }
 
+const activityTemplates = [
+  { title: "Mic dejun", type: "meal", icon: Coffee, time: "08:00" },
+  { title: "Check-in hotel", type: "accommodation", icon: Hotel, time: "15:00" },
+  { title: "Transfer aeroport", type: "transport", icon: Plane, time: "" },
+  { title: "Prânz", type: "meal", icon: Utensils, time: "13:00" },
+  { title: "Transport local", type: "transport", icon: Car, time: "" },
+  { title: "Vizită obiectiv", type: "attraction", icon: Camera, time: "" },
+  { title: "Timp liber la dispoziție", type: "free_time", icon: Clock, time: "" },
+  { title: "Excursie opțională", type: "attraction", icon: Camera, time: "" },
+];
+
 const activityTypes = [
-  { value: "meal", label: "Masă", color: "bg-orange-500" },
-  { value: "transport", label: "Transport", color: "bg-blue-500" },
-  { value: "attraction", label: "Atracție", color: "bg-green-500" },
-  { value: "accommodation", label: "Cazare", color: "bg-purple-500" },
-  { value: "free_time", label: "Timp liber", color: "bg-yellow-500" },
-  { value: "custom", label: "Personalizat", color: "bg-gray-500" },
+  { value: "meal", label: "Masă", color: "bg-orange-500", icon: Utensils },
+  { value: "transport", label: "Transport", color: "bg-blue-500", icon: Car },
+  { value: "attraction", label: "Atracție", color: "bg-green-500", icon: Camera },
+  { value: "accommodation", label: "Cazare", color: "bg-purple-500", icon: Hotel },
+  { value: "free_time", label: "Timp liber", color: "bg-yellow-500", icon: Clock },
+  { value: "custom", label: "Personalizat", color: "bg-gray-500", icon: Plus },
 ];
 
 const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId }) => {
@@ -259,6 +287,91 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
     }
   };
 
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination || !selectedDay) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    const dayData = days.find(day => day.id === selectedDay);
+    if (!dayData || !canEditDay(dayData.date)) {
+      toast({
+        title: "Eroare",
+        description: "Nu poți reordona activități din trecut.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dayActivities = activities[selectedDay] || [];
+    const newActivities = Array.from(dayActivities);
+    const [reorderedItem] = newActivities.splice(sourceIndex, 1);
+    newActivities.splice(destinationIndex, 0, reorderedItem);
+
+    const updates = newActivities.map((activity, index) => ({
+      id: activity.id,
+      display_order: index + 1
+    }));
+
+    try {
+      // Optimistic update
+      setActivities(prev => ({
+        ...prev,
+        [selectedDay]: newActivities.map((activity, index) => ({ 
+          ...activity, 
+          display_order: index + 1 
+        }))
+      }));
+
+      // Update database
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('itinerary_activities')
+          .update({ display_order: update.display_order })
+          .eq('id', update.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Succes",
+        description: "Ordinea activităților a fost actualizată.",
+      });
+    } catch (error) {
+      console.error('Error reordering activities:', error);
+      fetchTripAndItinerary();
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut actualiza ordinea activităților.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addTemplateActivity = (template: typeof activityTemplates[0]) => {
+    const dayData = days.find(day => day.id === selectedDay);
+    if (!dayData || !canEditDay(dayData.date)) {
+      toast({
+        title: "Eroare",
+        description: "Nu poți adăuga activități în trecut.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setNewActivity({
+      title: template.title,
+      description: "",
+      start_time: template.time,
+      end_time: "",
+      location_name: "",
+      activity_type: template.type,
+    });
+    setIsAddDialogOpen(true);
+  };
+
   const getActivityTypeInfo = (type: string) => {
     return activityTypes.find(t => t.value === type) || activityTypes.find(t => t.value === "custom")!;
   };
@@ -349,28 +462,29 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
 
                 return (
                   <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-2xl font-bold">
-                          {day?.title} - Ziua {day?.day_number}
-                        </h2>
-                        <p className="text-muted-foreground">
-                          {day && new Date(day.date).toLocaleDateString('ro-RO', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                      {isEditable && (
-                        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Adaugă Activitate
-                            </Button>
-                          </DialogTrigger>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-2xl font-bold">
+                            {day?.title} - Ziua {day?.day_number}
+                          </h2>
+                          <p className="text-muted-foreground">
+                            {day && new Date(day.date).toLocaleDateString('ro-RO', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        {isEditable && (
+                          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adaugă Activitate
+                              </Button>
+                            </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Adaugă Activitate Nouă</DialogTitle>
@@ -465,6 +579,34 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                       )}
                     </div>
 
+                    {/* Template-uri rapide */}
+                    {isEditable && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Template-uri Rapide</CardTitle>
+                          <CardDescription>Adaugă rapid activități comune</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {activityTemplates.map((template, idx) => {
+                              const Icon = template.icon;
+                              return (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  className="h-auto p-3 flex-col items-center gap-2"
+                                  onClick={() => addTemplateActivity(template)}
+                                >
+                                  <Icon className="h-5 w-5" />
+                                  <span className="text-xs text-center">{template.title}</span>
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {!isEditable && (
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
@@ -474,26 +616,51 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                       </Alert>
                     )}
 
-                    <div className="space-y-3">
-                      {dayActivities.length === 0 ? (
-                        <Card>
-                          <CardContent className="flex flex-col items-center justify-center py-12">
-                            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Nicio activitate programată</h3>
-                            <p className="text-muted-foreground text-center">
-                              {isEditable ? "Adaugă prima activitate pentru această zi." : "Nu sunt activități programate pentru această zi."}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        dayActivities.map((activity) => {
-                          const typeInfo = getActivityTypeInfo(activity.activity_type);
-                          const isEditing = editingActivity?.id === activity.id;
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable droppableId="activities">
+                        {(provided) => (
+                          <div 
+                            {...provided.droppableProps} 
+                            ref={provided.innerRef}
+                            className="space-y-3"
+                          >
+                            {dayActivities.length === 0 ? (
+                              <Card>
+                                <CardContent className="flex flex-col items-center justify-center py-12">
+                                  <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                                  <h3 className="text-lg font-semibold mb-2">Nicio activitate programată</h3>
+                                  <p className="text-muted-foreground text-center">
+                                    {isEditable ? "Adaugă prima activitate pentru această zi." : "Nu sunt activități programate pentru această zi."}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            ) : (
+                              dayActivities.map((activity, index) => {
+                                const typeInfo = getActivityTypeInfo(activity.activity_type);
+                                const isEditing = editingActivity?.id === activity.id;
 
-                          return (
-                            <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                              <CardContent className="p-4">
-                                {isEditing ? (
+                                return (
+                                  <Draggable
+                                    key={activity.id}
+                                    draggableId={activity.id}
+                                    index={index}
+                                    isDragDisabled={!isEditable}
+                                  >
+                                    {(provided) => (
+                                      <Card
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className="hover:shadow-md transition-shadow"
+                                      >
+                                        <CardContent className="p-4">
+                                          <div className="flex items-center gap-3">
+                                            {isEditable && (
+                                              <div {...provided.dragHandleProps}>
+                                                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                                              </div>
+                                            )}
+                                            <div className="flex-1">
+                                              {isEditing ? (
                                   <div className="space-y-4">
                                     <div>
                                       <Label>Titlu</Label>
@@ -608,23 +775,30 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                                       )}
                                     </div>
                                     
-                                    {isEditable && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setEditingActivity(activity)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })
+                                              {isEditable && (
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => setEditingActivity(activity)}
+                                                >
+                                                  <Edit className="h-4 w-4" />
+                                                </Button>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
+                                </Draggable>
+                              );
+                            })
+                          )}
+                          {provided.placeholder}
+                        </div>
                       )}
-                    </div>
+                    </Droppable>
+                  </DragDropContext>
                   </>
                 );
               })()}
