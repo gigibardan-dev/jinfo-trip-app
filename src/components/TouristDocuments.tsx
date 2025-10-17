@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineDocument } from "@/hooks/useOfflineDocument";
 
 interface TouristDocument {
   id: string;
@@ -448,6 +449,22 @@ const DocumentCard = ({
   onDownload: (doc: TouristDocument) => void; 
   onView: (doc: TouristDocument) => void; 
 }) => {
+  const {
+    isOffline,
+    isDownloading,
+    downloadOffline,
+    removeOffline,
+    viewDocument,
+    downloadDocument,
+  } = useOfflineDocument(
+    document.id,
+    document.nume,
+    document.file_type,
+    document.file_size,
+    document.file_url,
+    document.upload_date
+  );
+
   const formatFileSizeCard = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -497,7 +514,13 @@ const DocumentCard = ({
 
               {document.is_offline_priority && (
                 <Badge variant="default" className="text-xs">
-                  Offline
+                  Prioritate Offline
+                </Badge>
+              )}
+
+              {isOffline && (
+                <Badge variant="default" className="text-xs bg-success/20 text-success border-success/30">
+                  ✅ Disponibil Offline
                 </Badge>
               )}
             </div>
@@ -536,24 +559,54 @@ const DocumentCard = ({
           )}
         </div>
 
-        <div className="flex gap-2 pt-2">
-          <Button 
-            size="sm" 
-            onClick={() => onDownload(document)}
-            className="flex-1"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            Descarcă
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="px-3"
-            onClick={() => onView(document)}
-            title="Vizualizează document"
-          >
-            <Eye className="w-3 h-3" />
-          </Button>
+        <div className="flex flex-col gap-2 pt-2">
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              onClick={downloadDocument}
+              className="flex-1"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Descarcă
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="px-3"
+              onClick={viewDocument}
+              title="Vizualizează document"
+            >
+              <Eye className="w-3 h-3" />
+            </Button>
+          </div>
+
+          {!isOffline ? (
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={downloadOffline}
+              disabled={isDownloading}
+              className="w-full"
+            >
+              {isDownloading ? (
+                <>Descărcare...</>
+              ) : (
+                <>
+                  <Download className="w-3 h-3 mr-1" />
+                  Descarcă Offline
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={removeOffline}
+              className="w-full text-muted-foreground hover:text-destructive"
+            >
+              Șterge din Offline
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
