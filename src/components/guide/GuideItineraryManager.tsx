@@ -485,7 +485,7 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                                 Adaugă Activitate
                               </Button>
                             </DialogTrigger>
-                          <DialogContent>
+                            <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Adaugă Activitate Nouă</DialogTitle>
                               <DialogDescription>
@@ -574,10 +574,10 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                                 </Button>
                               </div>
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
 
                     {/* Template-uri rapide */}
                     {isEditable && (
@@ -661,144 +661,146 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                                             )}
                                             <div className="flex-1">
                                               {isEditing ? (
-                                  <div className="space-y-4">
-                                    <div>
-                                      <Label>Titlu</Label>
-                                      <Input
-                                        value={editingActivity.title}
-                                        onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Tip</Label>
-                                      <Select
-                                        value={editingActivity.activity_type}
-                                        onValueChange={(value) => setEditingActivity(prev => prev ? ({ ...prev, activity_type: value }) : null)}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {activityTypes.map(type => (
-                                            <SelectItem key={type.value} value={type.value}>
-                                              <div className="flex items-center gap-2">
-                                                <div className={`w-3 h-3 rounded-full ${type.color}`} />
-                                                {type.label}
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <Label>Ora început</Label>
-                                        <Input
-                                          type="time"
-                                          value={editingActivity.start_time || ""}
-                                          onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, start_time: e.target.value }) : null)}
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>Ora sfârșit</Label>
-                                        <Input
-                                          type="time"
-                                          value={editingActivity.end_time || ""}
-                                          onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, end_time: e.target.value }) : null)}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <Label>Locație</Label>
-                                      <Input
-                                        value={editingActivity.location_name || ""}
-                                        onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, location_name: e.target.value }) : null)}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Descriere</Label>
-                                      <Textarea
-                                        value={editingActivity.description || ""}
-                                        onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, description: e.target.value }) : null)}
-                                        rows={3}
-                                      />
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleUpdateActivity(editingActivity)}
-                                      >
-                                        <Save className="h-4 w-4 mr-1" />
-                                        Salvează
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setEditingActivity(null)}
-                                      >
-                                        <X className="h-4 w-4 mr-1" />
-                                        Anulează
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1 space-y-2">
-                                      <div className="flex items-center gap-3">
-                                        <div className={`w-4 h-4 rounded-full ${typeInfo.color}`} />
-                                        <div className="font-semibold text-lg">{activity.title}</div>
-                                        <Badge variant="outline">{typeInfo.label}</Badge>
-                                      </div>
-                                      
-                                      {(activity.start_time || activity.end_time) && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          <Clock className="h-4 w-4" />
-                                          <span>
-                                            {activity.start_time && formatTime(activity.start_time)}
-                                            {activity.start_time && activity.end_time && " - "}
-                                            {activity.end_time && formatTime(activity.end_time)}
-                                          </span>
-                                        </div>
-                                      )}
-                                      
-                                      {activity.location_name && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          <MapPin className="h-4 w-4" />
-                                          <span>{activity.location_name}</span>
-                                        </div>
-                                      )}
-                                      
-                                      {activity.description && (
-                                        <p className="text-sm text-muted-foreground mt-2">
-                                          {activity.description}
-                                        </p>
-                                      )}
-                                    </div>
-                                    
-                                              {isEditable && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => setEditingActivity(activity)}
-                                                >
-                                                  <Edit className="h-4 w-4" />
-                                                </Button>
+                                                <div className="space-y-4">
+                                                  <div>
+                                                    <Label>Titlu</Label>
+                                                    <Input
+                                                      value={editingActivity.title}
+                                                      onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <Label>Tip</Label>
+                                                    <Select
+                                                      value={editingActivity.activity_type}
+                                                      onValueChange={(value) => setEditingActivity(prev => prev ? ({ ...prev, activity_type: value }) : null)}
+                                                    >
+                                                      <SelectTrigger>
+                                                        <SelectValue />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {activityTypes.map(type => (
+                                                          <SelectItem key={type.value} value={type.value}>
+                                                            <div className="flex items-center gap-2">
+                                                              <div className={`w-3 h-3 rounded-full ${type.color}`} />
+                                                              {type.label}
+                                                            </div>
+                                                          </SelectItem>
+                                                        ))}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </div>
+                                                  <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                      <Label>Ora început</Label>
+                                                      <Input
+                                                        type="time"
+                                                        value={editingActivity.start_time || ""}
+                                                        onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, start_time: e.target.value }) : null)}
+                                                      />
+                                                    </div>
+                                                    <div>
+                                                      <Label>Ora sfârșit</Label>
+                                                      <Input
+                                                        type="time"
+                                                        value={editingActivity.end_time || ""}
+                                                        onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, end_time: e.target.value }) : null)}
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                  <div>
+                                                    <Label>Locație</Label>
+                                                    <Input
+                                                      value={editingActivity.location_name || ""}
+                                                      onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, location_name: e.target.value }) : null)}
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <Label>Descriere</Label>
+                                                    <Textarea
+                                                      value={editingActivity.description || ""}
+                                                      onChange={(e) => setEditingActivity(prev => prev ? ({ ...prev, description: e.target.value }) : null)}
+                                                      rows={3}
+                                                    />
+                                                  </div>
+                                                  <div className="flex gap-2">
+                                                    <Button
+                                                      size="sm"
+                                                      onClick={() => handleUpdateActivity(editingActivity)}
+                                                    >
+                                                      <Save className="h-4 w-4 mr-1" />
+                                                      Salvează
+                                                    </Button>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => setEditingActivity(null)}
+                                                    >
+                                                      <X className="h-4 w-4 mr-1" />
+                                                      Anulează
+                                                    </Button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="flex items-start justify-between">
+                                                  <div className="flex-1 space-y-2">
+                                                    <div className="flex items-center gap-3">
+                                                      <div className={`w-4 h-4 rounded-full ${typeInfo.color}`} />
+                                                      <div className="font-semibold text-lg">{activity.title}</div>
+                                                      <Badge variant="outline">{typeInfo.label}</Badge>
+                                                    </div>
+                                                    
+                                                    {(activity.start_time || activity.end_time) && (
+                                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Clock className="h-4 w-4" />
+                                                        <span>
+                                                          {activity.start_time && formatTime(activity.start_time)}
+                                                          {activity.start_time && activity.end_time && " - "}
+                                                          {activity.end_time && formatTime(activity.end_time)}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {activity.location_name && (
+                                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <MapPin className="h-4 w-4" />
+                                                        <span>{activity.location_name}</span>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {activity.description && (
+                                                      <p className="text-sm text-muted-foreground mt-2">
+                                                        {activity.description}
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {isEditable && (
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => setEditingActivity(activity)}
+                                                    >
+                                                      <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                  )}
+                                                </div>
                                               )}
                                             </div>
-                                          )}
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  )}
-                                </Draggable>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    )}
+                                  </Draggable>
                               );
                             })
                           )}
                           {provided.placeholder}
                         </div>
                       )}
-                    </Droppable>
-                  </DragDropContext>
+                      </Droppable>
+                    </DragDropContext>
+                    </div>
                   </>
                 );
               })()}
