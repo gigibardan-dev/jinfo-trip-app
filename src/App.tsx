@@ -1,4 +1,4 @@
-// Toaster components removed - folosim doar toast functions direct
+import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -58,6 +58,7 @@ const App = () => {
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
+      <Toaster />
     </QueryClientProvider>
   );
 };
