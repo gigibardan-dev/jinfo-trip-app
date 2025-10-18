@@ -1,11 +1,22 @@
 const CACHE_NAME = 'travelpro-v1';
 const RUNTIME_CACHE = 'travelpro-runtime-v1';
 
-// App Shell - Core files to precache
+// App Shell - Core files and main routes to precache
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/documents',
+  '/itinerary',
+  '/messages',
+  '/trips',
+  '/guides',
+  '/settings',
+  '/guide-dashboard',
+  '/guide-itinerary',
+  '/guide-reports',
+  '/guide-documents',
+  '/guide-messages'
 ];
 
 // Install event - precache app shell

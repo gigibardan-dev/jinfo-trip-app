@@ -143,13 +143,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: "Eroare la delogare",
+          description: error.message || "Nu s-a putut ieși din cont.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Clear local state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      toast({
+        title: "Delogare reușită",
+        description: "La revedere!",
+      });
+      
+      // Redirect to homepage after successful logout
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Unexpected logout error:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut ieși din cont.",
+        description: "A apărut o eroare neașteptată.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

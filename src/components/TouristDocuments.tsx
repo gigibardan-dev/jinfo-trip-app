@@ -560,26 +560,40 @@ const DocumentCard = ({
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
-          <div className="flex gap-2">
+          {/* Vizualizare Online/Offline */}
+          {isOffline ? (
             <Button 
               size="sm" 
-              onClick={downloadDocument}
-              className="flex-1"
-            >
-              <Download className="w-3 h-3 mr-1" />
-              Descarcă
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="px-3"
+              variant="default"
               onClick={viewDocument}
-              title="Vizualizează document"
+              className="w-full bg-success hover:bg-success/90"
             >
-              <Eye className="w-3 h-3" />
+              <Eye className="w-3 h-3 mr-1" />
+              Vizualizează Offline
             </Button>
-          </div>
+          ) : (
+            <Button 
+              size="sm" 
+              onClick={viewDocument}
+              className="w-full"
+            >
+              <Eye className="w-3 h-3 mr-1" />
+              Vizualizează Online
+            </Button>
+          )}
 
+          {/* Descarcă */}
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={downloadDocument}
+            className="w-full"
+          >
+            <Download className="w-3 h-3 mr-1" />
+            Descarcă
+          </Button>
+
+          {/* Offline Controls */}
           {!isOffline ? (
             <Button 
               size="sm" 
@@ -589,11 +603,11 @@ const DocumentCard = ({
               className="w-full"
             >
               {isDownloading ? (
-                <>Descărcare...</>
+                <>Se salvează...</>
               ) : (
                 <>
                   <Download className="w-3 h-3 mr-1" />
-                  Descarcă Offline
+                  Salvează Offline
                 </>
               )}
             </Button>
