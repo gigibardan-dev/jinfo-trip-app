@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       'sonner',
     ],
+    // Force rebundle to fix React instance issues
+    force: true,
   },
   resolve: {
     alias: {
