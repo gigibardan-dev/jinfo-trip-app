@@ -56,10 +56,10 @@ const App = () => {
               </div>
               <Footer />
             </div>
-            {/* Toasters plasate la sfârșit, după ce React și toți providerii sunt inițializați */}
-            <Toaster />
-            <Sonner />
           </BrowserRouter>
+          {/* Toasters înăuntrul ThemeProvider, la sfârșitul arborelui */}
+          <Toaster />
+          <Sonner />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
