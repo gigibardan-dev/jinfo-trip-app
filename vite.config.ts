@@ -18,14 +18,5 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ['react', 'react-dom'],
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        // Ensure service worker is copied to dist
-        manualChunks: undefined,
-      },
-    },
   },
 }));
