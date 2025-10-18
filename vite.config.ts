@@ -18,8 +18,17 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    // Dedupe React to prevent multiple instances
-    dedupe: ['react', 'react-dom'],
+    // Dedupe React and Radix UI to prevent multiple instances
+    dedupe: [
+      'react', 
+      'react-dom',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-slot'
+    ],
   },
   build: {
     rollupOptions: {
