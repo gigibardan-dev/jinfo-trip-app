@@ -1,12 +1,10 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { registerServiceWorker, checkOnlineStatus } from './registerServiceWorker'
 
-// Register service worker for PWA offline support
-registerServiceWorker();
-
-// Monitor online/offline status
-checkOnlineStatus();
+// Service worker registration temporarily disabled for debugging
+// import { registerServiceWorker, checkOnlineStatus } from './registerServiceWorker'
+// registerServiceWorker();
+// checkOnlineStatus();
 
 createRoot(document.getElementById("root")!).render(<App />);
