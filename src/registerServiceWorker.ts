@@ -87,24 +87,17 @@ export function isStandalone(): boolean {
  * Check online/offline status
  */
 export function checkOnlineStatus(): void {
-  // Initial status log
-  console.log(`[SW] Initial network status: ${navigator.onLine ? 'online' : 'offline'}`);
-
   window.addEventListener('online', () => {
-    console.log('[SW] Back online - IndexedDB sync will be triggered');
-    // The useNetworkSync hook will handle the actual sync
-    
-    // Optional: Trigger background sync if supported
+    console.log('[SW] Back online');
+    // Optional: Trigger background sync
     if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
       navigator.serviceWorker.ready.then(registration => {
-        (registration as any).sync.register('sync-offline-data').catch((err: Error) => {
-          console.log('[SW] Background sync registration failed:', err);
-        });
+        (registration as any).sync.register('sync-offline-data');
       });
     }
   });
 
   window.addEventListener('offline', () => {
-    console.log('[SW] Gone offline - cached documents still accessible via IndexedDB');
+    console.log('[SW] Gone offline');
   });
 }
