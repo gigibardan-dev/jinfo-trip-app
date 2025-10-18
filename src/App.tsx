@@ -30,10 +30,8 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <BrowserRouter>
+            <div className="min-h-screen flex flex-col">
               <div className="flex-1">
                 <Routes>
                   <Route path="/" element={<Index />} />
@@ -57,8 +55,11 @@ const App = () => {
                 </Routes>
               </div>
               <Footer />
-            </BrowserRouter>
-          </div>
+            </div>
+            {/* Toasters plasate la sfârșit, după ce React și toți providerii sunt inițializați */}
+            <Toaster />
+            <Sonner />
+          </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
