@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/sonner";
+// Removed Toaster - sonner toast works without explicit component
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -56,7 +56,6 @@ const App = () => (
             <Footer />
           </div>
         </BrowserRouter>
-        <Toaster />
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
