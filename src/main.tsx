@@ -1,7 +1,8 @@
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import { registerServiceWorker, checkOnlineStatus } from './registerServiceWorker'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+import { registerServiceWorker, checkOnlineStatus } from './registerServiceWorker';
 
 // Register service worker for PWA offline support
 registerServiceWorker();
@@ -9,4 +10,8 @@ registerServiceWorker();
 // Monitor online/offline status
 checkOnlineStatus();
 
-createRoot(document.getElementById("root")!).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
