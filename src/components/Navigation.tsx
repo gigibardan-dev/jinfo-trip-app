@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Plane, Users, FileText, MessageSquare, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist" | "guide";
@@ -96,7 +95,6 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-3">
-            <InstallPWAButton />
             <Badge variant="secondary" className="bg-accent text-accent-foreground">
               {profile?.nume ? `${profile.nume} ${profile.prenume}` : (userRole === "admin" ? "Administrator" : "Turist")}
             </Badge>

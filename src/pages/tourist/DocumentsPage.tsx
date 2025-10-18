@@ -3,7 +3,6 @@ import TouristDocuments from "@/components/TouristDocuments";
 import { useNetworkSync } from "@/hooks/useNetworkSync";
 import { Badge } from "@/components/ui/badge";
 import { WifiOff, Wifi } from "lucide-react";
-import { OfflineSavedDocuments } from "@/components/offline/OfflineSavedDocuments";
 
 const DocumentsPage = () => {
   const { isOnline, isSyncing } = useNetworkSync();
@@ -30,11 +29,6 @@ const DocumentsPage = () => {
             </Badge>
           )}
         </div>
-        
-        <div className="mb-6">
-          <OfflineSavedDocuments />
-        </div>
-        
         <TouristDocuments />
       </div>
     </div>

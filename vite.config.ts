@@ -14,32 +14,10 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react/jsx-runtime',
-      '@tanstack/react-query',
-      'next-themes',
-      'react-router-dom',
-      'sonner',
-    ],
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    // Dedupe React and Radix UI to prevent multiple instances
-    dedupe: [
-      'react', 
-      'react-dom',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-select',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-slot'
-    ],
   },
   build: {
     rollupOptions: {
