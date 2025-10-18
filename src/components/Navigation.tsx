@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Plane, Users, FileText, MessageSquare, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist" | "guide";
@@ -58,7 +59,10 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => handleNavigation("dashboard")}
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
               <Plane className="w-6 h-6 text-accent-foreground" />
             </div>
@@ -68,7 +72,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                 {userRole === "admin" ? "Admin Panel" : "Your Journey"}
               </p>
             </div>
-          </div>
+          </button>
 
           {/* Navigation Items */}
           <div className="hidden md:flex items-center space-x-1">
@@ -92,6 +96,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-3">
+            <InstallPWAButton />
             <Badge variant="secondary" className="bg-accent text-accent-foreground">
               {profile?.nume ? `${profile.nume} ${profile.prenume}` : (userRole === "admin" ? "Administrator" : "Turist")}
             </Badge>
