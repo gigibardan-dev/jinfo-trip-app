@@ -56,9 +56,9 @@ const App = () => {
               <Footer />
             </div>
           </BrowserRouter>
+          <Toaster />
         </AuthProvider>
       </ThemeProvider>
-      <Toaster />
     </QueryClientProvider>
   );
 };
