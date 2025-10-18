@@ -1,5 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+// Toaster components removed - folosim doar toast functions direct
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -57,9 +56,6 @@ const App = () => {
               <Footer />
             </div>
           </BrowserRouter>
-          {/* Toasters înăuntrul ThemeProvider, la sfârșitul arborelui */}
-          <Toaster />
-          <Sonner />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
