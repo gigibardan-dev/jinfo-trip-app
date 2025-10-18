@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plane, Mail, Lock, User, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const Auth = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
@@ -25,7 +25,6 @@ const Auth = () => {
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,20 +42,12 @@ const Auth = () => {
     e.preventDefault();
     
     if (signupData.password !== signupData.confirmPassword) {
-      toast({
-        title: "Eroare",
-        description: "Parolele nu coincid.",
-        variant: "destructive",
-      });
+      toast.error("Parolele nu coincid.");
       return;
     }
 
     if (signupData.password.length < 6) {
-      toast({
-        title: "Eroare",
-        description: "Parola trebuie să aibă cel puțin 6 caractere.",
-        variant: "destructive",
-      });
+      toast.error("Parola trebuie să aibă cel puțin 6 caractere.");
       return;
     }
 
