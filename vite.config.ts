@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Dedupe React to prevent multiple instances
+    dedupe: ['react', 'react-dom'],
   },
   build: {
     rollupOptions: {
