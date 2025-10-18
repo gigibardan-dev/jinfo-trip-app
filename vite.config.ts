@@ -24,17 +24,19 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       'sonner',
     ],
-    // Force rebundle to fix React instance issues
     force: true,
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force single React instance
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
-    // Dedupe React and Radix UI to prevent multiple instances
     dedupe: [
       'react', 
       'react-dom',
+      'react/jsx-runtime',
       '@radix-ui/react-tabs',
       '@radix-ui/react-select',
       '@radix-ui/react-dialog',
@@ -46,7 +48,6 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // Ensure service worker is copied to dist
         manualChunks: undefined,
       },
     },
