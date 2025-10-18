@@ -1,7 +1,7 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -16,11 +16,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   // Fetch user profile
   const fetchProfile = async (userId: string) => {
@@ -90,9 +91,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        toast.error(error.message || "Eroare la autentificare");
+        toast({
+          title: "Eroare la autentificare",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
-        toast.success("Autentificare reușită - Bun venit înapoi!");
+        toast({
+          title: "Autentificare reușită",
+          description: "Bun venit înapoi!",
+        });
       }
 
       return { error };
@@ -116,9 +124,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        toast.error(error.message || "Eroare la înregistrare");
+        toast({
+          title: "Eroare la înregistrare",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
-        toast.success("Înregistrare reușită - Verifică emailul pentru confirmarea contului.");
+        toast({
+          title: "Înregistrare reușită",
+          description: "Verifică emailul pentru confirmarea contului.",
+        });
       }
 
       return { error };
@@ -134,7 +149,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error('Logout error:', error);
-        toast.error(error.message || "Nu s-a putut ieși din cont.");
+        toast({
+          title: "Eroare la delogare",
+          description: error.message || "Nu s-a putut ieși din cont.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -143,13 +162,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(null);
       setProfile(null);
       
-      toast.success("Delogare reușită - La revedere!");
+      toast({
+        title: "Delogare reușită",
+        description: "La revedere!",
+      });
       
       // Redirect to homepage after successful logout
       window.location.href = '/';
     } catch (error) {
       console.error('Unexpected logout error:', error);
-      toast.error("A apărut o eroare neașteptată.");
+      toast({
+        title: "Eroare",
+        description: "A apărut o eroare neașteptată.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -164,10 +190,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq('id', user.id);
 
     if (error) {
-      toast.error("Nu s-a putut actualiza profilul.");
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut actualiza profilul.",
+        variant: "destructive",
+      });
     } else {
       setProfile({ ...profile, ...data });
-      toast.success("Profilul a fost actualizat.");
+      toast({
+        title: "Succes",
+        description: "Profilul a fost actualizat.",
+      });
     }
 
     return { error };

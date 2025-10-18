@@ -14,40 +14,15 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react/jsx-runtime',
-      '@tanstack/react-query',
-      'next-themes',
-      'react-router-dom',
-      'sonner',
-    ],
-    force: true,
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Force single React instance
-      'react': path.resolve(__dirname, './node_modules/react'),
-      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
-    dedupe: [
-      'react', 
-      'react-dom',
-      'react/jsx-runtime',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-select',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-slot'
-    ],
   },
   build: {
     rollupOptions: {
       output: {
+        // Ensure service worker is copied to dist
         manualChunks: undefined,
       },
     },
