@@ -96,8 +96,10 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-3">
-            <InstallPWAButton />
-            <Badge variant="secondary" className="bg-accent text-accent-foreground">
+            <div className="hidden sm:block">
+              <InstallPWAButton />
+            </div>
+            <Badge variant="secondary" className="bg-accent text-accent-foreground hidden sm:inline-flex">
               {profile?.nume ? `${profile.nume} ${profile.prenume}` : (userRole === "admin" ? "Administrator" : "Turist")}
             </Badge>
             <Button 
@@ -106,31 +108,39 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
               className="text-primary-foreground hover:bg-primary-foreground/10"
               onClick={signOut}
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Ieșire
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Ieșire</span>
             </Button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
         <div className="md:hidden pb-3">
-          <div className="flex flex-wrap gap-2">
-            {navItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleNavigation(item.id)}
-                className={
-                  activeTab === item.id
-                    ? "bg-primary-foreground/20 text-primary-foreground"
-                    : "text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                }
-              >
-                <item.icon className="w-4 h-4 mr-1" />
-                {item.label}
-              </Button>
-            ))}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              {navItems.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={activeTab === item.id ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => handleNavigation(item.id)}
+                  className={
+                    activeTab === item.id
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                  }
+                >
+                  <item.icon className="w-4 h-4 mr-1" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex justify-between items-center">
+              <InstallPWAButton />
+              <Badge variant="secondary" className="bg-accent text-accent-foreground text-xs">
+                {profile?.nume ? `${profile.nume} ${profile.prenume}` : (userRole === "admin" ? "Admin" : "Turist")}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
