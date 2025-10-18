@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -23,9 +23,10 @@ import GuideDocumentsPage from "./pages/guide/GuideDocumentsPage";
 import GuideMessagesPage from "./pages/guide/GuideMessagesPage";
 import Footer from "./components/shared/Footer";
 
-const queryClient = new QueryClient();
-
 const App = () => {
+  // Create QueryClient inside component to avoid multiple React instances
+  const [queryClient] = useState(() => new QueryClient());
+  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
