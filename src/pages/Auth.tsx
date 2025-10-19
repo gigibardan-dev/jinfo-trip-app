@@ -251,18 +251,8 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Tip cont</Label>
-                    <Select value={signupData.role} onValueChange={(value) => setSignupData({ ...signupData, role: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selectează tipul contului" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tourist">Turist</SelectItem>
-                        <SelectItem value="admin">Administrator</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* SECURITY: Role selection removed - all new users are tourists by default */}
+                  <input type="hidden" name="role" value="tourist" />
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Parolă</Label>

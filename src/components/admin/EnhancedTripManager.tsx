@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "./RichTextEditor";
+import DOMPurify from 'dompurify';
 
 interface Trip {
   id: string;
@@ -683,7 +684,7 @@ const EnhancedCircuitManager = () => {
                 {trip.descriere && (
                   <div 
                     className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: trip.descriere }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(trip.descriere) }}
                   />
                 )}
 

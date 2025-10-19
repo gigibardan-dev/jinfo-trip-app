@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import DOMPurify from 'dompurify';
 
 interface UserTrip {
   id: string;
@@ -457,7 +458,7 @@ const TouristDashboard = () => {
           <CardContent>
             <div 
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: currentTrip.descriere }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentTrip.descriere) }}
             />
           </CardContent>
         </Card>
