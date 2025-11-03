@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import { 
   MapPin, 
   Calendar, 
@@ -287,14 +288,15 @@ const TouristDashboard = () => {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {quickActions.map((action, index) => (
-          <Button
-            key={index}
-            variant="outline"
-            className="h-16 flex flex-col gap-2 hover:shadow-medium transition-all"
-          >
-            <action.icon className="w-5 h-5" />
-            <span className="text-xs">{action.label}</span>
-          </Button>
+          <Link key={index} to={action.path}>
+            <Button
+              variant="outline"
+              className="h-16 w-full flex flex-col gap-2 hover:shadow-medium transition-all"
+            >
+              <action.icon className="w-5 h-5" />
+              <span className="text-xs">{action.label}</span>
+            </Button>
+          </Link>
         ))}
       </div>
 
@@ -437,9 +439,11 @@ const TouristDashboard = () => {
               <div className="space-y-3 text-sm text-muted-foreground text-center py-4">
                 <FileText className="w-12 h-12 mx-auto opacity-50" />
                 <p>Verifică documentele în secțiunea dedicată</p>
-                <Button variant="outline" size="sm" className="w-full mt-2">
-                  Vezi Documente
-                </Button>
+                <Link to="/documents">
+                  <Button variant="outline" size="sm" className="w-full mt-2">
+                    Vezi Documente
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

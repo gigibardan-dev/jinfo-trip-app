@@ -321,13 +321,27 @@ const ItineraryPage = () => {
               </Alert>
             ) : (
               <Tabs value={selectedDay || ""} onValueChange={setSelectedDay}>
-                <TabsList className="grid w-full grid-cols-auto overflow-x-auto">
-                  {itineraryDays.map((day) => (
-                    <TabsTrigger key={day.id} value={day.id} className="min-w-0 flex-shrink-0">
-                      Ziua {day.day_number}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+                <div className="mb-6">
+                  <Label className="mb-3 block text-sm font-medium">Selectează ziua:</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {itineraryDays.map((day) => (
+                      <button
+                        key={day.id}
+                        onClick={() => setSelectedDay(day.id)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                          selectedDay === day.id
+                            ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                            : 'border-muted bg-background hover:border-primary/50 hover:shadow-sm'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">Ziua {day.day_number}</div>
+                        <div className="text-xs opacity-80">
+                          {format(parseISO(day.date), "d MMM", { locale: ro })}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {itineraryDays.map((day) => (
                   <TabsContent key={day.id} value={day.id} className="mt-6">

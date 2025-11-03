@@ -162,38 +162,59 @@ const TouristDocuments = () => {
 
   const handleDownload = async (doc: TouristDocument) => {
     try {
-      // Extract path from URL if it's a full URL (old format)
+      // Extract the file path from the URL
       let filePath = doc.file_url;
+      
+      // Remove any leading slashes and decode
       if (filePath.includes('supabase.co/storage')) {
-        const urlParts = filePath.split('/storage/v1/object/public/documents/');
-        if (urlParts.length > 1) {
-          filePath = decodeURIComponent(urlParts[1]);
+        // Old format - extract path from URL
+        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+        if (match) {
+          filePath = decodeURIComponent(match[1]);
+        }
+      } else if (filePath.includes('/documents/')) {
+        // Extract path after /documents/
+        const match = filePath.match(/\/documents\/(.+)$/);
+        if (match) {
+          filePath = match[1];
         }
       }
       
-      // Get signed URL for secure download
+      // Clean up the path - remove leading slashes
+      filePath = filePath.replace(/^\/+/, '');
+      
+      console.log('Downloading file:', filePath);
+      
+      // Download directly using the path
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, 60); // 60 seconds expiry
+        .download(filePath);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
+      }
 
+      // Create blob URL and trigger download
+      const blob = new Blob([data], { type: doc.file_type });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = data.signedUrl;
+      link.href = url;
       link.download = doc.nume;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
       toast({
-        title: "Descărcare inițiată",
-        description: `Se descarcă ${doc.nume}`,
+        title: "Descărcare reușită",
+        description: `${doc.nume} a fost descărcat`,
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut descărca documentul.",
+        description: "Nu s-a putut descărca documentul. Verificați dacă fișierul există.",
         variant: "destructive",
       });
     }
@@ -203,41 +224,71 @@ const TouristDocuments = () => {
     try {
       const fileType = doc.file_type.toLowerCase();
       
-      // Extract path from URL if it's a full URL (old format)
+      // Extract the file path from the URL
       let filePath = doc.file_url;
+      
+      // Remove any leading slashes and decode
       if (filePath.includes('supabase.co/storage')) {
-        const urlParts = filePath.split('/storage/v1/object/public/documents/');
-        if (urlParts.length > 1) {
-          filePath = decodeURIComponent(urlParts[1]);
+        // Old format - extract path from URL
+        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+        if (match) {
+          filePath = decodeURIComponent(match[1]);
+        }
+      } else if (filePath.includes('/documents/')) {
+        // Extract path after /documents/
+        const match = filePath.match(/\/documents\/(.+)$/);
+        if (match) {
+          filePath = match[1];
         }
       }
       
-      // Get signed URL for secure viewing
+      // Clean up the path - remove leading slashes
+      filePath = filePath.replace(/^\/+/, '');
+      
+      console.log('Viewing file:', filePath);
+      
+      // Download file as blob first
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, 300); // 5 minutes for viewing
+        .download(filePath);
 
-      if (error) throw error;
-      
-      const viewUrl = data.signedUrl;
-      
-      if (fileType.includes('image') || fileType.includes('pdf')) {
-        window.open(viewUrl, '_blank');
-      } else {
-        // For office documents, download them
-        handleDownload(doc);
-        return;
+      if (error) {
+        console.error('View error:', error);
+        throw error;
       }
+
+      // Create blob URL
+      const blob = new Blob([data], { type: doc.file_type });
+      const url = window.URL.createObjectURL(blob);
       
-      toast({
-        title: "Document deschis",
-        description: `Se vizualizează ${doc.nume}`,
-      });
+      // Open in new tab for images and PDFs, download for others
+      if (fileType.includes('image') || fileType.includes('pdf')) {
+        window.open(url, '_blank');
+        toast({
+          title: "Document deschis",
+          description: `Se vizualizează ${doc.nume}`,
+        });
+        // Clean up after a delay
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      } else {
+        // For office documents, trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.nume;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast({
+          title: "Descărcare inițiată",
+          description: `Se descarcă ${doc.nume}`,
+        });
+      }
     } catch (error) {
       console.error('View error:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut deschide documentul.",
+        description: "Nu s-a putut deschide documentul. Verificați dacă fișierul există.",
         variant: "destructive",
       });
     }
