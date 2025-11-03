@@ -756,14 +756,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_group_member_basic_info: {
+        Args: { member_user_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          id: string
+          is_active: boolean
+          nume: string
+          prenume: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      guide_assigned_to_trip: {
-        Args: { trip_uuid: string }
-        Returns: boolean
-      }
+      guide_assigned_to_trip: { Args: { trip_uuid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
@@ -771,22 +780,13 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
       is_conversation_participant: {
         Args: { conversation_uuid: string; user_uuid: string }
         Returns: boolean
       }
-      is_guide: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      user_in_group: {
-        Args: { group_uuid: string }
-        Returns: boolean
-      }
+      is_guide: { Args: never; Returns: boolean }
+      user_in_group: { Args: { group_uuid: string }; Returns: boolean }
     }
     Enums: {
       activity_type:
