@@ -1,12 +1,14 @@
 import Navigation from "@/components/Navigation";
 import TouristDocuments from "@/components/TouristDocuments";
 import { useNetworkSync } from "@/hooks/useNetworkSync";
+import { useOfflineDocuments } from "@/hooks/useOfflineDocuments";
 import { Badge } from "@/components/ui/badge";
 import { WifiOff, Wifi } from "lucide-react";
 import { OfflineSavedDocuments } from "@/components/offline/OfflineSavedDocuments";
 
 const DocumentsPage = () => {
   const { isOnline, isSyncing } = useNetworkSync();
+  const { refreshOfflineDocuments } = useOfflineDocuments();
 
   return (
     <div className="min-h-screen bg-gradient-soft">
@@ -35,7 +37,7 @@ const DocumentsPage = () => {
           <OfflineSavedDocuments />
         </div>
         
-        <TouristDocuments />
+        <TouristDocuments onOfflineSaved={refreshOfflineDocuments} />
       </div>
     </div>
   );

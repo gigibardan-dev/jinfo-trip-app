@@ -40,22 +40,18 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
- * Save document to IndexedDB for offline access
+ * Save document to IndexedDB for offline access (using Blob directly)
  */
-export async function saveDocumentOffline(
+export async function saveDocumentOfflineFromBlob(
   fileId: string,
   fileName: string,
   fileType: string,
   fileSize: number,
-  fileUrl: string,
-  lastUpdated: string
+  blobData: Blob,
+  lastUpdated: string,
+  supabaseUrl: string
 ): Promise<void> {
   try {
-    // Fetch the file as blob
-    const response = await fetch(fileUrl);
-    if (!response.ok) throw new Error('Failed to fetch document');
-    
-    const blobData = await response.blob();
 
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -68,7 +64,7 @@ export async function saveDocumentOffline(
       fileSize,
       blobData,
       lastUpdated,
-      supabaseUrl: fileUrl,
+      supabaseUrl,
     };
 
     await new Promise<void>((resolve, reject) => {
@@ -195,7 +191,7 @@ export function revokeOfflineDocumentURL(url: string): void {
  * Sync offline documents with Supabase (check for updates)
  */
 export async function syncOfflineDocuments(
-  getSupabaseDocument: (id: string) => Promise<{ updated_at: string; url: string } | null>
+  getSupabaseDocument: (id: string) => Promise<{ updated_at: string; blob: Blob; url: string } | null>
 ): Promise<{ updated: string[]; errors: string[] }> {
   const updated: string[] = [];
   const errors: string[] = [];
@@ -218,13 +214,14 @@ export async function syncOfflineDocuments(
 
         if (supabaseDate > offlineDate) {
           // Update needed
-          await saveDocumentOffline(
+          await saveDocumentOfflineFromBlob(
             doc.id,
             doc.fileName,
             doc.fileType,
             doc.fileSize,
-            supabaseDoc.url,
-            supabaseDoc.updated_at
+            supabaseDoc.blob,
+            supabaseDoc.updated_at,
+            supabaseDoc.url
           );
           updated.push(doc.id);
           console.log(`[OfflineStorage] Document ${doc.fileName} updated`);

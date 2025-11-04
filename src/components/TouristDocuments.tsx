@@ -49,7 +49,11 @@ interface TripInfo {
   destinatie: string;
 }
 
-const TouristDocuments = () => {
+interface TouristDocumentsProps {
+  onOfflineSaved?: () => void;
+}
+
+const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
   const [documents, setDocuments] = useState<TouristDocument[]>([]);
   const [trips, setTrips] = useState<TripInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -435,7 +439,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.mandatory.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -450,7 +454,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expiring.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -465,7 +469,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expired.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -480,7 +484,7 @@ const TouristDocuments = () => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.regular.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} />
+                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -494,11 +498,13 @@ const TouristDocuments = () => {
 const DocumentCard = ({ 
   document, 
   onDownload,
-  onView 
+  onView,
+  onOfflineSaved
 }: { 
   document: TouristDocument; 
   onDownload: (doc: TouristDocument) => void; 
-  onView: (doc: TouristDocument) => void; 
+  onView: (doc: TouristDocument) => void;
+  onOfflineSaved?: () => void;
 }) => {
   const {
     isOffline,
@@ -515,6 +521,13 @@ const DocumentCard = ({
     document.file_url,
     document.upload_date
   );
+  
+  const handleDownloadOffline = async () => {
+    const success = await downloadOffline();
+    if (success && onOfflineSaved) {
+      onOfflineSaved();
+    }
+  };
 
   const formatFileSizeCard = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -649,7 +662,7 @@ const DocumentCard = ({
             <Button 
               size="sm" 
               variant="secondary"
-              onClick={downloadOffline}
+              onClick={handleDownloadOffline}
               disabled={isDownloading}
               className="w-full"
             >

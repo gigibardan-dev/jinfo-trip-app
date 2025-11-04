@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   isDocumentOffline,
-  saveDocumentOffline,
+  saveDocumentOfflineFromBlob,
   getOfflineDocument,
   deleteOfflineDocument,
   createOfflineDocumentURL,
   revokeOfflineDocumentURL,
 } from '@/lib/offlineStorage';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export function useOfflineDocument(
@@ -37,19 +38,50 @@ export function useOfflineDocument(
   const downloadOffline = async () => {
     setIsDownloading(true);
     try {
-      await saveDocumentOffline(
+      // Extract file path from URL
+      let filePath = fileUrl;
+      
+      if (filePath.includes('supabase.co/storage')) {
+        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+        if (match) {
+          filePath = decodeURIComponent(match[1]);
+        }
+      } else if (filePath.includes('/documents/')) {
+        const match = filePath.match(/\/documents\/(.+)$/);
+        if (match) {
+          filePath = match[1];
+        }
+      }
+      
+      filePath = filePath.replace(/^\/+/, '');
+      
+      // Download blob from Supabase
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(filePath);
+      
+      if (error) throw error;
+      
+      // Save blob to offline storage
+      const blob = new Blob([data], { type: fileType });
+      await saveDocumentOfflineFromBlob(
         documentId,
         fileName,
         fileType,
         fileSize,
-        fileUrl,
-        lastUpdated
+        blob,
+        lastUpdated,
+        fileUrl
       );
+      
       setIsOffline(true);
       toast.success('✅ Document disponibil offline');
+      
+      return true;
     } catch (error) {
       console.error('Failed to download offline:', error);
       toast.error('❌ Eroare la descărcarea offline');
+      return false;
     } finally {
       setIsDownloading(false);
     }

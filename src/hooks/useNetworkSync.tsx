@@ -29,17 +29,32 @@ export function useNetworkSync() {
 
           if (error || !data) return null;
 
-          // Get signed URL
-          const fileName = data.file_url.split('/').pop() || '';
-          const { data: signedData } = await supabase.storage
-            .from('documents')
-            .createSignedUrl(fileName, 3600);
+          // Extract file path
+          let filePath = data.file_url;
+          if (filePath.includes('supabase.co/storage')) {
+            const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+            if (match) {
+              filePath = decodeURIComponent(match[1]);
+            }
+          } else if (filePath.includes('/documents/')) {
+            const match = filePath.match(/\/documents\/(.+)$/);
+            if (match) {
+              filePath = match[1];
+            }
+          }
+          filePath = filePath.replace(/^\/+/, '');
 
-          if (!signedData) return null;
+          // Download blob
+          const { data: blobData, error: downloadError } = await supabase.storage
+            .from('documents')
+            .download(filePath);
+
+          if (downloadError || !blobData) return null;
 
           return {
             updated_at: data.upload_date,
-            url: signedData.signedUrl,
+            blob: blobData,
+            url: data.file_url,
           };
         });
 
