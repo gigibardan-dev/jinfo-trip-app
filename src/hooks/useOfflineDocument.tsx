@@ -55,12 +55,18 @@ export function useOfflineDocument(
       
       filePath = filePath.replace(/^\/+/, '');
       
-      // Download blob from Supabase
-      const { data, error } = await supabase.storage
+      // Get signed URL for secure download (bucket is private)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documents')
-        .download(filePath);
+        .createSignedUrl(filePath, 60);
       
-      if (error) throw error;
+      if (signedError) throw signedError;
+      
+      // Fetch blob using signed URL
+      const response = await fetch(signedData.signedUrl);
+      if (!response.ok) throw new Error('Failed to fetch document');
+      
+      const data = await response.blob();
       
       // Save blob to offline storage
       const blob = new Blob([data], { type: fileType });

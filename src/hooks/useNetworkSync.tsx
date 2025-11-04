@@ -44,12 +44,18 @@ export function useNetworkSync() {
           }
           filePath = filePath.replace(/^\/+/, '');
 
-          // Download blob
-          const { data: blobData, error: downloadError } = await supabase.storage
+          // Get signed URL for secure download
+          const { data: signedData, error: signedError } = await supabase.storage
             .from('documents')
-            .download(filePath);
+            .createSignedUrl(filePath, 60);
 
-          if (downloadError || !blobData) return null;
+          if (signedError || !signedData) return null;
+
+          // Fetch blob using signed URL
+          const response = await fetch(signedData.signedUrl);
+          if (!response.ok) return null;
+          
+          const blobData = await response.blob();
 
           return {
             updated_at: data.upload_date,
