@@ -120,35 +120,48 @@ export function useOfflineDocument(
   // View document (online or offline)
   const viewDocument = async () => {
     try {
-      // Check if we're offline
-      if (!navigator.onLine) {
+      // If offline or document is saved offline, use offline version
+      if (!navigator.onLine || isOffline) {
         const doc = await getOfflineDocument(documentId);
         if (!doc) {
           toast.error('Document indisponibil offline');
           return;
         }
 
-        // Create a blob URL and download directly instead of opening in new tab
+        // Create a blob URL and open in new tab
         const blob = doc.blobData;
         const url = createOfflineDocumentURL(blob);
+        window.open(url, '_blank');
         
-        // Create an invisible anchor and trigger download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Cleanup
-        setTimeout(() => revokeOfflineDocumentURL(url), 1000);
-        toast.success('Document deschis din cache offline');
+        // Cleanup after some time
+        setTimeout(() => revokeOfflineDocumentURL(url), 60000);
         return;
       }
 
-      // Online - open from Supabase
-      window.open(fileUrl, '_blank');
+      // Online - get signed URL from Supabase
+      let filePath = fileUrl;
+      
+      if (filePath.includes('supabase.co/storage')) {
+        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+        if (match) {
+          filePath = decodeURIComponent(match[1]);
+        }
+      } else if (filePath.includes('/documents/')) {
+        const match = filePath.match(/\/documents\/(.+)$/);
+        if (match) {
+          filePath = match[1];
+        }
+      }
+      
+      filePath = filePath.replace(/^\/+/, '');
+      
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 60);
+      
+      if (signedError) throw signedError;
+      
+      window.open(signedData.signedUrl, '_blank');
     } catch (error) {
       console.error('Failed to view document:', error);
       toast.error('Eroare la deschiderea documentului');
@@ -158,29 +171,61 @@ export function useOfflineDocument(
   // Download document (normal download)
   const downloadDocument = async () => {
     try {
-      let downloadUrl = fileUrl;
-
       // If offline, use offline version
       if (!navigator.onLine) {
         const offlineURL = await getOfflineURL();
         if (offlineURL) {
-          downloadUrl = offlineURL;
+          const link = document.createElement('a');
+          link.href = offlineURL;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => revokeOfflineDocumentURL(offlineURL), 5000);
         } else {
           toast.error('Document indisponibil offline');
-          return;
         }
+        return;
       }
 
+      // Online - get signed URL and download
+      let filePath = fileUrl;
+      
+      if (filePath.includes('supabase.co/storage')) {
+        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
+        if (match) {
+          filePath = decodeURIComponent(match[1]);
+        }
+      } else if (filePath.includes('/documents/')) {
+        const match = filePath.match(/\/documents\/(.+)$/);
+        if (match) {
+          filePath = match[1];
+        }
+      }
+      
+      filePath = filePath.replace(/^\/+/, '');
+      
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 60);
+      
+      if (signedError) throw signedError;
+      
+      // Fetch the blob
+      const response = await fetch(signedData.signedUrl);
+      if (!response.ok) throw new Error('Failed to fetch document');
+      
+      const blob = await response.blob();
+      const blobUrl = createOfflineDocumentURL(blob);
+      
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      if (!navigator.onLine) {
-        setTimeout(() => revokeOfflineDocumentURL(downloadUrl), 5000);
-      }
+      
+      setTimeout(() => revokeOfflineDocumentURL(blobUrl), 5000);
     } catch (error) {
       console.error('Failed to download:', error);
       toast.error('Eroare la descărcarea documentului');
