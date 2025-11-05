@@ -164,135 +164,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
     }
   };
 
-  const handleDownload = async (doc: TouristDocument) => {
-    try {
-      // Extract path - file_url is just the path in storage
-      let filePath = doc.file_url;
-      
-      // Handle old URL format if present
-      if (filePath.includes('supabase.co/storage')) {
-        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
-        if (match) {
-          filePath = decodeURIComponent(match[1]);
-        }
-      } else if (filePath.includes('/documents/')) {
-        const match = filePath.match(/\/documents\/(.+)$/);
-        if (match) {
-          filePath = match[1];
-        }
-      }
-      
-      filePath = filePath.replace(/^\/+/, '');
-      
-      console.log('Downloading file from path:', filePath);
-      
-      // Get signed URL for secure download (bucket is private)
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(filePath, 60); // 1 minute
-
-      if (signedError) {
-        console.error('Signed URL error:', signedError);
-        throw signedError;
-      }
-
-      // Fetch the file using signed URL
-      const response = await fetch(signedData.signedUrl);
-      if (!response.ok) throw new Error('Failed to fetch document');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = doc.nume;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Descărcare reușită",
-        description: `${doc.nume} a fost descărcat`,
-      });
-    } catch (error) {
-      console.error('Download error:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-a putut descărca documentul.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleView = async (doc: TouristDocument) => {
-    try {
-      const fileType = doc.file_type.toLowerCase();
-      
-      // Extract path - file_url is just the path in storage
-      let filePath = doc.file_url;
-      
-      // Handle old URL format if present
-      if (filePath.includes('supabase.co/storage')) {
-        const match = filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
-        if (match) {
-          filePath = decodeURIComponent(match[1]);
-        }
-      } else if (filePath.includes('/documents/')) {
-        const match = filePath.match(/\/documents\/(.+)$/);
-        if (match) {
-          filePath = match[1];
-        }
-      }
-      
-      filePath = filePath.replace(/^\/+/, '');
-      
-      console.log('Viewing file from path:', filePath);
-      
-      // Get signed URL for secure viewing (bucket is private)
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(filePath, 300); // 5 minutes for viewing
-
-      if (signedError) {
-        console.error('Signed URL error:', signedError);
-        throw signedError;
-      }
-
-      const viewUrl = signedData.signedUrl;
-      
-      // Open in new tab for images and PDFs, download for others
-      if (fileType.includes('image') || fileType.includes('pdf')) {
-        window.open(viewUrl, '_blank');
-        toast({
-          title: "Document deschis",
-          description: `Se vizualizează ${doc.nume}`,
-        });
-      } else {
-        // For office documents, trigger download
-        const response = await fetch(viewUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = doc.nume;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast({
-          title: "Descărcare inițiată",
-          description: `Se descarcă ${doc.nume}`,
-        });
-      }
-    } catch (error) {
-      console.error('View error:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-a putut deschide documentul.",
-        variant: "destructive",
-      });
-    }
-  };
+  // Functions removed - using hook functions directly in DocumentCard
 
   const getCategoryLabel = (category: string) => {
     const cat = documentCategories.find(c => c.value === category);
@@ -435,7 +307,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.mandatory.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
+                  <DocumentCard key={document.id} document={document} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -450,7 +322,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expiring.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
+                  <DocumentCard key={document.id} document={document} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -465,7 +337,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.expired.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
+                  <DocumentCard key={document.id} document={document} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -480,7 +352,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {groupedDocuments.regular.map((document) => (
-                  <DocumentCard key={document.id} document={document} onDownload={handleDownload} onView={handleView} onOfflineSaved={onOfflineSaved} />
+                  <DocumentCard key={document.id} document={document} onOfflineSaved={onOfflineSaved} />
                 ))}
               </div>
             </div>
@@ -493,13 +365,9 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
 
 const DocumentCard = ({ 
   document, 
-  onDownload,
-  onView,
   onOfflineSaved
 }: { 
   document: TouristDocument; 
-  onDownload: (doc: TouristDocument) => void; 
-  onView: (doc: TouristDocument) => void;
   onOfflineSaved?: () => void;
 }) => {
   const {
