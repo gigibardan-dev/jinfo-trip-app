@@ -11,9 +11,6 @@ import {
   WifiOff, 
   Clock,
   Camera,
-  Navigation,
-  Sun,
-  CloudRain,
   Users,
   AlertCircle
 } from "lucide-react";
@@ -252,34 +249,37 @@ const TouristDashboard = () => {
       {/* Trip Header - REAL DATA */}
       <Card className="shadow-medium border-0 bg-gradient-hero text-primary-foreground">
         <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">{currentTrip.nume}</h1>
-              <div className="flex items-center gap-4 text-primary-foreground/90">
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            {/* Main Info - Stacked vertically on mobile */}
+            <div className="flex-1 space-y-4">
+              {/* Title */}
+              <h1 className="text-2xl lg:text-3xl font-bold leading-tight">
+                {currentTrip.nume}
+              </h1>
+              
+              {/* Destination - Separate line on mobile */}
+              <div className="flex items-center gap-2 text-primary-foreground/90">
+                <MapPin className="w-5 h-5 flex-shrink-0" />
+                <span className="text-base lg:text-lg font-medium">
                   {currentTrip.destinatie}, {currentTrip.tara}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
+                </span>
+              </div>
+              
+              {/* Trip Day - Separate line on mobile */}
+              <div className="flex items-center gap-2 text-primary-foreground/90">
+                <Calendar className="w-5 h-5 flex-shrink-0" />
+                <span className="text-base lg:text-lg font-medium">
                   Ziua {tripDay.current} din {tripDay.total}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Sun className="w-4 h-4" />
-                  ☀️ 18°C {/* TODO: Real weather data */}
-                </div>
+                </span>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-white/20 text-primary-foreground border-0">
-                <Wifi className="w-3 h-3 mr-1" />
+            {/* Status Badge - Right side on desktop, below on mobile */}
+            <div className="flex items-center justify-start lg:justify-end">
+              <Badge variant="secondary" className="bg-white/20 text-primary-foreground border-0 px-4 py-2">
+                <Wifi className="w-4 h-4 mr-2" />
                 Online
               </Badge>
-              <Button variant="secondary" className="bg-white/20 text-primary-foreground hover:bg-white/30 border-0">
-                <Navigation className="w-4 h-4 mr-2" />
-                Navigație
-              </Button>
             </div>
           </div>
         </CardContent>
