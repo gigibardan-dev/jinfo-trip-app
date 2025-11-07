@@ -23,11 +23,15 @@ import {
   Mail,
   Phone,
   Eye,
-  Settings
+  Settings,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface TouristGroup {
   id: string;
@@ -80,6 +84,7 @@ const GroupManager = () => {
   const [selectedGroup, setSelectedGroup] = useState<TouristGroup | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [formData, setFormData] = useState<GroupFormData>({
     nume_grup: "",
     
@@ -445,120 +450,256 @@ const GroupManager = () => {
           />
         </div>
         
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toate</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 items-center">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toate</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex border rounded-lg p-1 bg-muted">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'cards' && "bg-background shadow-sm"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'list' && "bg-background shadow-sm"
+              )}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Groups Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredGroups.map((group) => (
-          <Card key={group.id} className="hover:shadow-soft transition-all duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{group.nume_grup}</CardTitle>
-                  <div className="flex items-center text-sm text-muted-foreground mt-1">
-                    <Users className="w-3 h-3 mr-1" />
-                    {group.member_count} membri
+      {/* Groups View */}
+      {viewMode === 'cards' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredGroups.map((group) => (
+            <Card key={group.id} className="hover:shadow-soft transition-all duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{group.nume_grup}</CardTitle>
+                    <div className="flex items-center text-sm text-muted-foreground mt-1">
+                      <Users className="w-3 h-3 mr-1" />
+                      {group.member_count} membri
+                    </div>
                   </div>
+                  <Badge variant={group.is_active ? "default" : "secondary"}>
+                    {group.is_active ? "Activ" : "Inactiv"}
+                  </Badge>
                 </div>
-                <Badge variant={group.is_active ? "default" : "secondary"}>
-                  {group.is_active ? "Activ" : "Inactiv"}
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="space-y-3">
-                {/* Invite Code */}
-                <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-muted-foreground">Cod:</span>
-                    <code className="text-sm font-mono font-bold">{group.invite_code}</code>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Invite Code */}
+                  <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-muted-foreground">Cod:</span>
+                      <code className="text-sm font-mono font-bold">{group.invite_code}</code>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleCopyInviteCode(group.invite_code)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleGenerateNewInviteCode(group.id)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleCopyInviteCode(group.invite_code)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleGenerateNewInviteCode(group.id)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
 
-                {/* Member Preview */}
-                {group.members && group.members.length > 0 && (
-                  <div className="flex -space-x-2">
-                    {group.members.slice(0, 4).map((member, index) => (
-                      <Avatar key={member.user_id} className="w-6 h-6 border-2 border-background">
-                        <AvatarImage src={member.profiles.avatar_url} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(member.profiles.nume, member.profiles.prenume)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {group.members.length > 4 && (
-                      <div className="w-6 h-6 bg-muted border-2 border-background rounded-full flex items-center justify-center">
-                        <span className="text-xs">+{group.members.length - 4}</span>
+                  {/* Member Preview */}
+                  {group.members && group.members.length > 0 && (
+                    <div className="flex -space-x-2">
+                      {group.members.slice(0, 4).map((member, index) => (
+                        <Avatar key={member.user_id} className="w-6 h-6 border-2 border-background">
+                          <AvatarImage src={member.profiles.avatar_url} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(member.profiles.nume, member.profiles.prenume)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {group.members.length > 4 && (
+                        <div className="w-6 h-6 bg-muted border-2 border-background rounded-full flex items-center justify-center">
+                          <span className="text-xs">+{group.members.length - 4}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    Creat: {new Date(group.created_at).toLocaleDateString('ro-RO')}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleViewMembers(group)}
+                      className="flex-1"
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Vezi Membri
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(group)}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleDelete(group.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nume Grup</TableHead>
+                <TableHead>Cod Invitație</TableHead>
+                <TableHead>Membri</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Acțiuni</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredGroups.map((group) => (
+                <TableRow key={group.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{group.nume_grup}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Creat: {new Date(group.created_at).toLocaleDateString('ro-RO')}
                       </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="text-xs text-muted-foreground">
-                  Creat: {new Date(group.created_at).toLocaleDateString('ro-RO')}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => handleViewMembers(group)}
-                    className="flex-1"
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    Vezi Membri
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(group)}
-                  >
-                    <Edit className="w-3 h-3" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => handleDelete(group.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm font-mono font-bold bg-muted px-2 py-1 rounded">
+                        {group.invite_code}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleCopyInviteCode(group.invite_code)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleGenerateNewInviteCode(group.id)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center text-sm">
+                        <Users className="w-3 h-3 mr-1 text-muted-foreground" />
+                        {group.member_count}
+                      </div>
+                      {group.members && group.members.length > 0 && (
+                        <div className="flex -space-x-2">
+                          {group.members.slice(0, 3).map((member) => (
+                            <Avatar key={member.user_id} className="w-6 h-6 border-2 border-background">
+                              <AvatarImage src={member.profiles.avatar_url} />
+                              <AvatarFallback className="text-xs">
+                                {getInitials(member.profiles.nume, member.profiles.prenume)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                          {group.members.length > 3 && (
+                            <div className="w-6 h-6 bg-muted border-2 border-background rounded-full flex items-center justify-center">
+                              <span className="text-xs">+{group.members.length - 3}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={group.is_active ? "default" : "secondary"}>
+                      {group.is_active ? "Activ" : "Inactiv"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleViewMembers(group)}
+                      >
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEdit(group)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleDelete(group.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Members Management Dialog */}
       <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>

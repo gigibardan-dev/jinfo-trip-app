@@ -19,11 +19,15 @@ import {
   Phone,
   UserPlus,
   UserMinus,
-  Eye
+  Eye,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface Tourist {
   id: string;
@@ -70,6 +74,7 @@ const TouristManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [formData, setFormData] = useState<TouristFormData>({
     email: "",
     nume: "",
@@ -491,7 +496,7 @@ const TouristManager = () => {
           />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Grup" />
@@ -516,95 +521,218 @@ const TouristManager = () => {
               <SelectItem value="inactive">Inactivi</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="flex border rounded-lg p-1 bg-muted">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'cards' && "bg-background shadow-sm"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "h-8 px-3",
+                viewMode === 'list' && "bg-background shadow-sm"
+              )}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Tourists Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTourists.map((tourist) => (
-          <Card key={tourist.id} className="hover:shadow-soft transition-all duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarImage src={tourist.avatar_url} />
-                    <AvatarFallback>
-                      {getInitials(tourist.nume, tourist.prenume)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {tourist.nume} {tourist.prenume}
-                    </CardTitle>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Mail className="w-3 h-3 mr-1" />
-                      {tourist.email}
+      {/* Tourists View */}
+      {viewMode === 'cards' ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredTourists.map((tourist) => (
+            <Card key={tourist.id} className="hover:shadow-soft transition-all duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar>
+                      <AvatarImage src={tourist.avatar_url} />
+                      <AvatarFallback>
+                        {getInitials(tourist.nume, tourist.prenume)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <CardTitle className="text-lg">
+                        {tourist.nume} {tourist.prenume}
+                      </CardTitle>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Mail className="w-3 h-3 mr-1" />
+                        {tourist.email}
+                      </div>
                     </div>
                   </div>
+                  <Badge variant={tourist.is_active ? "default" : "secondary"}>
+                    {tourist.is_active ? "Activ" : "Inactiv"}
+                  </Badge>
                 </div>
-                <Badge variant={tourist.is_active ? "default" : "secondary"}>
-                  {tourist.is_active ? "Activ" : "Inactiv"}
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="space-y-3">
-                {tourist.telefon && (
-                  <div className="flex items-center text-sm">
-                    <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                    {tourist.telefon}
-                  </div>
-                )}
-
-                {tourist.group_memberships && tourist.group_memberships.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium mb-1">Grupuri:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {tourist.group_memberships.map((gm, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {gm.tourist_groups.nume_grup}
-                        </Badge>
-                      ))}
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-3">
+                  {tourist.telefon && (
+                    <div className="flex items-center text-sm">
+                      <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
+                      {tourist.telefon}
                     </div>
+                  )}
+
+                  {tourist.group_memberships && tourist.group_memberships.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium mb-1">Grupuri:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {tourist.group_memberships.map((gm, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {gm.tourist_groups.nume_grup}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    Înregistrat: {new Date(tourist.created_at).toLocaleDateString('ro-RO')}
                   </div>
-                )}
 
-                <div className="text-xs text-muted-foreground">
-                  Înregistrat: {new Date(tourist.created_at).toLocaleDateString('ro-RO')}
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleEdit(tourist)}
+                      className="flex-1"
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Editează
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                    >
+                      {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleDelete(tourist.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => handleEdit(tourist)}
-                    className="flex-1"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Editează
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
-                  >
-                    {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => handleDelete(tourist.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Turist</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Grupuri</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Acțiuni</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTourists.map((tourist) => (
+                <TableRow key={tourist.id}>
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={tourist.avatar_url} />
+                        <AvatarFallback className="text-xs">
+                          {getInitials(tourist.nume, tourist.prenume)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">
+                          {tourist.nume} {tourist.prenume}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(tourist.created_at).toLocaleDateString('ro-RO')}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm">
+                        <Mail className="w-3 h-3 mr-1 text-muted-foreground" />
+                        {tourist.email}
+                      </div>
+                      {tourist.telefon && (
+                        <div className="flex items-center text-sm">
+                          <Phone className="w-3 h-3 mr-1 text-muted-foreground" />
+                          {tourist.telefon}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {tourist.group_memberships && tourist.group_memberships.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {tourist.group_memberships.map((gm, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {gm.tourist_groups.nume_grup}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={tourist.is_active ? "default" : "secondary"}>
+                      {tourist.is_active ? "Activ" : "Inactiv"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleEdit(tourist)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                      >
+                        {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleDelete(tourist.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {filteredTourists.length === 0 && (
         <div className="text-center py-12">
