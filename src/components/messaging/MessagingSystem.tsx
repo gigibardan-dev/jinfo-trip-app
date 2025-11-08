@@ -7,11 +7,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Search, Send, MessageSquare, Users, User, MessageCircle, ArrowLeft, Menu, Bell } from "lucide-react";
+import { Search, Send, MessageSquare, Users, User, MessageCircle, ArrowLeft, Menu, Bell, Check, CheckCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useWebPush } from "@/hooks/useWebPush";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 
 interface Conversation {
   id: string;
@@ -30,6 +32,8 @@ interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
+  delivered_at?: string;
+  read_at?: string;
   created_at: string;
   sender?: any;
 }
@@ -51,6 +55,7 @@ interface Group {
 export const MessagingSystem = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { permission, requestPermission, showNotification } = useWebPush();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -64,10 +69,22 @@ export const MessagingSystem = () => {
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(
+    selectedConversation?.id || null,
+    user?.id || null
+  );
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (user && permission === 'default') {
+      requestPermission();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -99,17 +116,37 @@ export const MessagingSystem = () => {
           schema: 'public',
           table: 'chat_messages',
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newMsg = payload.new as Message;
           
           // If message is not from current user
           if (newMsg.sender_id !== user.id) {
+            // Get sender info
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('nume, prenume')
+              .eq('id', newMsg.sender_id)
+              .single();
+
+            const senderName = senderData 
+              ? `${senderData.nume} ${senderData.prenume}`
+              : 'Cineva';
+
             // Show notification
             toast({
               title: "Mesaj nou",
-              description: "Ai primit un mesaj nou",
+              description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
               duration: 3000,
             });
+
+            // Show web push notification if not viewing the app
+            if (document.hidden) {
+              showNotification('Mesaj nou', {
+                body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
+                tag: newMsg.conversation_id,
+                requireInteraction: false,
+              });
+            }
 
             // Update conversations list
             fetchConversations();
@@ -121,12 +158,30 @@ export const MessagingSystem = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload: any) => {
+          // Update message status in real-time
+          if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+              )
+            );
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedConversation]);
+  }, [user, selectedConversation, showNotification]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -173,8 +228,26 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
       setMessages(messagesData || []);
+      
+      // Mark messages as delivered when viewing
+      await markMessagesAsDelivered(conversationId);
     } catch (error) {
       console.error('Error fetching messages:', error);
+    }
+  };
+
+  const markMessagesAsDelivered = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .update({ delivered_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', user.id)
+        .is('delivered_at', null);
+    } catch (error) {
+      console.error('Error marking messages as delivered:', error);
     }
   };
 
@@ -184,7 +257,10 @@ export const MessagingSystem = () => {
     try {
       await supabase
         .from('chat_messages')
-        .update({ is_read: true })
+        .update({ 
+          is_read: true,
+          read_at: new Date().toISOString()
+        })
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id)
         .eq('is_read', false);
@@ -653,6 +729,22 @@ export const MessagingSystem = () => {
   }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const handleChange = (newValue: string) => {
+      onChange(newValue);
+      
+      // Start typing indicator
+      if (newValue.length > 0 && profile) {
+        startTyping(`${profile.nume} ${profile.prenume}`);
+      } else {
+        stopTyping();
+      }
+    };
+
+    const handleSend = () => {
+      stopTyping();
+      onSend();
+    };
+
     return (
       <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex gap-2 max-w-4xl mx-auto">
@@ -660,17 +752,18 @@ export const MessagingSystem = () => {
             ref={inputRef}
             placeholder="Scrie un mesaj..."
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                onSend();
+                handleSend();
               }
             }}
+            onBlur={() => stopTyping()}
             className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
           />
           <Button 
-            onClick={onSend} 
+            onClick={handleSend} 
             disabled={!value.trim()}
             size="icon"
             className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
@@ -790,15 +883,28 @@ export const MessagingSystem = () => {
                           )}
                         >
                           <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                          <p className={cn(
-                            "text-[10px] sm:text-xs mt-1 text-right",
-                            isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                          )}>
-                            {new Date(message.created_at).toLocaleTimeString('ro-RO', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            <p className={cn(
+                              "text-[10px] sm:text-xs",
+                              isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}>
+                              {new Date(message.created_at).toLocaleTimeString('ro-RO', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            {isOwn && (
+                              <span className="text-primary-foreground/70">
+                                {message.read_at ? (
+                                  <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+                                ) : message.delivered_at ? (
+                                  <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                                ) : (
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {isOwn && (
@@ -815,6 +921,23 @@ export const MessagingSystem = () => {
                   );
                 })}
                 <div ref={messagesEndRef} />
+                
+                {/* Typing Indicator */}
+                {typingUsers.length > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground animate-in fade-in-0">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    </div>
+                    <span className="text-xs">
+                      {typingUsers.length === 1 
+                        ? `${typingUsers[0].name} scrie...`
+                        : `${typingUsers.length} persoane scriu...`
+                      }
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
