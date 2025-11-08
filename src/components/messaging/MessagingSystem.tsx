@@ -362,6 +362,21 @@ export const MessagingSystem = () => {
             participants.push({ conversation_id: conversation.id, user_id: member.user_id });
           }
         });
+
+        // If guide is creating the group chat, also add admin users
+        if (isGuide && !isAdmin) {
+          const { data: adminProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('role', 'admin')
+            .eq('is_active', true);
+
+          adminProfiles?.forEach(admin => {
+            if (!participants.some(p => p.user_id === admin.id)) {
+              participants.push({ conversation_id: conversation.id, user_id: admin.id });
+            }
+          });
+        }
       }
 
       const { error: participantsError } = await supabase
@@ -450,17 +465,17 @@ export const MessagingSystem = () => {
     );
   }
 
-  const ConversationsList = () => (
+  const ConversationsList = React.memo(() => (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Mesaje</h2>
+      <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg sm:text-xl font-bold">Mesaje</h2>
           {canInitiateChat && (
             <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
+                <Button size="sm" className="gap-2 h-9">
                   <MessageSquare className="w-4 h-4" />
-                  <span className="hidden sm:inline">Conversație nouă</span>
+                  <span className="hidden sm:inline text-sm">Nou</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
@@ -536,7 +551,7 @@ export const MessagingSystem = () => {
             placeholder="Caută conversații..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10"
           />
         </div>
       </div>
@@ -544,26 +559,32 @@ export const MessagingSystem = () => {
       <ScrollArea className="flex-1">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <MessageCircle className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-2">Nicio conversație</h3>
-            <p className="text-sm text-muted-foreground">
+            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
+            <h3 className="font-semibold mb-2 text-sm sm:text-base">Nicio conversație</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {canInitiateChat 
                 ? "Începe o conversație nouă folosind butonul de mai sus" 
                 : "Nu ai nicio conversație momentan"}
             </p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-border/50">
             {filteredConversations.map(conversation => {
               const unreadCount = getUnreadCount(conversation.id);
               const isSelected = selectedConversation?.id === conversation.id;
+              const lastMessageTime = conversation.last_message?.created_at 
+                ? new Date(conversation.last_message.created_at).toLocaleTimeString('ro-RO', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : '';
               
               return (
                 <button
                   key={conversation.id}
                   className={cn(
-                    "w-full p-4 text-left transition-colors hover:bg-muted/50",
-                    isSelected && "bg-primary/10 hover:bg-primary/15"
+                    "w-full p-3 sm:p-4 text-left transition-all hover:bg-accent/50 active:bg-accent",
+                    isSelected && "bg-primary/10 hover:bg-primary/15 active:bg-primary/20"
                   )}
                   onClick={() => {
                     setSelectedConversation(conversation);
@@ -571,46 +592,45 @@ export const MessagingSystem = () => {
                   }}
                 >
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-12 h-12 flex-shrink-0">
-                      <AvatarFallback className="bg-primary/10">
+                    <Avatar className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0">
+                      <AvatarFallback className={cn(
+                        "bg-gradient-to-br font-semibold text-white",
+                        conversation.conversation_type === 'group' 
+                          ? "from-blue-500 to-purple-500" 
+                          : "from-green-500 to-teal-500"
+                      )}>
                         {conversation.conversation_type === 'group' ? (
-                          <Users className="w-6 h-6 text-primary" />
+                          <Users className="w-5 h-5 sm:w-6 sm:h-6" />
                         ) : (
-                          <User className="w-6 h-6 text-primary" />
+                          <User className="w-5 h-5 sm:w-6 sm:h-6" />
                         )}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="font-semibold truncate">
-                          {getConversationTitle(conversation)}
-                        </p>
-                        {unreadCount > 0 && (
-                          <Badge variant="destructive" className="ml-auto flex-shrink-0">
-                            {unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {conversation.conversation_type === 'group' ? (
-                            <>
-                              <Users className="w-3 h-3 mr-1" />
-                              Grup
-                            </>
-                          ) : (
-                            <>
-                              <User className="w-3 h-3 mr-1" />
-                              Direct
-                            </>
-                          )}
-                        </Badge>
-                        {conversation.last_message && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.last_message.content}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate text-sm sm:text-base">
+                            {getConversationTitle(conversation)}
                           </p>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {lastMessageTime && (
+                            <span className="text-xs text-muted-foreground">
+                              {lastMessageTime}
+                            </span>
+                          )}
+                          {unreadCount > 0 && (
+                            <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                              {unreadCount}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
+                      {conversation.last_message && (
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
+                          {conversation.last_message.content}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -620,16 +640,56 @@ export const MessagingSystem = () => {
         )}
       </ScrollArea>
     </div>
-  );
+  ));
 
-  const MessagesView = () => {
+  const MessageInput = React.memo(({ 
+    value, 
+    onChange, 
+    onSend 
+  }: { 
+    value: string; 
+    onChange: (value: string) => void; 
+    onSend: () => void;
+  }) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    return (
+      <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex gap-2 max-w-4xl mx-auto">
+          <Input
+            ref={inputRef}
+            placeholder="Scrie un mesaj..."
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSend();
+              }
+            }}
+            className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
+          />
+          <Button 
+            onClick={onSend} 
+            disabled={!value.trim()}
+            size="icon"
+            className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
+          >
+            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Button>
+        </div>
+      </div>
+    );
+  });
+
+  const MessagesView = React.memo(() => {
     if (!selectedConversation) {
       return (
         <div className="flex-1 flex items-center justify-center bg-muted/20">
           <div className="text-center p-8">
-            <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Selectează o conversație</h3>
-            <p className="text-muted-foreground">
+            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
+            <p className="text-sm text-muted-foreground">
               Alege o conversație din listă pentru a începe să comunici
             </p>
           </div>
@@ -640,30 +700,35 @@ export const MessagingSystem = () => {
     return (
       <div className="flex-1 flex flex-col bg-background">
         {/* Chat Header */}
-        <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden h-9 w-9"
               onClick={() => setSelectedConversation(null)}
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-primary/10">
+            <Avatar className="w-10 h-10 sm:w-11 sm:h-11">
+              <AvatarFallback className={cn(
+                "bg-gradient-to-br font-semibold text-white",
+                selectedConversation.conversation_type === 'group' 
+                  ? "from-blue-500 to-purple-500" 
+                  : "from-green-500 to-teal-500"
+              )}>
                 {selectedConversation.conversation_type === 'group' ? (
-                  <Users className="w-5 h-5 text-primary" />
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6" />
                 ) : (
-                  <User className="w-5 h-5 text-primary" />
+                  <User className="w-5 h-5 sm:w-6 sm:h-6" />
                 )}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold truncate">
+              <h3 className="font-semibold truncate text-sm sm:text-base">
                 {getConversationTitle(selectedConversation)}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {selectedConversation.conversation_type === 'group' ? 'Chat de grup' : 'Mesaj direct'}
               </p>
             </div>
@@ -671,12 +736,13 @@ export const MessagingSystem = () => {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4 max-w-4xl mx-auto">
+        <ScrollArea className="flex-1 p-3 sm:p-4 bg-muted/20">
+          <div className="space-y-2 sm:space-y-3 max-w-4xl mx-auto">
             {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Niciun mesaj încă</p>
-                <p className="text-sm text-muted-foreground mt-1">
+              <div className="text-center py-8 sm:py-12">
+                <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground font-medium">Niciun mesaj încă</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Fii primul care trimite un mesaj!
                 </p>
               </div>
@@ -688,39 +754,44 @@ export const MessagingSystem = () => {
                     index === 0 || 
                     messages[index - 1].sender_id !== message.sender_id
                   );
+                  const showAvatar = index === messages.length - 1 || 
+                    messages[index + 1]?.sender_id !== message.sender_id;
 
                   return (
                     <div
                       key={message.id}
                       className={cn(
-                        "flex gap-2 items-end",
+                        "flex gap-2 items-end animate-in fade-in-0 slide-in-from-bottom-2",
                         isOwn ? "justify-end" : "justify-start"
                       )}
                     >
                       {!isOwn && (
-                        <Avatar className="w-8 h-8 mb-1">
-                          <AvatarFallback className="text-xs bg-primary/10">
+                        <Avatar className={cn(
+                          "w-7 h-7 sm:w-8 sm:h-8 mb-0.5 flex-shrink-0",
+                          !showAvatar && "opacity-0"
+                        )}>
+                          <AvatarFallback className="text-xs bg-gradient-to-br from-green-500 to-teal-500 text-white font-semibold">
                             {message.sender?.nume?.[0]}{message.sender?.prenume?.[0]}
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={cn("flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
+                      <div className={cn("flex flex-col gap-0.5 max-w-[80%] sm:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
                         {showSender && (
-                          <p className="text-xs font-medium text-muted-foreground px-3">
+                          <p className="text-xs font-medium text-muted-foreground px-3 mb-0.5">
                             {message.sender?.nume} {message.sender?.prenume}
                           </p>
                         )}
                         <div
                           className={cn(
-                            "rounded-2xl px-4 py-2 max-w-[75%] sm:max-w-md break-words",
+                            "rounded-2xl px-3 sm:px-4 py-2 break-words shadow-sm",
                             isOwn
-                              ? "bg-primary text-primary-foreground rounded-br-sm"
-                              : "bg-muted rounded-bl-sm"
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-background border border-border/50 rounded-bl-md"
                           )}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{message.content}</p>
                           <p className={cn(
-                            "text-xs mt-1",
+                            "text-[10px] sm:text-xs mt-1 text-right",
                             isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                           )}>
                             {new Date(message.created_at).toLocaleTimeString('ro-RO', {
@@ -731,8 +802,11 @@ export const MessagingSystem = () => {
                         </div>
                       </div>
                       {isOwn && (
-                        <Avatar className="w-8 h-8 mb-1">
-                          <AvatarFallback className="text-xs bg-primary">
+                        <Avatar className={cn(
+                          "w-7 h-7 sm:w-8 sm:h-8 mb-0.5 flex-shrink-0",
+                          !showAvatar && "opacity-0"
+                        )}>
+                          <AvatarFallback className="text-xs bg-primary text-primary-foreground font-semibold">
                             {profile?.nume?.[0]}{profile?.prenume?.[0]}
                           </AvatarFallback>
                         </Avatar>
@@ -747,38 +821,19 @@ export const MessagingSystem = () => {
         </ScrollArea>
 
         {/* Message Input */}
-        <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex gap-2 max-w-4xl mx-auto">
-            <Input
-              placeholder="Scrie un mesaj..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={!newMessage.trim()}
-              size="icon"
-              className="flex-shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <MessageInput 
+          value={newMessage}
+          onChange={setNewMessage}
+          onSend={sendMessage}
+        />
       </div>
     );
-  };
+  });
 
   return (
     <>
       {/* Desktop Layout */}
-      <div className="hidden lg:flex h-[calc(100vh-12rem)] border rounded-lg overflow-hidden shadow-lg bg-background">
+      <div className="hidden lg:flex h-[calc(100vh-12rem)] border rounded-xl overflow-hidden shadow-xl bg-background">
         <div className="w-[380px] border-r flex-shrink-0">
           <ConversationsList />
         </div>
@@ -788,11 +843,11 @@ export const MessagingSystem = () => {
       {/* Mobile Layout */}
       <div className="lg:hidden">
         {selectedConversation ? (
-          <div className="h-[calc(100vh-10rem)] border rounded-lg overflow-hidden shadow-lg bg-background">
+          <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background">
             <MessagesView />
           </div>
         ) : (
-          <div className="h-[calc(100vh-10rem)] border rounded-lg overflow-hidden shadow-lg bg-background">
+          <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background">
             <ConversationsList />
           </div>
         )}
