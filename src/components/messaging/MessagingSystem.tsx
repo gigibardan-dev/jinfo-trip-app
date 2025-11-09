@@ -55,7 +55,7 @@ interface Group {
 export const MessagingSystem = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  const { permission, requestPermission, showNotification } = useWebPush();
+  const { isSupported, permission, requestPermission, showNotification } = useWebPush();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -79,12 +79,12 @@ export const MessagingSystem = () => {
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
 
-  // Request notification permission on mount
+  // Request notification permission on mount (only if supported)
   useEffect(() => {
-    if (user && permission === 'default') {
+    if (user && isSupported && permission === 'default') {
       requestPermission();
     }
-  }, [user]);
+  }, [user, isSupported]);
 
   useEffect(() => {
     if (user) {
@@ -189,6 +189,8 @@ export const MessagingSystem = () => {
   }, [messages]);
 
   const fetchConversations = async () => {
+    if (!user) return;
+    
     try {
       const { data: conversationsData, error } = await supabase
         .from('conversations')
@@ -202,7 +204,25 @@ export const MessagingSystem = () => {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setConversations(conversationsData || []);
+
+      // Fetch unread counts for each conversation
+      const conversationsWithUnread = await Promise.all(
+        (conversationsData || []).map(async (conv) => {
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .eq('is_read', false)
+            .neq('sender_id', user.id);
+
+          return {
+            ...conv,
+            unread_count: count || 0
+          };
+        })
+      );
+
+      setConversations(conversationsWithUnread);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -525,9 +545,8 @@ export const MessagingSystem = () => {
   );
 
   const getUnreadCount = (conversationId: string) => {
-    // This would need to be calculated from the database
-    // For now returning 0, but should be implemented with proper query
-    return 0;
+    const conversation = conversations.find(c => c.id === conversationId);
+    return conversation?.unread_count || 0;
   };
 
   if (loading) {
