@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -527,6 +527,22 @@ export const MessagingSystem = () => {
     }
   };
 
+  const handleMessageChange = useCallback((newValue: string) => {
+    setNewMessage(newValue);
+    
+    // Start typing indicator
+    if (newValue.length > 0 && profile) {
+      startTyping(`${profile.nume} ${profile.prenume}`);
+    } else {
+      stopTyping();
+    }
+  }, [profile, startTyping, stopTyping]);
+
+  const handleSendMessage = useCallback(() => {
+    stopTyping();
+    sendMessage();
+  }, [stopTyping]);
+
   const getConversationTitle = (conversation: Conversation) => {
     if (conversation.title) return conversation.title;
     
@@ -748,22 +764,6 @@ export const MessagingSystem = () => {
   }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleChange = (newValue: string) => {
-      onChange(newValue);
-      
-      // Start typing indicator
-      if (newValue.length > 0 && profile) {
-        startTyping(`${profile.nume} ${profile.prenume}`);
-      } else {
-        stopTyping();
-      }
-    };
-
-    const handleSend = () => {
-      stopTyping();
-      onSend();
-    };
-
     return (
       <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex gap-2 max-w-4xl mx-auto">
@@ -771,18 +771,18 @@ export const MessagingSystem = () => {
             ref={inputRef}
             placeholder="Scrie un mesaj..."
             value={value}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSend();
+                onSend();
               }
             }}
             onBlur={() => stopTyping()}
             className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
           />
           <Button 
-            onClick={handleSend} 
+            onClick={onSend} 
             disabled={!value.trim()}
             size="icon"
             className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
@@ -965,8 +965,8 @@ export const MessagingSystem = () => {
         {/* Message Input */}
         <MessageInput 
           value={newMessage}
-          onChange={setNewMessage}
-          onSend={sendMessage}
+          onChange={handleMessageChange}
+          onSend={handleSendMessage}
         />
       </div>
     );
