@@ -99,7 +99,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
       setMoreMenuOpen(true);
       return;
     }
-    
+
     setActiveTab(id);
     navigate(path);
   };
@@ -117,9 +117,9 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-14">
             {/* Logo */}
-            <button 
+            <button
               onClick={() => handleNavigation(
-                userRole === "guide" ? "/guide/dashboard" : "/", 
+                userRole === "guide" ? "/guide/dashboard" : "/",
                 "dashboard"
               )}
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
@@ -135,18 +135,18 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
             {/* Right Actions */}
             <div className="flex items-center space-x-2">
               <InstallPWAButton />
-              
+
               {/* User Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="text-primary-foreground hover:bg-primary-foreground/10"
                   >
                     <span className="hidden sm:inline mr-1 font-semibold">
-    {profile?.nume ? `${profile.nume} ${profile.prenume}` : "User"}
-  </span>
+                      {profile?.nume ? `${profile.nume} ${profile.prenume}` : "User"}
+                    </span>
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -180,69 +180,65 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
         <div className="max-w-7xl mx-auto">
           {/* DESKTOP - Admin 7 tabs / Guide 5 / Tourist 4 */}
           <div className="hidden md:block">
-            <div className={`grid ${
-              userRole === "admin" ? "grid-cols-7" : 
-              userRole === "guide" ? "grid-cols-5" : 
-              "grid-cols-4"
-            } gap-1 px-2 py-2`}>
-              {(userRole === "admin" ? adminNavItemsDesktop : 
+            <div className={`grid ${userRole === "admin" ? "grid-cols-7" :
+                userRole === "guide" ? "grid-cols-5" :
+                  "grid-cols-4"
+              } gap-1 px-2 py-2`}>
+              {(userRole === "admin" ? adminNavItemsDesktop :
                 userRole === "guide" ? guideNavItems : touristNavItems).map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigation(item.path, item.id)}
-                    className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all ${
-                      isActive 
-                        ? "bg-primary/10 text-primary" 
-                        : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                    }`}
-                  >
-                    {isActive && (
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
-                    )}
-                    <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
-                    <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigation(item.path, item.id)}
+                      className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all ${isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                        }`}
+                    >
+                      {isActive && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
+                      )}
+                      <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                      <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
           {/* MOBILE - Admin 4+More / Guide 5 / Tourist 4 */}
           <div className="md:hidden">
-            <div className={`grid ${
-              userRole === "guide" ? "grid-cols-5" : "grid-cols-4"
-            } gap-1 px-2 py-2`}>
-              {(userRole === "admin" ? adminNavItemsMobile : 
+            <div className={`grid ${userRole === "guide" ? "grid-cols-5" : "grid-cols-4"
+              } gap-1 px-2 py-2`}>
+              {(userRole === "admin" ? adminNavItemsMobile :
                 userRole === "guide" ? guideNavItems : touristNavItems).map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigation(item.path, item.id)}
-                    className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all ${
-                      isActive 
-                        ? "bg-primary/10 text-primary" 
-                        : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                    }`}
-                  >
-                    {isActive && item.id !== "more" && (
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
-                    )}
-                    <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
-                    <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigation(item.path, item.id)}
+                      className={`relative flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all ${isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                        }`}
+                    >
+                      {isActive && item.id !== "more" && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
+                      )}
+                      <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                      <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
         </div>

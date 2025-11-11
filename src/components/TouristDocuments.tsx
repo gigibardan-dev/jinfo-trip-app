@@ -410,7 +410,7 @@ const DocumentCard = ({
       isExpiredDoc ? 'border-l-4 border-l-destructive bg-destructive/5' :
       isExpiring ? 'border-l-4 border-l-warning bg-warning/5' : ''
     }`}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 px-3 sm:px-6">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -456,7 +456,8 @@ const DocumentCard = ({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-3 sm:px-6">
+
         {document.descriere && (
           <p className="text-sm text-muted-foreground">{document.descriere}</p>
         )}

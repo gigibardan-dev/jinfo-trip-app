@@ -248,7 +248,7 @@ const TouristDashboard = () => {
     <div className="space-y-6">
       {/* Trip Header - REAL DATA */}
       <Card className="shadow-medium border-0 bg-gradient-hero text-primary-foreground">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             {/* Main Info - Stacked vertically on mobile */}
             <div className="flex-1 space-y-4">

@@ -5,16 +5,23 @@ import { useOfflineDocuments } from "@/hooks/useOfflineDocuments";
 import { Badge } from "@/components/ui/badge";
 import { WifiOff, Wifi } from "lucide-react";
 import { OfflineSavedDocuments } from "@/components/offline/OfflineSavedDocuments";
+import { useState } from "react";
 
 const DocumentsPage = () => {
   const { isOnline, isSyncing } = useNetworkSync();
   const { refreshOfflineDocuments } = useOfflineDocuments();
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  const handleOfflineSaved = () => {
+    refreshOfflineDocuments();
+    setRefreshKey(prev => prev + 1); // Force re-render
+  };
   return (
     <div className="min-h-screen bg-gradient-soft">
       <Navigation userRole="tourist" />
       <div className="pt-14 pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4">
+
           <div className="mb-4 flex justify-end">
             {!isOnline ? (
               <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
@@ -35,10 +42,10 @@ const DocumentsPage = () => {
           </div>
 
           <div className="mb-6">
-            <OfflineSavedDocuments />
+            <OfflineSavedDocuments key={refreshKey} />
           </div>
 
-          <TouristDocuments onOfflineSaved={refreshOfflineDocuments} />
+          <TouristDocuments onOfflineSaved={handleOfflineSaved} />
         </div>
       </div>
     </div>

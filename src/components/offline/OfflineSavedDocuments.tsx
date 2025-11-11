@@ -13,10 +13,10 @@ export const OfflineSavedDocuments = () => {
     try {
       const url = createOfflineDocumentURL(doc.blobData);
       window.open(url, '_blank');
-      
+
       // Cleanup after some time
       setTimeout(() => revokeOfflineDocumentURL(url), 60000);
-      
+
       toast.success(`📄 ${doc.fileName} deschis`);
     } catch (error) {
       console.error('Failed to view offline document:', error);
@@ -33,9 +33,9 @@ export const OfflineSavedDocuments = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setTimeout(() => revokeOfflineDocumentURL(url), 5000);
-      
+
       toast.success(`⬇️ ${doc.fileName} descărcat`);
     } catch (error) {
       console.error('Failed to download offline document:', error);
@@ -110,51 +110,57 @@ export const OfflineSavedDocuments = () => {
           Documente Salvate Offline ({offlineDocuments.length})
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-2 sm:p-6 pt-0">
+
         <div className="space-y-3">
           {offlineDocuments.map((doc) => (
-            <div 
-              key={doc.id} 
-              className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+            <div
+              key={doc.id}
+              className="flex flex-col p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
             >
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{doc.fileName}</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      {formatFileSize(doc.fileSize)}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {formatDate(doc.lastUpdated)}
-                    </Badge>
-                  </div>
-                </div>
+              {/* Titlu - 2 linii max */}
+              <div className="flex items-start gap-2 mb-2">
+                <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <p className="font-medium text-sm line-clamp-2 flex-1">
+                  {doc.fileName}
+                </p>
               </div>
-              
-              <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+
+              {/* Info pe același rând - Size & Date */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                <span className="flex items-center gap-1">
+                  📦 {formatFileSize(doc.fileSize)}
+                </span>
+                <span className="flex items-center gap-1">
+                  📅 {formatDate(doc.lastUpdated)}
+                </span>
+              </div>
+
+              {/* Butoane pe un rând separat */}
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => handleView(doc)}
-                  title="Vizualizează"
+                  className="flex-1"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4 mr-1" />
+                  <span className="text-xs">View</span>
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => handleDownload(doc)}
-                  title="Descarcă"
+                  className="flex-1"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Save</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDelete(doc.id, doc.fileName)}
-                  title="Șterge"
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

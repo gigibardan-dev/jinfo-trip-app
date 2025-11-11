@@ -95,12 +95,12 @@ const Index = () => {
     );
   }
 
-  return (
+ return (
   <div className="min-h-screen bg-gradient-ocean">
     <Navigation userRole={selectedRole || "tourist"} />
     
     {/* Spacer pentru top nav (h-14) + padding bottom pentru bottom nav */}
-    <div className="pt-14 pb-20 px-4">
+    <div className="pt-14 pb-20 px-2">
       {selectedRole === "admin" ? (
         <AdminDashboard />
       ) : (
