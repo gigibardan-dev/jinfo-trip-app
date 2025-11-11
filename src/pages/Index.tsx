@@ -96,16 +96,19 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-ocean">
-      <Navigation userRole={selectedRole || "tourist"} />
-      
+  <div className="min-h-screen bg-gradient-ocean">
+    <Navigation userRole={selectedRole || "tourist"} />
+    
+    {/* Spacer pentru top nav (h-14) + padding bottom pentru bottom nav */}
+    <div className="pt-14 pb-20 px-4">
       {selectedRole === "admin" ? (
         <AdminDashboard />
       ) : (
         <TouristDashboard />
       )}
     </div>
-  );
+  </div>
+);
 };
 
 export default Index;

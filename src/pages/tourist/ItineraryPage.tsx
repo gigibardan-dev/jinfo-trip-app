@@ -257,7 +257,8 @@ const ItineraryPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation userRole="tourist" />
-      <div className="container mx-auto px-4 py-8">
+      <div className="pt-14 pb-20"> 
+      <div className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Itinerariul Meu</h1>
           <p className="text-muted-foreground">Vizualizează itinerariul detaliat al circuitului tău</p>
@@ -380,6 +381,7 @@ const ItineraryPage = () => {
             )}
           </>
         )}
+      </div>
       </div>
     </div>
   );

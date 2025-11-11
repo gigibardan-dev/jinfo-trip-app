@@ -328,150 +328,152 @@ const GuideDocumentsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-soft">
       <Navigation userRole="guide" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Documente</h1>
-          <p className="text-muted-foreground">
-            Gestionează documentele pentru circuiturile tale
-          </p>
-        </div>
-
-        {trips.length > 1 && (
+      <div className="pt-14 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
-            <Label htmlFor="trip-select">Selectează circuitul:</Label>
-            <select
-              id="trip-select"
-              value={selectedTripId}
-              onChange={(e) => setSelectedTripId(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-            >
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.nume} - {trip.destinatie}
-                </option>
-              ))}
-            </select>
+            <h1 className="text-3xl font-bold mb-2">Documente</h1>
+            <p className="text-muted-foreground">
+              Gestionează documentele pentru circuiturile tale
+            </p>
           </div>
-        )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Încarcă Document Nou
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="doc-name">Nume document*</Label>
-                <Input
-                  id="doc-name"
-                  value={uploadForm.nume}
-                  onChange={(e) =>
-                    setUploadForm({ ...uploadForm, nume: e.target.value })
-                  }
-                  placeholder="ex: Program detaliat"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="doc-desc">Descriere</Label>
-                <Textarea
-                  id="doc-desc"
-                  value={uploadForm.descriere}
-                  onChange={(e) =>
-                    setUploadForm({ ...uploadForm, descriere: e.target.value })
-                  }
-                  placeholder="Descriere opțională"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="doc-file">Fișier*</Label>
-                <Input
-                  id="doc-file"
-                  type="file"
-                  onChange={handleFileChange}
-                />
-              </div>
-
-              <Button
-                onClick={handleUpload}
-                disabled={uploading || !uploadForm.file || !uploadForm.nume}
-                className="w-full"
+          {trips.length > 1 && (
+            <div className="mb-6">
+              <Label htmlFor="trip-select">Selectează circuitul:</Label>
+              <select
+                id="trip-select"
+                value={selectedTripId}
+                onChange={(e) => setSelectedTripId(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
               >
-                {uploading ? "Se încarcă..." : "Încarcă Document"}
-              </Button>
-            </CardContent>
-          </Card>
+                {trips.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.nume} - {trip.destinatie}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Documente ({documents.length})
-            </h2>
-            <div className="space-y-4">
-              {documents.length === 0 ? (
-                <Alert>
-                  <AlertDescription>
-                    Nu există documente pentru acest circuit.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                documents.map((doc) => (
-                  <Card key={doc.id}>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span>{doc.nume}</span>
-                        <Badge variant="secondary">{doc.file_type}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {doc.descriere && (
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {doc.descriere}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                        <span>
-                          {format(new Date(doc.upload_date), "d MMMM yyyy", {
-                            locale: ro,
-                          })}
-                        </span>
-                        <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleView(doc)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Vezi
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownload(doc)}
-                        >
-                          <Download className="w-4 h-4 mr-1" />
-                          Descarcă
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(doc)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Șterge
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Încarcă Document Nou
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="doc-name">Nume document*</Label>
+                  <Input
+                    id="doc-name"
+                    value={uploadForm.nume}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, nume: e.target.value })
+                    }
+                    placeholder="ex: Program detaliat"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="doc-desc">Descriere</Label>
+                  <Textarea
+                    id="doc-desc"
+                    value={uploadForm.descriere}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, descriere: e.target.value })
+                    }
+                    placeholder="Descriere opțională"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="doc-file">Fișier*</Label>
+                  <Input
+                    id="doc-file"
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleUpload}
+                  disabled={uploading || !uploadForm.file || !uploadForm.nume}
+                  className="w-full"
+                >
+                  {uploading ? "Se încarcă..." : "Încarcă Document"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Documente ({documents.length})
+              </h2>
+              <div className="space-y-4">
+                {documents.length === 0 ? (
+                  <Alert>
+                    <AlertDescription>
+                      Nu există documente pentru acest circuit.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  documents.map((doc) => (
+                    <Card key={doc.id}>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center justify-between">
+                          <span>{doc.nume}</span>
+                          <Badge variant="secondary">{doc.file_type}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {doc.descriere && (
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {doc.descriere}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                          <span>
+                            {format(new Date(doc.upload_date), "d MMMM yyyy", {
+                              locale: ro,
+                            })}
+                          </span>
+                          <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleView(doc)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Vezi
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownload(doc)}
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Descarcă
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(doc)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Șterge
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -112,33 +112,35 @@ const GuideItineraryPage = () => {
   return (
     <div className="min-h-screen bg-gradient-soft">
       <Navigation userRole="guide" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Gestionare Itinerariu</h1>
-          <p className="text-muted-foreground">
-            Vizualizează și editează itinerariul circuiturilor tale
-          </p>
-        </div>
-
-        {trips.length > 1 && (
+      <div className="pt-14 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
-            <Label htmlFor="trip-select">Selectează circuitul:</Label>
-            <select
-              id="trip-select"
-              value={selectedTripId}
-              onChange={(e) => setSelectedTripId(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
-            >
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.nume} - {trip.destinatie}
-                </option>
-              ))}
-            </select>
+            <h1 className="text-3xl font-bold mb-2">Gestionare Itinerariu</h1>
+            <p className="text-muted-foreground">
+              Vizualizează și editează itinerariul circuiturilor tale
+            </p>
           </div>
-        )}
 
-        {selectedTripId && <GuideItineraryManager tripId={selectedTripId} />}
+          {trips.length > 1 && (
+            <div className="mb-6">
+              <Label htmlFor="trip-select">Selectează circuitul:</Label>
+              <select
+                id="trip-select"
+                value={selectedTripId}
+                onChange={(e) => setSelectedTripId(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                {trips.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.nume} - {trip.destinatie}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedTripId && <GuideItineraryManager tripId={selectedTripId} />}
+        </div>
       </div>
     </div>
   );
