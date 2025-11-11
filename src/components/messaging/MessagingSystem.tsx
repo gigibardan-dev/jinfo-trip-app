@@ -6,8 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Search, Send, MessageSquare, Users, User, MessageCircle, ArrowLeft, Menu, Bell, Check, CheckCheck } from "lucide-react";
+import { Search, Send, MessageSquare, Users, User, MessageCircle, ArrowLeft, Check, CheckCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +58,6 @@ export const MessagingSystem = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
   const [tourists, setTourists] = useState<Tourist[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,7 +65,6 @@ export const MessagingSystem = () => {
   const [newChatType, setNewChatType] = useState<'direct' | 'group'>('direct');
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { typingUsers, startTyping, stopTyping } = useTypingIndicator(
@@ -84,7 +81,7 @@ export const MessagingSystem = () => {
     if (user && isSupported && permission === 'default') {
       requestPermission();
     }
-  }, [user, isSupported]);
+  }, [user, isSupported, permission, requestPermission]);
 
   useEffect(() => {
     if (user) {
@@ -119,9 +116,7 @@ export const MessagingSystem = () => {
         async (payload: any) => {
           const newMsg = payload.new as Message;
 
-          // If message is not from current user
           if (newMsg.sender_id !== user.id) {
-            // Get sender info
             const { data: senderData } = await supabase
               .from('profiles')
               .select('nume, prenume')
@@ -132,14 +127,12 @@ export const MessagingSystem = () => {
               ? `${senderData.nume} ${senderData.prenume}`
               : 'Cineva';
 
-            // Show notification
             toast({
               title: "Mesaj nou",
               description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
               duration: 3000,
             });
 
-            // Show web push notification if not viewing the app
             if (document.hidden) {
               showNotification('Mesaj nou', {
                 body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
@@ -148,10 +141,8 @@ export const MessagingSystem = () => {
               });
             }
 
-            // Update conversations list
             fetchConversations();
 
-            // If message is in current conversation, update messages
             if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
               fetchMessages(selectedConversation.id);
             }
@@ -166,7 +157,6 @@ export const MessagingSystem = () => {
           table: 'chat_messages',
         },
         (payload: any) => {
-          // Update message status in real-time
           if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
             setMessages(prevMessages =>
               prevMessages.map(msg =>
@@ -181,7 +171,7 @@ export const MessagingSystem = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedConversation, showNotification]);
+  }, [user, selectedConversation, showNotification, toast]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -205,7 +195,6 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
 
-      // Fetch unread counts for each conversation
       const conversationsWithUnread = await Promise.all(
         (conversationsData || []).map(async (conv) => {
           const { count } = await supabase
@@ -249,7 +238,6 @@ export const MessagingSystem = () => {
       if (error) throw error;
       setMessages(messagesData || []);
 
-      // Mark messages as delivered when viewing
       await markMessagesAsDelivered(conversationId);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -285,7 +273,7 @@ export const MessagingSystem = () => {
         .neq('sender_id', user.id)
         .eq('is_read', false);
 
-      fetchConversations(); // Refresh to update unread counts
+      fetchConversations();
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
@@ -295,7 +283,6 @@ export const MessagingSystem = () => {
     if (!canInitiateChat) return;
 
     try {
-      // If guide, only fetch tourists from assigned groups
       if (isGuide && !isAdmin) {
         const { data: assignments, error: assignError } = await supabase
           .from('guide_assignments')
@@ -347,7 +334,6 @@ export const MessagingSystem = () => {
         if (error) throw error;
         setTourists(data || []);
       } else {
-        // Admin can see all tourists
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nume, prenume, email, is_active')
@@ -366,7 +352,6 @@ export const MessagingSystem = () => {
     if (!canInitiateChat) return;
 
     try {
-      // If guide, only fetch groups from assigned trips
       if (isGuide && !isAdmin) {
         const { data: assignments, error: assignError } = await supabase
           .from('guide_assignments')
@@ -405,7 +390,6 @@ export const MessagingSystem = () => {
         if (error) throw error;
         setGroups(data || []);
       } else {
-        // Admin can see all groups
         const { data, error } = await supabase
           .from('tourist_groups')
           .select('id, nume_grup, is_active')
@@ -439,7 +423,6 @@ export const MessagingSystem = () => {
 
       if (convError) throw convError;
 
-      // Add participants
       const participants = [
         { conversation_id: conversation.id, user_id: user.id }
       ];
@@ -447,7 +430,6 @@ export const MessagingSystem = () => {
       if (newChatType === 'direct') {
         participants.push({ conversation_id: conversation.id, user_id: selectedRecipient });
       } else {
-        // For group conversations, add all group members
         const { data: groupMembers } = await supabase
           .from('group_members')
           .select('user_id')
@@ -459,7 +441,6 @@ export const MessagingSystem = () => {
           }
         });
 
-        // If guide is creating the group chat, also add admin users
         if (isGuide && !isAdmin) {
           const { data: adminProfiles } = await supabase
             .from('profiles')
@@ -499,8 +480,8 @@ export const MessagingSystem = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || !user) return;
+  const sendMessage = async (messageText: string) => {
+    if (!messageText || !selectedConversation || !user) return;
 
     try {
       const { error } = await supabase
@@ -508,15 +489,13 @@ export const MessagingSystem = () => {
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: user.id,
-          content: newMessage.trim()
+          content: messageText
         });
 
       if (error) throw error;
 
-      setNewMessage("");
       fetchMessages(selectedConversation.id);
       fetchConversations();
-      setIsMobileMenuOpen(false); // Close mobile menu after sending
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -526,17 +505,6 @@ export const MessagingSystem = () => {
       });
     }
   };
-
-  const handleMessageChange = useCallback((newValue: string) => {
-    setNewMessage(newValue);
-
-    // Start typing indicator - nu folosim direct startTyping/stopTyping aici
-    // pentru a evita dependențele care cauzează re-render
-  }, []);
-
-  const handleSendMessage = useCallback(() => {
-  sendMessage();
-}, []);
 
   const getConversationTitle = (conversation: Conversation) => {
     if (conversation.title) return conversation.title;
@@ -570,6 +538,8 @@ export const MessagingSystem = () => {
       </div>
     );
   }
+
+  // ==================== SUB-COMPONENTS ====================
 
   const ConversationsList = React.memo(() => (
     <div className="flex flex-col h-full">
@@ -692,10 +662,7 @@ export const MessagingSystem = () => {
                     "w-full p-3 sm:p-4 text-left transition-all hover:bg-accent/50 active:bg-accent",
                     isSelected && "bg-primary/10 hover:bg-primary/15 active:bg-primary/20"
                   )}
-                  onClick={() => {
-                    setSelectedConversation(conversation);
-                    setIsMobileMenuOpen(false);
-                  }}
+                  onClick={() => setSelectedConversation(conversation)}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0">
@@ -749,60 +716,58 @@ export const MessagingSystem = () => {
   ));
 
   const MessageInput = React.memo(({
-    value,
-    onChange,
     onSend,
     onTypingStart,
     onTypingStop
   }: {
-    value: string;
-    onChange: (value: string) => void;
-    onSend: () => void;
+    onSend: (message: string) => void;
     onTypingStart?: () => void;
     onTypingStop?: () => void;
   }) => {
+    const [localMessage, setLocalMessage] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
-      onChange(newValue);
+      setLocalMessage(newValue);
 
-      // Handle typing indicator
       if (newValue.length > 0 && onTypingStart) {
         onTypingStart();
 
-        // Clear existing timeout
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
 
-        // Auto-stop after 3 seconds
         typingTimeoutRef.current = setTimeout(() => {
           if (onTypingStop) {
             onTypingStop();
           }
         }, 3000);
       } else if (newValue.length === 0 && onTypingStop) {
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
         onTypingStop();
       }
-    }, [onChange, onTypingStart, onTypingStop]);
+    };
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
+    const handleSend = () => {
+      if (localMessage.trim()) {
+        onSend(localMessage.trim());
+        setLocalMessage("");
         if (onTypingStop) {
           onTypingStop();
         }
-        onSend();
       }
-    }, [onSend, onTypingStop]);
+    };
 
-    const handleBlur = useCallback(() => {
-      if (onTypingStop) {
-        onTypingStop();
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
       }
-    }, [onTypingStop]);
+    };
 
     return (
       <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -810,15 +775,15 @@ export const MessagingSystem = () => {
           <Input
             ref={inputRef}
             placeholder="Scrie un mesaj..."
-            value={value}
+            value={localMessage}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
+            onBlur={onTypingStop}
             className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
           />
           <Button
-            onClick={onSend}
-            disabled={!value.trim()}
+            onClick={handleSend}
+            disabled={!localMessage.trim()}
             size="icon"
             className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
           >
@@ -830,24 +795,26 @@ export const MessagingSystem = () => {
   });
 
   const MessagesView = React.memo(() => {
-    if (!selectedConversation) {
-      return (
-        <div className="flex-1 flex items-center justify-center bg-muted/20">
-          <div className="text-center p-8">
-            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
-            <p className="text-sm text-muted-foreground">
-              Alege o conversație din listă pentru a începe să comunici
-            </p>
-          </div>
+        
+  if (!selectedConversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-muted/20">
+        <div className="text-center p-8">
+          <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
+          <p className="text-sm text-muted-foreground">
+            Alege o conversație din listă pentru a începe să comunici
+          </p>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+
 
     return (
-      <div className="flex-1 flex flex-col bg-background">
+      <div className="flex-1 flex flex-col bg-background h-full">
         {/* Chat Header */}
-        <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+        <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -882,16 +849,18 @@ export const MessagingSystem = () => {
           </div>
         </div>
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-3 sm:p-4 bg-muted/20">
-          <div className="space-y-2 sm:space-y-3 max-w-4xl mx-auto">
+        {/* Messages - SCROLLABLE */}
+        <ScrollArea className="flex-1 bg-muted/20">
+          <div className="p-3 sm:p-4 space-y-2 sm:space-y-3 max-w-4xl mx-auto min-h-full">
             {messages.length === 0 ? (
-              <div className="text-center py-8 sm:py-12">
-                <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                <p className="text-sm sm:text-base text-muted-foreground font-medium">Niciun mesaj încă</p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Fii primul care trimite un mesaj!
-                </p>
+              <div className="text-center py-8 sm:py-12 flex items-center justify-center min-h-[300px]">
+                <div>
+                  <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <p className="text-sm sm:text-base text-muted-foreground font-medium">Niciun mesaj încă</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    Fii primul care trimite un mesaj!
+                  </p>
+                </div>
               </div>
             ) : (
               <>
@@ -975,39 +944,41 @@ export const MessagingSystem = () => {
                   );
                 })}
                 <div ref={messagesEndRef} />
-
-                {/* Typing Indicator */}
-                {typingUsers.length > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground animate-in fade-in-0">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                    </div>
-                    <span className="text-xs">
-                      {typingUsers.length === 1
-                        ? `${typingUsers[0].name} scrie...`
-                        : `${typingUsers.length} persoane scriu...`
-                      }
-                    </span>
-                  </div>
-                )}
               </>
             )}
           </div>
         </ScrollArea>
-
+        {/* Typing Indicator - OUTSIDE ScrollArea */}
+        {typingUsers.length > 0 && (
+          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in-0 max-w-4xl mx-auto">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+              <span className="text-xs">
+                {typingUsers.length === 1
+                  ? `${typingUsers[0].name} scrie...`
+                  : `${typingUsers.length} persoane scriu...`
+                }
+              </span>
+            </div>
+          </div>
+        )}
         {/* Message Input */}
-        <MessageInput
-          value={newMessage}
-          onChange={handleMessageChange}
-          onSend={handleSendMessage}
-          onTypingStart={profile ? () => startTyping(`${profile.nume} ${profile.prenume}`) : undefined}
-          onTypingStop={stopTyping}
-        />
+        <div className="flex-shrink-0">
+          <MessageInput
+            onSend={sendMessage}
+            onTypingStart={profile ? () => startTyping(`${profile.nume} ${profile.prenume}`) : undefined}
+            onTypingStop={stopTyping}
+          />
+        </div>
       </div>
     );
   });
+
+  // ==================== MAIN RENDER ====================
 
   return (
     <>
@@ -1022,7 +993,7 @@ export const MessagingSystem = () => {
       {/* Mobile Layout */}
       <div className="lg:hidden">
         {selectedConversation ? (
-          <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background">
+          <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background flex flex-col">
             <MessagesView />
           </div>
         ) : (

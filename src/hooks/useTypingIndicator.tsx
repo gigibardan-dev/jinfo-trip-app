@@ -11,13 +11,13 @@ export const useTypingIndicator = (conversationId: string | null, userId: string
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingUsersRef = useRef<TypingUser[]>([]); // ← ADAUGĂ ASTA
 
   useEffect(() => {
     if (!conversationId || !userId) {
       return;
     }
 
-    // Create a presence channel for this conversation
     const channel = supabase.channel(`typing:${conversationId}`, {
       config: {
         presence: {
@@ -26,7 +26,6 @@ export const useTypingIndicator = (conversationId: string | null, userId: string
       },
     });
 
-    // Track presence state changes
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
@@ -44,11 +43,16 @@ export const useTypingIndicator = (conversationId: string | null, userId: string
           });
         });
         
-        setTypingUsers(typing);
+        // ✅ DOAR UPDATE DACĂ S-A SCHIMBAT EFECTIV
+        const typingChanged = JSON.stringify(typingUsersRef.current) !== JSON.stringify(typing);
+        if (typingChanged) {
+          console.log('🔄 Typing users changed:', typing); // Debug
+          typingUsersRef.current = typing;
+          setTypingUsers(typing);
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Track initial presence
           await channel.track({
             user_id: userId,
             typing: false,
@@ -70,12 +74,10 @@ export const useTypingIndicator = (conversationId: string | null, userId: string
   const startTyping = useCallback(async (userName: string) => {
     if (!channelRef.current || !userId) return;
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Update presence to typing
     await channelRef.current.track({
       user_id: userId,
       name: userName,
@@ -83,11 +85,10 @@ export const useTypingIndicator = (conversationId: string | null, userId: string
       online_at: new Date().toISOString(),
     });
 
-    // Auto-stop typing after 3 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       stopTyping();
     }, 3000);
-  }, [userId]);
+  }, [userId]); // ← ATENȚIE: stopTyping NU e în dependency!
 
   const stopTyping = useCallback(async () => {
     if (!channelRef.current || !userId) return;
