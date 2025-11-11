@@ -69,7 +69,7 @@ export const MessagingSystem = () => {
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const { typingUsers, startTyping, stopTyping } = useTypingIndicator(
     selectedConversation?.id || null,
     user?.id || null
@@ -118,7 +118,7 @@ export const MessagingSystem = () => {
         },
         async (payload: any) => {
           const newMsg = payload.new as Message;
-          
+
           // If message is not from current user
           if (newMsg.sender_id !== user.id) {
             // Get sender info
@@ -128,7 +128,7 @@ export const MessagingSystem = () => {
               .eq('id', newMsg.sender_id)
               .single();
 
-            const senderName = senderData 
+            const senderName = senderData
               ? `${senderData.nume} ${senderData.prenume}`
               : 'Cineva';
 
@@ -168,8 +168,8 @@ export const MessagingSystem = () => {
         (payload: any) => {
           // Update message status in real-time
           if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
-            setMessages(prevMessages => 
-              prevMessages.map(msg => 
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
                 msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
               )
             );
@@ -190,7 +190,7 @@ export const MessagingSystem = () => {
 
   const fetchConversations = async () => {
     if (!user) return;
-    
+
     try {
       const { data: conversationsData, error } = await supabase
         .from('conversations')
@@ -248,7 +248,7 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
       setMessages(messagesData || []);
-      
+
       // Mark messages as delivered when viewing
       await markMessagesAsDelivered(conversationId);
     } catch (error) {
@@ -277,7 +277,7 @@ export const MessagingSystem = () => {
     try {
       await supabase
         .from('chat_messages')
-        .update({ 
+        .update({
           is_read: true,
           read_at: new Date().toISOString()
         })
@@ -293,7 +293,7 @@ export const MessagingSystem = () => {
 
   const fetchTourists = async () => {
     if (!canInitiateChat) return;
-    
+
     try {
       // If guide, only fetch tourists from assigned groups
       if (isGuide && !isAdmin) {
@@ -426,8 +426,8 @@ export const MessagingSystem = () => {
       const conversationData = {
         conversation_type: newChatType,
         group_id: newChatType === 'group' ? selectedRecipient : null,
-        title: newChatType === 'group' ? 
-          groups.find(g => g.id === selectedRecipient)?.nume_grup : 
+        title: newChatType === 'group' ?
+          groups.find(g => g.id === selectedRecipient)?.nume_grup :
           null
       };
 
@@ -529,30 +529,25 @@ export const MessagingSystem = () => {
 
   const handleMessageChange = useCallback((newValue: string) => {
     setNewMessage(newValue);
-    
-    // Start typing indicator
-    if (newValue.length > 0 && profile) {
-      startTyping(`${profile.nume} ${profile.prenume}`);
-    } else {
-      stopTyping();
-    }
-  }, [profile, startTyping, stopTyping]);
+
+    // Start typing indicator - nu folosim direct startTyping/stopTyping aici
+    // pentru a evita dependențele care cauzează re-render
+  }, []);
 
   const handleSendMessage = useCallback(() => {
-    stopTyping();
-    sendMessage();
-  }, [stopTyping]);
+  sendMessage();
+}, []);
 
   const getConversationTitle = (conversation: Conversation) => {
     if (conversation.title) return conversation.title;
-    
+
     if (conversation.conversation_type === 'direct') {
       const otherParticipant = conversation.participants?.find(p => p.user_id !== user?.id);
       if (otherParticipant?.profiles) {
         return `${otherParticipant.profiles.nume} ${otherParticipant.profiles.prenume}`;
       }
     }
-    
+
     return 'Conversație';
   };
 
@@ -644,8 +639,8 @@ export const MessagingSystem = () => {
                     </Select>
                   )}
 
-                  <Button 
-                    onClick={createConversation} 
+                  <Button
+                    onClick={createConversation}
                     disabled={!selectedRecipient}
                     className="w-full"
                   >
@@ -673,8 +668,8 @@ export const MessagingSystem = () => {
             <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
             <h3 className="font-semibold mb-2 text-sm sm:text-base">Nicio conversație</h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {canInitiateChat 
-                ? "Începe o conversație nouă folosind butonul de mai sus" 
+              {canInitiateChat
+                ? "Începe o conversație nouă folosind butonul de mai sus"
                 : "Nu ai nicio conversație momentan"}
             </p>
           </div>
@@ -683,13 +678,13 @@ export const MessagingSystem = () => {
             {filteredConversations.map(conversation => {
               const unreadCount = getUnreadCount(conversation.id);
               const isSelected = selectedConversation?.id === conversation.id;
-              const lastMessageTime = conversation.last_message?.created_at 
+              const lastMessageTime = conversation.last_message?.created_at
                 ? new Date(conversation.last_message.created_at).toLocaleTimeString('ro-RO', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
                 : '';
-              
+
               return (
                 <button
                   key={conversation.id}
@@ -706,8 +701,8 @@ export const MessagingSystem = () => {
                     <Avatar className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0">
                       <AvatarFallback className={cn(
                         "bg-gradient-to-br font-semibold text-white",
-                        conversation.conversation_type === 'group' 
-                          ? "from-blue-500 to-purple-500" 
+                        conversation.conversation_type === 'group'
+                          ? "from-blue-500 to-purple-500"
                           : "from-green-500 to-teal-500"
                       )}>
                         {conversation.conversation_type === 'group' ? (
@@ -753,16 +748,61 @@ export const MessagingSystem = () => {
     </div>
   ));
 
-  const MessageInput = React.memo(({ 
-    value, 
-    onChange, 
-    onSend 
-  }: { 
-    value: string; 
-    onChange: (value: string) => void; 
+  const MessageInput = React.memo(({
+    value,
+    onChange,
+    onSend,
+    onTypingStart,
+    onTypingStop
+  }: {
+    value: string;
+    onChange: (value: string) => void;
     onSend: () => void;
+    onTypingStart?: () => void;
+    onTypingStop?: () => void;
   }) => {
     const inputRef = useRef<HTMLInputElement>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      onChange(newValue);
+
+      // Handle typing indicator
+      if (newValue.length > 0 && onTypingStart) {
+        onTypingStart();
+
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Auto-stop after 3 seconds
+        typingTimeoutRef.current = setTimeout(() => {
+          if (onTypingStop) {
+            onTypingStop();
+          }
+        }, 3000);
+      } else if (newValue.length === 0 && onTypingStop) {
+        onTypingStop();
+      }
+    }, [onChange, onTypingStart, onTypingStop]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (onTypingStop) {
+          onTypingStop();
+        }
+        onSend();
+      }
+    }, [onSend, onTypingStop]);
+
+    const handleBlur = useCallback(() => {
+      if (onTypingStop) {
+        onTypingStop();
+      }
+    }, [onTypingStop]);
 
     return (
       <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -771,18 +811,13 @@ export const MessagingSystem = () => {
             ref={inputRef}
             placeholder="Scrie un mesaj..."
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                onSend();
-              }
-            }}
-            onBlur={() => stopTyping()}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
           />
-          <Button 
-            onClick={onSend} 
+          <Button
+            onClick={onSend}
             disabled={!value.trim()}
             size="icon"
             className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
@@ -825,8 +860,8 @@ export const MessagingSystem = () => {
             <Avatar className="w-10 h-10 sm:w-11 sm:h-11">
               <AvatarFallback className={cn(
                 "bg-gradient-to-br font-semibold text-white",
-                selectedConversation.conversation_type === 'group' 
-                  ? "from-blue-500 to-purple-500" 
+                selectedConversation.conversation_type === 'group'
+                  ? "from-blue-500 to-purple-500"
                   : "from-green-500 to-teal-500"
               )}>
                 {selectedConversation.conversation_type === 'group' ? (
@@ -863,10 +898,10 @@ export const MessagingSystem = () => {
                 {messages.map((message, index) => {
                   const isOwn = message.sender_id === user?.id;
                   const showSender = !isOwn && (
-                    index === 0 || 
+                    index === 0 ||
                     messages[index - 1].sender_id !== message.sender_id
                   );
-                  const showAvatar = index === messages.length - 1 || 
+                  const showAvatar = index === messages.length - 1 ||
                     messages[index + 1]?.sender_id !== message.sender_id;
 
                   return (
@@ -940,7 +975,7 @@ export const MessagingSystem = () => {
                   );
                 })}
                 <div ref={messagesEndRef} />
-                
+
                 {/* Typing Indicator */}
                 {typingUsers.length > 0 && (
                   <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground animate-in fade-in-0">
@@ -950,7 +985,7 @@ export const MessagingSystem = () => {
                       <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                     </div>
                     <span className="text-xs">
-                      {typingUsers.length === 1 
+                      {typingUsers.length === 1
                         ? `${typingUsers[0].name} scrie...`
                         : `${typingUsers.length} persoane scriu...`
                       }
@@ -963,10 +998,12 @@ export const MessagingSystem = () => {
         </ScrollArea>
 
         {/* Message Input */}
-        <MessageInput 
+        <MessageInput
           value={newMessage}
           onChange={handleMessageChange}
           onSend={handleSendMessage}
+          onTypingStart={profile ? () => startTyping(`${profile.nume} ${profile.prenume}`) : undefined}
+          onTypingStop={stopTyping}
         />
       </div>
     );
