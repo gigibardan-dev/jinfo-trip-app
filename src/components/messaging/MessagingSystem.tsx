@@ -77,101 +77,89 @@ export const MessagingSystem = () => {
   const canInitiateChat = isAdmin || isGuide;
 
   // Request notification permission on mount (only if supported)
-  useEffect(() => {
-    if (user && isSupported && permission === 'default') {
-      requestPermission();
-    }
-  }, [user, isSupported, permission, requestPermission]);
+// Real-time notifications for new messages
+useEffect(() => {
+  if (!user) return;
 
-  useEffect(() => {
-    if (user) {
-      fetchConversations();
-      if (canInitiateChat) {
-        fetchTourists();
-        fetchGroups();
-      }
-    }
-  }, [user, canInitiateChat]);
+  const channel = supabase
+    .channel('new-messages')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+      },
+      async (payload: any) => {
+        const newMsg = payload.new as Message;
 
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
-      markMessagesAsRead(selectedConversation.id);
-    }
-  }, [selectedConversation]);
+        if (newMsg.sender_id !== user.id) {
+          // Fetch sender info
+          const { data: senderData } = await supabase
+            .from('profiles')
+            .select('nume, prenume, email')
+            .eq('id', newMsg.sender_id)
+            .single();
 
-  // Real-time notifications for new messages
-  useEffect(() => {
-    if (!user) return;
+          const senderName = senderData
+            ? `${senderData.nume} ${senderData.prenume}`
+            : 'Cineva';
 
-    const channel = supabase
-      .channel('new-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-        },
-        async (payload: any) => {
-          const newMsg = payload.new as Message;
+          toast({
+            title: "Mesaj nou",
+            description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
+            duration: 3000,
+          });
 
-          if (newMsg.sender_id !== user.id) {
-            const { data: senderData } = await supabase
-              .from('profiles')
-              .select('nume, prenume')
-              .eq('id', newMsg.sender_id)
-              .single();
-
-            const senderName = senderData
-              ? `${senderData.nume} ${senderData.prenume}`
-              : 'Cineva';
-
-            toast({
-              title: "Mesaj nou",
-              description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
-              duration: 3000,
+          if (document.hidden) {
+            showNotification('Mesaj nou', {
+              body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
+              tag: newMsg.conversation_id,
+              requireInteraction: false,
             });
-
-            if (document.hidden) {
-              showNotification('Mesaj nou', {
-                body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
-                tag: newMsg.conversation_id,
-                requireInteraction: false,
-              });
-            }
-
-            fetchConversations();
-
-            if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
-              fetchMessages(selectedConversation.id);
-            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'chat_messages',
-        },
-        (payload: any) => {
-          if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
-                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, selectedConversation, showNotification, toast]);
+          // ✅ DACĂ MESAJUL E ÎN CONVERSAȚIA CURENTĂ, ADAUGĂ-L DIRECT
+          if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
+            setMessages(prev => {
+              // Verifică dacă mesajul nu există deja (evită duplicate)
+              const exists = prev.some(m => m.id === newMsg.id);
+              if (exists) return prev;
+              
+              return [...prev, {
+                ...newMsg,
+                sender: senderData
+              }];
+            });
+          }
+
+          fetchConversations();
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'chat_messages',
+      },
+      (payload: any) => {
+        if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
+          setMessages(prevMessages =>
+            prevMessages.map(msg =>
+              msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+            )
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [user, selectedConversation, showNotification, toast, profile]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -484,20 +472,55 @@ export const MessagingSystem = () => {
     if (!messageText || !selectedConversation || !user) return;
 
     try {
-      const { error } = await supabase
+      // ✅ Optimistic UI - adaugă mesajul INSTANT
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: selectedConversation.id,
+        sender_id: user.id,
+        content: messageText,
+        is_read: false,
+        created_at: new Date().toISOString(),
+        sender: {
+          nume: profile?.nume,
+          prenume: profile?.prenume,
+          email: profile?.email
+        }
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      // Trimite la server
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: messageText
-        });
+        })
+        .select(`
+        *,
+        sender:profiles(nume, prenume, email)
+      `)
+        .single();
 
       if (error) throw error;
 
-      fetchMessages(selectedConversation.id);
+      // Înlocuiește mesajul optimistic cu cel real
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === optimisticMessage.id ? data : msg
+        )
+      );
+
       fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
+
+      // Șterge mesajul optimistic dacă eroare
+      setMessages(prev =>
+        prev.filter(msg => !msg.id.startsWith('temp-'))
+      );
+
       toast({
         title: "Eroare",
         description: "Nu s-a putut trimite mesajul",
@@ -795,20 +818,20 @@ export const MessagingSystem = () => {
   });
 
   const MessagesView = React.memo(() => {
-        
-  if (!selectedConversation) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted/20">
-        <div className="text-center p-8">
-          <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
-          <p className="text-sm text-muted-foreground">
-            Alege o conversație din listă pentru a începe să comunici
-          </p>
+
+    if (!selectedConversation) {
+      return (
+        <div className="flex-1 flex items-center justify-center bg-muted/20">
+          <div className="text-center p-8">
+            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
+            <p className="text-sm text-muted-foreground">
+              Alege o conversație din listă pentru a începe să comunici
+            </p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
 
     return (
