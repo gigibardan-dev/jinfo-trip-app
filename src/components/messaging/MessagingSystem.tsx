@@ -173,19 +173,19 @@ export const MessagingSystem = () => {
               setMessages(prev => {
                 const exists = prev.some(m => m.id === newMsg.id);
                 if (exists) return prev;
-                
+
                 return [...prev, {
                   ...newMsg,
                   sender: senderData
                 }];
               });
-              
+
               // Mark as read instant
               markMessagesAsRead(selectedConversation.id);
             } else {
               // Dacă e în altă conversație, update unread count
-              setConversations(prev => 
-                prev.map(conv => 
+              setConversations(prev =>
+                prev.map(conv =>
                   conv.id === newMsg.conversation_id
                     ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
                     : conv
@@ -292,7 +292,7 @@ export const MessagingSystem = () => {
       );
 
       setConversations(conversationsWithUnread);
-      
+
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -358,9 +358,9 @@ export const MessagingSystem = () => {
       if (error) throw error;
 
       // Update local state INSTANT
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === conversationId 
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === conversationId
             ? { ...conv, unread_count: 0 }
             : conv
         )
@@ -613,8 +613,8 @@ export const MessagingSystem = () => {
       if (error) throw error;
 
       // Înlocuiește mesajul optimistic
-      setMessages(prev => 
-        prev.map(msg => 
+      setMessages(prev =>
+        prev.map(msg =>
           msg.id === optimisticMessage.id ? data : msg
         )
       );
@@ -622,12 +622,12 @@ export const MessagingSystem = () => {
       fetchConversationsDebounced();
     } catch (error) {
       console.error('Error sending message:', error);
-      
+
       // Șterge mesajul optimistic
-      setMessages(prev => 
+      setMessages(prev =>
         prev.filter(msg => !msg.id.startsWith('temp-'))
       );
-      
+
       toast({
         title: "Eroare",
         description: "Nu s-a putut trimite mesajul",
@@ -931,20 +931,20 @@ export const MessagingSystem = () => {
   }, () => true);
 
   const MessagesView = React.memo(() => {
-        
-  if (!selectedConversation) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted/20">
-        <div className="text-center p-8">
-          <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
-          <p className="text-sm text-muted-foreground">
-            Alege o conversație din listă pentru a începe să comunici
-          </p>
+
+    if (!selectedConversation) {
+      return (
+        <div className="flex-1 flex items-center justify-center bg-muted/20">
+          <div className="text-center p-8">
+            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
+            <p className="text-sm text-muted-foreground">
+              Alege o conversație din listă pentru a începe să comunici
+            </p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
     return (
       <div className="flex-1 flex flex-col bg-background h-full">
@@ -1026,24 +1026,48 @@ export const MessagingSystem = () => {
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={cn("flex flex-col gap-0.5 max-w-[80%] sm:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
+
+                      {/* ✅ Container mesaj - MĂRIT + min-w-0 */}
+                      <div className={cn(
+                        "flex flex-col gap-0.5 min-w-0",
+                        "max-w-[85%] sm:max-w-[75%] lg:max-w-[600px]", // ← Mai larg
+                        isOwn ? "items-end" : "items-start"
+                      )}>
                         {showSender && (
                           <p className="text-xs font-medium text-muted-foreground px-3 mb-0.5">
                             {message.sender?.nume} {message.sender?.prenume}
                           </p>
                         )}
+
+                        {/* ✅ Bula mesaj - break AGRESIV */}
                         <div
                           className={cn(
-                            "rounded-2xl px-3 sm:px-4 py-2 break-words shadow-sm",
+                            "rounded-2xl px-3 sm:px-4 py-2 shadow-sm w-full min-w-0",
                             isOwn
                               ? "bg-primary text-primary-foreground rounded-br-md"
                               : "bg-background border border-border/50 rounded-bl-md"
                           )}
                         >
-                          <p className="text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                          <div className="flex items-center justify-end gap-1 mt-1">
+                          <p
+                            className={cn(
+                              "text-sm sm:text-base leading-relaxed",
+                              "break-all overflow-wrap-anywhere", // ← break-all forțează rupere
+                              "whitespace-pre-wrap max-w-full"
+                            )}
+                            style={{
+                              wordBreak: 'break-word',
+                              overflowWrap: 'anywhere',
+                              hyphens: 'auto',
+                              WebkitHyphens: 'auto',
+                              MozHyphens: 'auto'
+                            }}
+                          >
+                            {message.content}
+                          </p>
+
+                          <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
                             <p className={cn(
-                              "text-[10px] sm:text-xs",
+                              "text-[10px] sm:text-xs whitespace-nowrap", // ← whitespace-nowrap pentru ora
                               isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
                             )}>
                               {new Date(message.created_at).toLocaleTimeString('ro-RO', {
@@ -1065,6 +1089,7 @@ export const MessagingSystem = () => {
                           </div>
                         </div>
                       </div>
+
                       {isOwn && (
                         <Avatar className={cn(
                           "w-7 h-7 sm:w-8 sm:h-8 mb-0.5 flex-shrink-0",
