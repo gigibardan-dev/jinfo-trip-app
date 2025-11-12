@@ -77,99 +77,155 @@ export const MessagingSystem = () => {
   const canInitiateChat = isAdmin || isGuide;
 
   // Request notification permission on mount (only if supported)
-// Real-time notifications for new messages
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (user && isSupported && permission === 'default') {
+      requestPermission();
+    }
+  }, [user, isSupported, permission, requestPermission]);
 
-  const channel = supabase
-    .channel('new-messages')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-      },
-      async (payload: any) => {
-        const newMsg = payload.new as Message;
+  // Fetch conversations - SEPARAT
+  useEffect(() => {
+    console.log('🔄 Conversations useEffect', { user: !!user });
+    
+    if (user) {
+      fetchConversations();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
-        if (newMsg.sender_id !== user.id) {
-          // Fetch sender info
-          const { data: senderData } = await supabase
-            .from('profiles')
-            .select('nume, prenume, email')
-            .eq('id', newMsg.sender_id)
-            .single();
+  // Fetch tourists & groups - SEPARAT
+  useEffect(() => {
+    console.log('🔄 Tourists/Groups useEffect', { user: !!user, canInitiateChat });
+    
+    if (user && canInitiateChat) {
+      fetchTourists();
+      fetchGroups();
+    }
+  }, [user, canInitiateChat]);
 
-          const senderName = senderData
-            ? `${senderData.nume} ${senderData.prenume}`
-            : 'Cineva';
-
-          toast({
-            title: "Mesaj nou",
-            description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
-            duration: 3000,
-          });
-
-          if (document.hidden) {
-            showNotification('Mesaj nou', {
-              body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
-              tag: newMsg.conversation_id,
-              requireInteraction: false,
-            });
-          }
-
-          // ✅ DACĂ MESAJUL E ÎN CONVERSAȚIA CURENTĂ, ADAUGĂ-L DIRECT
-          if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
-            setMessages(prev => {
-              // Verifică dacă mesajul nu există deja (evită duplicate)
-              const exists = prev.some(m => m.id === newMsg.id);
-              if (exists) return prev;
-              
-              return [...prev, {
-                ...newMsg,
-                sender: senderData
-              }];
-            });
-          }
-
-          fetchConversations();
-        }
+  // Safety net - dacă loading e true mai mult de 5 secunde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ Loading timeout - forcing false');
+        setLoading(false);
       }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'chat_messages',
-      },
-      (payload: any) => {
-        if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
-          setMessages(prevMessages =>
-            prevMessages.map(msg =>
-              msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
-            )
-          );
-        }
-      }
-    )
-    .subscribe();
+    }, 5000);
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [user, selectedConversation, showNotification, toast, profile]);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.id);
+      markMessagesAsRead(selectedConversation.id);
+    }
+  }, [selectedConversation]);
+
+  // Real-time notifications for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('new-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        async (payload: any) => {
+          const newMsg = payload.new as Message;
+
+          if (newMsg.sender_id !== user.id) {
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('nume, prenume, email')
+              .eq('id', newMsg.sender_id)
+              .single();
+
+            const senderName = senderData
+              ? `${senderData.nume} ${senderData.prenume}`
+              : 'Cineva';
+
+            toast({
+              title: "Mesaj nou",
+              description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
+              duration: 3000,
+            });
+
+            if (document.hidden) {
+              showNotification('Mesaj nou', {
+                body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
+                tag: newMsg.conversation_id,
+                requireInteraction: false,
+              });
+            }
+
+            // ✅ Dacă mesajul e în conversația curentă, adaugă-l direct
+            if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
+              setMessages(prev => {
+                const exists = prev.some(m => m.id === newMsg.id);
+                if (exists) return prev;
+                
+                return [...prev, {
+                  ...newMsg,
+                  sender: senderData
+                }];
+              });
+            }
+
+            fetchConversations();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload: any) => {
+          if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, selectedConversation, showNotification, toast, profile]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [messages]);
 
   const fetchConversations = async () => {
-    if (!user) return;
+    console.log('🚀 fetchConversations START', { user: user?.id });
+    
+    if (!user) {
+      console.log('❌ No user in fetchConversations');
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log('📡 Fetching conversations from Supabase...');
+      
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
@@ -181,16 +237,30 @@ useEffect(() => {
         `)
         .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 Supabase response:', { 
+        data: conversationsData?.length, 
+        error: error?.message 
+      });
+
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
+
+      console.log('✅ Conversations data:', conversationsData);
 
       const conversationsWithUnread = await Promise.all(
         (conversationsData || []).map(async (conv) => {
-          const { count } = await supabase
+          const { count, error: countError } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
             .eq('conversation_id', conv.id)
             .eq('is_read', false)
             .neq('sender_id', user.id);
+
+          if (countError) {
+            console.error('❌ Count error for conversation:', conv.id, countError);
+          }
 
           return {
             ...conv,
@@ -199,15 +269,18 @@ useEffect(() => {
         })
       );
 
+      console.log('✅ Setting conversations:', conversationsWithUnread.length);
       setConversations(conversationsWithUnread);
+      
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('❌ Error in fetchConversations:', error);
       toast({
         title: "Eroare",
         description: "Nu s-au putut încărca conversațiile",
         variant: "destructive",
       });
     } finally {
+      console.log('✅ fetchConversations COMPLETE - setting loading false');
       setLoading(false);
     }
   };
@@ -472,7 +545,7 @@ useEffect(() => {
     if (!messageText || !selectedConversation || !user) return;
 
     try {
-      // ✅ Optimistic UI - adaugă mesajul INSTANT
+      // ✅ Optimistic UI
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
         conversation_id: selectedConversation.id,
@@ -489,7 +562,6 @@ useEffect(() => {
 
       setMessages(prev => [...prev, optimisticMessage]);
 
-      // Trimite la server
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -498,16 +570,16 @@ useEffect(() => {
           content: messageText
         })
         .select(`
-        *,
-        sender:profiles(nume, prenume, email)
-      `)
+          *,
+          sender:profiles(nume, prenume, email)
+        `)
         .single();
 
       if (error) throw error;
 
-      // Înlocuiește mesajul optimistic cu cel real
-      setMessages(prev =>
-        prev.map(msg =>
+      // Înlocuiește mesajul optimistic
+      setMessages(prev => 
+        prev.map(msg => 
           msg.id === optimisticMessage.id ? data : msg
         )
       );
@@ -515,12 +587,12 @@ useEffect(() => {
       fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
-
-      // Șterge mesajul optimistic dacă eroare
-      setMessages(prev =>
+      
+      // Șterge mesajul optimistic
+      setMessages(prev => 
         prev.filter(msg => !msg.id.startsWith('temp-'))
       );
-
+      
       toast({
         title: "Eroare",
         description: "Nu s-a putut trimite mesajul",
@@ -750,27 +822,30 @@ useEffect(() => {
     const [localMessage, setLocalMessage] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isTypingRef = useRef(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       setLocalMessage(newValue);
 
-      if (newValue.length > 0 && onTypingStart) {
+      if (newValue.length > 0 && onTypingStart && !isTypingRef.current) {
+        isTypingRef.current = true;
         onTypingStart();
+      }
 
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
 
+      if (newValue.length > 0) {
         typingTimeoutRef.current = setTimeout(() => {
           if (onTypingStop) {
+            isTypingRef.current = false;
             onTypingStop();
           }
         }, 3000);
-      } else if (newValue.length === 0 && onTypingStop) {
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
+      } else if (onTypingStop) {
+        isTypingRef.current = false;
         onTypingStop();
       }
     };
@@ -780,7 +855,11 @@ useEffect(() => {
         onSend(localMessage.trim());
         setLocalMessage("");
         if (onTypingStop) {
+          isTypingRef.current = false;
           onTypingStop();
+        }
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
         }
       }
     };
@@ -801,7 +880,6 @@ useEffect(() => {
             value={localMessage}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            onBlur={onTypingStop}
             className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
           />
           <Button
@@ -815,24 +893,23 @@ useEffect(() => {
         </div>
       </div>
     );
-  });
+  }, () => true);
 
   const MessagesView = React.memo(() => {
-
-    if (!selectedConversation) {
-      return (
-        <div className="flex-1 flex items-center justify-center bg-muted/20">
-          <div className="text-center p-8">
-            <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
-            <p className="text-sm text-muted-foreground">
-              Alege o conversație din listă pentru a începe să comunici
-            </p>
-          </div>
+        
+  if (!selectedConversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-muted/20">
+        <div className="text-center p-8">
+          <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
+          <p className="text-sm text-muted-foreground">
+            Alege o conversație din listă pentru a începe să comunici
+          </p>
         </div>
-      );
-    }
-
+      </div>
+    );
+  }
 
     return (
       <div className="flex-1 flex flex-col bg-background h-full">
@@ -971,9 +1048,10 @@ useEffect(() => {
             )}
           </div>
         </ScrollArea>
-        {/* Typing Indicator - OUTSIDE ScrollArea */}
+
+        {/* Typing Indicator */}
         {typingUsers.length > 0 && (
-          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t">
+          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t flex-shrink-0">
             <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in-0 max-w-4xl mx-auto">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -989,6 +1067,7 @@ useEffect(() => {
             </div>
           </div>
         )}
+
         {/* Message Input */}
         <div className="flex-shrink-0">
           <MessageInput
