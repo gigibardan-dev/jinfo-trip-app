@@ -66,6 +66,8 @@ export const MessagingSystem = () => {
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasFetchedRef = useRef(false);
+  const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { typingUsers, startTyping, stopTyping } = useTypingIndicator(
     selectedConversation?.id || null,
@@ -76,28 +78,29 @@ export const MessagingSystem = () => {
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
 
-  // Request notification permission on mount (only if supported)
+  // Request notification permission on mount (only on desktop)
   useEffect(() => {
     if (user && isSupported && permission === 'default') {
-      requestPermission();
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!isMobile) {
+        requestPermission();
+      }
     }
   }, [user, isSupported, permission, requestPermission]);
 
-  // Fetch conversations - SEPARAT
+  // Fetch conversations - cu prevent double call
   useEffect(() => {
-    console.log('🔄 Conversations useEffect', { user: !!user });
-    
-    if (user) {
+    if (user && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchConversations();
-    } else {
+    } else if (!user) {
+      hasFetchedRef.current = false;
       setLoading(false);
     }
   }, [user]);
 
   // Fetch tourists & groups - SEPARAT
   useEffect(() => {
-    console.log('🔄 Tourists/Groups useEffect', { user: !!user, canInitiateChat });
-    
     if (user && canInitiateChat) {
       fetchTourists();
       fetchGroups();
@@ -108,7 +111,6 @@ export const MessagingSystem = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (loading) {
-        console.warn('⚠️ Loading timeout - forcing false');
         setLoading(false);
       }
     }, 5000);
@@ -116,6 +118,7 @@ export const MessagingSystem = () => {
     return () => clearTimeout(timer);
   }, [loading]);
 
+  // Fetch messages când se selectează o conversație
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.id);
@@ -156,7 +159,8 @@ export const MessagingSystem = () => {
               duration: 3000,
             });
 
-            if (document.hidden) {
+            // Push notification doar dacă granted și document hidden
+            if (document.hidden && permission === 'granted') {
               showNotification('Mesaj nou', {
                 body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
                 tag: newMsg.conversation_id,
@@ -164,7 +168,7 @@ export const MessagingSystem = () => {
               });
             }
 
-            // ✅ Dacă mesajul e în conversația curentă, adaugă-l direct
+            // Dacă mesajul e în conversația curentă, adaugă-l direct
             if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
               setMessages(prev => {
                 const exists = prev.some(m => m.id === newMsg.id);
@@ -175,9 +179,22 @@ export const MessagingSystem = () => {
                   sender: senderData
                 }];
               });
+              
+              // Mark as read instant
+              markMessagesAsRead(selectedConversation.id);
+            } else {
+              // Dacă e în altă conversație, update unread count
+              setConversations(prev => 
+                prev.map(conv => 
+                  conv.id === newMsg.conversation_id
+                    ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
+                    : conv
+                )
+              );
             }
 
-            fetchConversations();
+            // Debounced fetch pentru last_message
+            fetchConversationsDebounced();
           }
         }
       )
@@ -189,6 +206,7 @@ export const MessagingSystem = () => {
           table: 'chat_messages',
         },
         (payload: any) => {
+          // Update mesajele din UI (pentru read receipts)
           if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
             setMessages(prevMessages =>
               prevMessages.map(msg =>
@@ -203,29 +221,47 @@ export const MessagingSystem = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedConversation, showNotification, toast, profile]);
+  }, [user, selectedConversation, showNotification, toast, permission]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll INSTANT când se deschide conversația
   useEffect(() => {
-    const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    if (selectedConversation && messages.length > 0) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedConversation?.id]);
+
+  // Auto-scroll SMOOTH când apar mesaje noi
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
   }, [messages]);
 
+  const fetchConversationsDebounced = useCallback(() => {
+    if (fetchConversationsTimeoutRef.current) {
+      clearTimeout(fetchConversationsTimeoutRef.current);
+    }
+
+    fetchConversationsTimeoutRef.current = setTimeout(() => {
+      fetchConversations();
+    }, 300);
+  }, []);
+
   const fetchConversations = async () => {
-    console.log('🚀 fetchConversations START', { user: user?.id });
-    
     if (!user) {
-      console.log('❌ No user in fetchConversations');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📡 Fetching conversations from Supabase...');
-      
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
@@ -237,30 +273,16 @@ export const MessagingSystem = () => {
         `)
         .order('updated_at', { ascending: false });
 
-      console.log('📊 Supabase response:', { 
-        data: conversationsData?.length, 
-        error: error?.message 
-      });
-
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        throw error;
-      }
-
-      console.log('✅ Conversations data:', conversationsData);
+      if (error) throw error;
 
       const conversationsWithUnread = await Promise.all(
         (conversationsData || []).map(async (conv) => {
-          const { count, error: countError } = await supabase
+          const { count } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
             .eq('conversation_id', conv.id)
             .eq('is_read', false)
             .neq('sender_id', user.id);
-
-          if (countError) {
-            console.error('❌ Count error for conversation:', conv.id, countError);
-          }
 
           return {
             ...conv,
@@ -269,18 +291,16 @@ export const MessagingSystem = () => {
         })
       );
 
-      console.log('✅ Setting conversations:', conversationsWithUnread.length);
       setConversations(conversationsWithUnread);
       
     } catch (error) {
-      console.error('❌ Error in fetchConversations:', error);
+      console.error('Error fetching conversations:', error);
       toast({
         title: "Eroare",
         description: "Nu s-au putut încărca conversațiile",
         variant: "destructive",
       });
     } finally {
-      console.log('✅ fetchConversations COMPLETE - setting loading false');
       setLoading(false);
     }
   };
@@ -324,7 +344,7 @@ export const MessagingSystem = () => {
     if (!user) return;
 
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .update({
           is_read: true,
@@ -332,9 +352,24 @@ export const MessagingSystem = () => {
         })
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .select();
 
-      fetchConversations();
+      if (error) throw error;
+
+      // Update local state INSTANT
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, unread_count: 0 }
+            : conv
+        )
+      );
+
+      // Debounced fetch pentru sincronizare completă
+      if (data && data.length > 0) {
+        fetchConversationsDebounced();
+      }
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
@@ -545,7 +580,7 @@ export const MessagingSystem = () => {
     if (!messageText || !selectedConversation || !user) return;
 
     try {
-      // ✅ Optimistic UI
+      // Optimistic UI
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
         conversation_id: selectedConversation.id,
@@ -584,7 +619,7 @@ export const MessagingSystem = () => {
         )
       );
 
-      fetchConversations();
+      fetchConversationsDebounced();
     } catch (error) {
       console.error('Error sending message:', error);
       
