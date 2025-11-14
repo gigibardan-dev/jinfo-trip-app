@@ -3,8 +3,6 @@
  * Handles storing, retrieving, and syncing documents for offline access
  */
 
-import { supabase } from '@/integrations/supabase/client';
-
 const DB_NAME = 'TravelProOfflineDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'documents';
@@ -17,7 +15,6 @@ export interface OfflineDocument {
   blobData: Blob;
   lastUpdated: string;
   supabaseUrl: string;
-  tripId?: string; // 🆕 Pentru tracking în offline_cache_status
 }
 
 /**
@@ -43,57 +40,6 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
- * 🆕 Track document in offline_cache_status table
- */
-async function trackInDatabase(
-  fileId: string,
-  tripId: string | undefined,
-  fileSize: number
-): Promise<void> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !tripId) return; // Skip if no user or tripId
-
-    await supabase.from('offline_cache_status').upsert({
-      user_id: user.id,
-      trip_id: tripId,
-      resource_type: 'documents', // ✅ FIXED: 'documents' (plural) not 'document'
-      resource_id: fileId,
-      cache_size: fileSize,
-      cached_at: new Date().toISOString(),
-    });
-
-    console.log(`[OfflineStorage] Tracked ${fileId} in database`);
-  } catch (error) {
-    console.error('[OfflineStorage] Failed to track in database:', error);
-    // Don't throw - offline functionality should work even if DB tracking fails
-  }
-}
-
-/**
- * 🆕 Remove tracking from offline_cache_status table
- */
-async function untrackFromDatabase(fileId: string): Promise<void> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase
-      .from('offline_cache_status')
-      .delete()
-      .match({
-        user_id: user.id,
-        resource_id: fileId,
-      });
-
-    console.log(`[OfflineStorage] Untracked ${fileId} from database`);
-  } catch (error) {
-    console.error('[OfflineStorage] Failed to untrack from database:', error);
-    // Don't throw
-  }
-}
-
-/**
  * Save document to IndexedDB for offline access (using Blob directly)
  */
 export async function saveDocumentOfflineFromBlob(
@@ -103,10 +49,10 @@ export async function saveDocumentOfflineFromBlob(
   fileSize: number,
   blobData: Blob,
   lastUpdated: string,
-  supabaseUrl: string,
-  tripId?: string // 🆕 Optional tripId parameter
+  supabaseUrl: string
 ): Promise<void> {
   try {
+
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
@@ -119,7 +65,6 @@ export async function saveDocumentOfflineFromBlob(
       blobData,
       lastUpdated,
       supabaseUrl,
-      tripId, // 🆕 Store tripId
     };
 
     await new Promise<void>((resolve, reject) => {
@@ -130,9 +75,6 @@ export async function saveDocumentOfflineFromBlob(
 
     db.close();
     console.log(`[OfflineStorage] Document ${fileName} saved offline`);
-
-    // 🆕 Track in database
-    await trackInDatabase(fileId, tripId, fileSize);
   } catch (error) {
     console.error('[OfflineStorage] Failed to save document:', error);
     throw error;
@@ -202,9 +144,6 @@ export async function deleteOfflineDocument(fileId: string): Promise<void> {
 
     db.close();
     console.log(`[OfflineStorage] Document ${fileId} deleted from offline storage`);
-
-    // 🆕 Remove from database tracking
-    await untrackFromDatabase(fileId);
   } catch (error) {
     console.error('[OfflineStorage] Failed to delete offline document:', error);
     throw error;
@@ -282,8 +221,7 @@ export async function syncOfflineDocuments(
             doc.fileSize,
             supabaseDoc.blob,
             supabaseDoc.updated_at,
-            supabaseDoc.url,
-            doc.tripId // 🆕 Pass tripId through
+            supabaseDoc.url
           );
           updated.push(doc.id);
           console.log(`[OfflineStorage] Document ${doc.fileName} updated`);
@@ -319,9 +257,6 @@ export async function getStorageSize(): Promise<number> {
  */
 export async function clearAllOfflineDocuments(): Promise<void> {
   try {
-    // 🆕 Get all docs first to untrack them
-    const documents = await getAllOfflineDocuments();
-
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
@@ -334,11 +269,6 @@ export async function clearAllOfflineDocuments(): Promise<void> {
 
     db.close();
     console.log('[OfflineStorage] All offline documents cleared');
-
-    // 🆕 Untrack all from database
-    for (const doc of documents) {
-      await untrackFromDatabase(doc.id);
-    }
   } catch (error) {
     console.error('[OfflineStorage] Failed to clear offline documents:', error);
     throw error;

@@ -168,6 +168,39 @@ const TouristManager = () => {
           description: "Turistul a fost actualizat cu succes.",
         });
       } else {
+        // 🔴 SOLUȚIA 1: Edge Function (ideal - no auto-login)
+        const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-tourist-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            nume: formData.nume,
+            prenume: formData.prenume,
+            telefon: formData.telefon || null,
+            avatar_url: formData.avatar_url || null,
+            group_ids: formData.group_ids
+          }
+        });
+
+        if (!edgeFunctionError && edgeFunctionData?.success) {
+          // Success - admin rămâne logat!
+          toast({
+            title: "Succes",
+            description: "Turistul a fost creat cu succes.",
+          });
+
+          setShowDialog(false);
+          setEditingTourist(null);
+          resetForm();
+          fetchTourists();
+          return;
+        }
+
+        // 🔴 SOLUȚIA 2: Fallback cu session restore
+        console.log("Edge Function not available, using fallback method");
+
+        // Salvează session-ul admin
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
         // Create new tourist
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
@@ -185,8 +218,27 @@ const TouristManager = () => {
         if (authError) throw authError;
 
         if (authData.user) {
+          // Așteaptă ca trigger să creeze profilul
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Update profile cu avatar
+          if (formData.avatar_url) {
+            await supabase
+              .from('profiles')
+              .update({ avatar_url: formData.avatar_url })
+              .eq('id', authData.user.id);
+          }
+
           // Add group memberships
           await updateGroupMemberships(authData.user.id);
+
+          // CRITICAL: Restore admin session
+          if (currentSession) {
+            await supabase.auth.setSession({
+              access_token: currentSession.access_token,
+              refresh_token: currentSession.refresh_token
+            });
+          }
         }
 
         toast({

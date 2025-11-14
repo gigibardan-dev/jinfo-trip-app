@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText } from "lucide-react";
+import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText, Edit, Trash2, Power, Phone, Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/shared/StatsCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Guide {
   id: string;
@@ -55,6 +65,14 @@ interface DailyReport {
   guides: Guide;
 }
 
+interface GuideFormData {
+  email: string;
+  nume: string;
+  prenume: string;
+  telefon: string;
+  password: string;
+}
+
 const GuideManager = () => {
   const { user } = useAuth();
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -65,8 +83,19 @@ const GuideManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState("");
   const [selectedTrip, setSelectedTrip] = useState("");
+  const [selectedGuideForAction, setSelectedGuideForAction] = useState<Guide | null>(null);
+  const [formData, setFormData] = useState<GuideFormData>({
+    email: "",
+    nume: "",
+    prenume: "",
+    telefon: "",
+    password: ""
+  });
 
   useEffect(() => {
     fetchData();
@@ -74,7 +103,9 @@ const GuideManager = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch guides
+      setLoading(true);
+
+      // Fetch guides - din profiles cu role='guide'
       const { data: guidesData, error: guidesError } = await supabase
         .from('profiles')
         .select('*')
@@ -93,7 +124,7 @@ const GuideManager = () => {
       if (tripsError) throw tripsError;
       setTrips(tripsData || []);
 
-      // Fetch assignments
+      // Fetch assignments with related data
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('guide_assignments')
         .select('*')
@@ -102,11 +133,9 @@ const GuideManager = () => {
       if (assignmentsError) throw assignmentsError;
 
       if (assignmentsData && assignmentsData.length > 0) {
-        // Get unique trip and guide IDs
         const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
         const guideIds = [...new Set(assignmentsData.map(a => a.guide_user_id))];
 
-        // Fetch trip details
         const { data: tripsData, error: tripsError } = await supabase
           .from('trips')
           .select('id, nume, destinatie, start_date, end_date, status')
@@ -114,15 +143,13 @@ const GuideManager = () => {
 
         if (tripsError) throw tripsError;
 
-        // Fetch guide details
         const { data: guidesData, error: guidesError } = await supabase
           .from('profiles')
-          .select('id, nume, prenume, email, is_active, created_at')
+          .select('id, nume, prenume, email, is_active, created_at, telefon')
           .in('id', guideIds);
 
         if (guidesError) throw guidesError;
 
-        // Combine assignments with trip and guide data
         const assignmentsWithData = assignmentsData.map(assignment => ({
           ...assignment,
           trips: tripsData?.find(trip => trip.id === assignment.trip_id) || null,
@@ -144,11 +171,9 @@ const GuideManager = () => {
       if (reportsError) throw reportsError;
 
       if (reportsData && reportsData.length > 0) {
-        // Get unique trip and guide IDs
         const tripIds = [...new Set(reportsData.map(r => r.trip_id))];
         const guideIds = [...new Set(reportsData.map(r => r.guide_user_id))];
 
-        // Fetch trip details
         const { data: tripsData, error: tripsError } = await supabase
           .from('trips')
           .select('id, nume, destinatie, start_date, end_date, status')
@@ -156,15 +181,13 @@ const GuideManager = () => {
 
         if (tripsError) throw tripsError;
 
-        // Fetch guide details
         const { data: guidesData, error: guidesError } = await supabase
           .from('profiles')
-          .select('id, nume, prenume, email, is_active, created_at')
+          .select('id, nume, prenume, email, is_active, created_at, telefon')
           .in('id', guideIds);
 
         if (guidesError) throw guidesError;
 
-        // Combine reports with trip and guide data
         const reportsWithData = reportsData.map(report => ({
           ...report,
           trips: tripsData?.find(trip => trip.id === report.trip_id) || null,
@@ -187,6 +210,266 @@ const GuideManager = () => {
     }
   };
 
+  const handleCreateGuide = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // 🔴 SOLUȚIA 1: Folosim Edge Function (dacă există)
+      const { data, error: edgeFunctionError } = await supabase.functions.invoke('create-guide-user', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          nume: formData.nume,
+          prenume: formData.prenume,
+          telefon: formData.telefon || null,
+        }
+      });
+
+      if (!edgeFunctionError) {
+        // Edge Function success - no auto-login!
+        toast({
+          title: "Succes",
+          description: "Ghidul a fost creat cu succes.",
+        });
+
+        setIsCreateDialogOpen(false);
+        resetForm();
+        fetchData();
+        return;
+      }
+
+      // 🔴 SOLUȚIA 2: Fallback - manual cu session restore
+      console.log("Edge Function not available, using fallback method");
+      
+      // 1. Salvează session-ul curent (admin-ul)
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+      // 2. Creează user în Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            nume: formData.nume,
+            prenume: formData.prenume,
+            telefon: formData.telefon,
+            role: 'guide'
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // 3. Așteaptă ca trigger-ul să creeze profilul
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // 4. FORȚEAZĂ rolul guide în profiles (trigger-ul pune automat tourist!)
+        const { error: updateProfileError } = await supabase
+          .from('profiles')
+          .update({ 
+            role: 'guide',
+            telefon: formData.telefon 
+          })
+          .eq('id', authData.user.id);
+
+        if (updateProfileError) {
+          console.error('Error updating profile:', updateProfileError);
+        }
+
+        // 5. FORȚEAZĂ rolul guide în user_roles
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', authData.user.id)
+          .eq('role', 'tourist');
+
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: 'guide',
+            assigned_by: user?.id
+          });
+
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error('Error adding guide role:', roleError);
+        }
+
+        // 6. Restore session-ul admin-ului (CRITICAL!)
+        if (currentSession) {
+          await supabase.auth.setSession({
+            access_token: currentSession.access_token,
+            refresh_token: currentSession.refresh_token
+          });
+        }
+
+        toast({
+          title: "Succes",
+          description: "Ghidul a fost creat cu succes.",
+        });
+
+        setIsCreateDialogOpen(false);
+        resetForm();
+        fetchData();
+      }
+    } catch (error: any) {
+      console.error('Error creating guide:', error);
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut crea ghidul.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      email: "",
+      nume: "",
+      prenume: "",
+      telefon: "",
+      password: ""
+    });
+  };
+
+  const handleEdit = (guide: Guide) => {
+    setSelectedGuideForAction(guide);
+    setFormData({
+      email: guide.email,
+      nume: guide.nume,
+      prenume: guide.prenume,
+      telefon: guide.telefon || "",
+      password: ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditGuide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedGuideForAction || !formData.nume || !formData.prenume) {
+      toast({
+        title: "Eroare",
+        description: "Completează toate câmpurile obligatorii",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          nume: formData.nume,
+          prenume: formData.prenume,
+          telefon: formData.telefon || null,
+        })
+        .eq("id", selectedGuideForAction.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succes",
+        description: "Ghid actualizat cu succes",
+      });
+
+      setIsEditDialogOpen(false);
+      setSelectedGuideForAction(null);
+      resetForm();
+      fetchData();
+    } catch (error: any) {
+      console.error("Error updating guide:", error);
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut actualiza ghidul",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleActive = async (guideId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: !currentStatus })
+        .eq('id', guideId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succes",
+        description: `Ghidul a fost ${!currentStatus ? 'activat' : 'dezactivat'}.`,
+      });
+
+      fetchData();
+    } catch (error) {
+      console.error('Error toggling guide status:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut actualiza statusul ghidului.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openDeleteDialog = (guide: Guide) => {
+    setSelectedGuideForAction(guide);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedGuideForAction) return;
+
+    try {
+      // Check if guide has active assignments
+      const guideAssignments = assignments.filter(
+        a => a.guide_user_id === selectedGuideForAction.id && a.is_active
+      );
+
+      if (guideAssignments.length > 0) {
+        toast({
+          title: "Eroare",
+          description: `Ghidul are ${guideAssignments.length} călătorii asignate. Dezasignează călătoriile înainte de ștergere.`,
+          variant: "destructive",
+        });
+        setIsDeleteDialogOpen(false);
+        return;
+      }
+
+      // 1. Șterge din user_roles
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', selectedGuideForAction.id)
+        .eq('role', 'guide');
+
+      // 2. Șterge din profiles (soft delete)
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', selectedGuideForAction.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succes",
+        description: "Ghidul a fost șters cu succes.",
+      });
+
+      setIsDeleteDialogOpen(false);
+      setSelectedGuideForAction(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting guide:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut șterge ghidul. Verifică dacă are atribuiri active.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAssignGuide = async () => {
     if (!selectedGuide || !selectedTrip) {
       toast({
@@ -204,6 +487,7 @@ const GuideManager = () => {
           guide_user_id: selectedGuide,
           trip_id: selectedTrip,
           assigned_by_admin_id: user?.id,
+          is_active: true
         });
 
       if (error) throw error;
@@ -217,28 +501,28 @@ const GuideManager = () => {
       setSelectedGuide("");
       setSelectedTrip("");
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning guide:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut atribui ghidul.",
+        description: error.message || "Nu s-a putut atribui ghidul.",
         variant: "destructive",
       });
     }
   };
 
-  const handleToggleAssignment = async (assignmentId: string, isActive: boolean) => {
+  const handleToggleAssignment = async (assignmentId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('guide_assignments')
-        .update({ is_active: !isActive })
+        .update({ is_active: !currentStatus })
         .eq('id', assignmentId);
 
       if (error) throw error;
 
       toast({
         title: "Succes",
-        description: `Atribuirea a fost ${!isActive ? 'activată' : 'dezactivată'}.`,
+        description: `Atribuirea a fost ${!currentStatus ? 'activată' : 'dezactivată'}.`,
       });
 
       fetchData();
@@ -246,46 +530,10 @@ const GuideManager = () => {
       console.error('Error toggling assignment:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut modifica atribuirea.",
+        description: "Nu s-a putut actualiza atribuirea.",
         variant: "destructive",
       });
     }
-  };
-
-  const filteredGuides = guides.filter(guide => {
-    const matchesSearch = guide.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guide.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guide.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterStatus === "all" || 
-                         (filterStatus === "active" && guide.is_active) ||
-                         (filterStatus === "inactive" && !guide.is_active);
-    
-    return matchesSearch && matchesFilter;
-  });
-
-  const filteredAssignments = assignments.filter(assignment => {
-    const guide = assignment.guides;
-    const trip = assignment.trips;
-    return guide && trip && (
-      guide.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guide.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.destinatie.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
-
-  const getActiveAssignmentsCount = () => {
-    return assignments.filter(a => a.is_active).length;
-  };
-
-  const getActiveGuidesCount = () => {
-    return guides.filter(g => g.is_active).length;
-  };
-
-  const getRecentReportsCount = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return reports.filter(r => r.report_date === today).length;
   };
 
   const formatDate = (dateString: string) => {
@@ -293,133 +541,250 @@ const GuideManager = () => {
   };
 
   const getTripStatus = (trip: Trip) => {
-    const today = new Date();
+    const now = new Date();
     const startDate = new Date(trip.start_date);
     const endDate = new Date(trip.end_date);
 
-    if (today < startDate) return { label: "Viitor", variant: "secondary" as const };
-    if (today >= startDate && today <= endDate) return { label: "Activ", variant: "default" as const };
-    return { label: "Completat", variant: "outline" as const };
+    if (trip.status === 'cancelled') {
+      return { label: 'Anulat', variant: 'destructive' as const };
+    }
+    if (trip.status === 'completed') {
+      return { label: 'Finalizat', variant: 'secondary' as const };
+    }
+    if (now < startDate) {
+      return { label: 'Viitor', variant: 'outline' as const };
+    }
+    if (now > endDate) {
+      return { label: 'Trecut', variant: 'secondary' as const };
+    }
+    return { label: 'În desfășurare', variant: 'default' as const };
   };
+
+  const filteredGuides = guides.filter(guide => {
+    const matchesSearch = 
+      guide.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guide.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guide.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = 
+      filterStatus === 'all' || 
+      (filterStatus === 'active' && guide.is_active) ||
+      (filterStatus === 'inactive' && !guide.is_active);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredAssignments = assignments.filter(assignment => {
+    if (!assignment.guides || !assignment.trips) return false;
+
+    const matchesSearch = 
+      assignment.guides.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.guides.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.trips.nume.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = 
+      filterStatus === 'all' || 
+      (filterStatus === 'active' && assignment.is_active) ||
+      (filterStatus === 'inactive' && !assignment.is_active);
+
+    return matchesSearch && matchesStatus;
+  });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-lg text-muted-foreground">Se încarcă...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Gestionare Ghizi</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestionează Ghizi</h1>
+          <p className="text-muted-foreground mt-1">
             Gestionează ghizii și atribuirile lor la circuite
           </p>
         </div>
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Atribuie Ghid
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Atribuie Ghid la Circuit</DialogTitle>
-              <DialogDescription>
-                Selectează ghidul și circuitul pentru atribuire.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="guide">Ghid</Label>
-                <Select value={selectedGuide} onValueChange={setSelectedGuide}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selectează ghidul" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {guides.filter(g => g.is_active).map(guide => (
-                      <SelectItem key={guide.id} value={guide.id}>
-                        {guide.nume} {guide.prenume} - {guide.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="trip">Circuit</Label>
-                <Select value={selectedTrip} onValueChange={setSelectedTrip}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selectează circuitul" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trips.map(trip => {
-                      const status = getTripStatus(trip);
-                      return (
-                        <SelectItem key={trip.id} value={trip.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{trip.nume} - {trip.destinatie}</span>
-                            <Badge variant={status.variant} className="text-xs">
-                              {status.label}
-                            </Badge>
-                          </div>
+        <div className="flex gap-2">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Creează Ghid Nou
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Creează Ghid Nou</DialogTitle>
+                <DialogDescription>
+                  Completează informațiile pentru a crea un cont de ghid
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateGuide} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nume">Nume *</Label>
+                    <Input
+                      id="nume"
+                      value={formData.nume}
+                      onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="prenume">Prenume *</Label>
+                    <Input
+                      id="prenume"
+                      value={formData.prenume}
+                      onChange={(e) => setFormData({ ...formData, prenume: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefon">Telefon</Label>
+                  <Input
+                    id="telefon"
+                    type="tel"
+                    value={formData.telefon}
+                    onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
+                    placeholder="+40 722 123 456"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Parolă *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    minLength={6}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Minim 6 caractere
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsCreateDialogOpen(false);
+                      resetForm();
+                    }}
+                  >
+                    Anulează
+                  </Button>
+                  <Button type="submit">
+                    Creează Ghid
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <UserCheck className="h-4 w-4" />
+                Atribuie Ghid
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Atribuie Ghid la Circuit</DialogTitle>
+                <DialogDescription>
+                  Selectează ghidul și circuitul pentru atribuire
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Ghid</Label>
+                  <Select value={selectedGuide} onValueChange={setSelectedGuide}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selectează ghid" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {guides.map(guide => (
+                        <SelectItem key={guide.id} value={guide.id}>
+                          {guide.nume} {guide.prenume}
                         </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Circuit</Label>
+                  <Select value={selectedTrip} onValueChange={setSelectedTrip}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selectează circuit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trips.map(trip => (
+                        <SelectItem key={trip.id} value={trip.id}>
+                          {trip.nume} - {trip.destinatie}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAssignGuide} className="flex-1">
-                  Atribuie
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAssignDialogOpen(false)}
-                >
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
                   Anulează
                 </Button>
+                <Button onClick={handleAssignGuide}>
+                  Atribuie
+                </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <StatsCard
           title="Ghizi Activi"
-          value={getActiveGuidesCount()}
+          value={guides.filter(g => g.is_active).length}
           description="Ghizi disponibili"
           icon={<UserCheck className="h-4 w-4" />}
         />
         <StatsCard
           title="Atribuiri Active"
-          value={getActiveAssignmentsCount()}
+          value={assignments.filter(a => a.is_active).length}
           description="Ghizi atribuiți"
           icon={<MapPin className="h-4 w-4" />}
         />
         <StatsCard
-          title="Rapoarte Astăzi"
-          value={getRecentReportsCount()}
+          title="Rapoarte Totale"
+          value={reports.length}
           description="Rapoarte primite"
           icon={<FileText className="h-4 w-4" />}
         />
-        <StatsCard
-          title="Total Circuite"
-          value={trips.length}
-          description="În sistem"
-          icon={<Calendar className="h-4 w-4" />}
-        />
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Caută ghizi, circuite..."
             value={searchTerm}
@@ -427,28 +792,36 @@ const GuideManager = () => {
             className="pl-10"
           />
         </div>
+
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toți ghizii</SelectItem>
-            <SelectItem value="active">Ghizi activi</SelectItem>
-            <SelectItem value="inactive">Ghizi inactivi</SelectItem>
+            <SelectItem value="all">Toate</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <Tabs defaultValue="guides" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="guides">Ghizi ({filteredGuides.length})</TabsTrigger>
-          <TabsTrigger value="assignments">Atribuiri ({filteredAssignments.length})</TabsTrigger>
-          <TabsTrigger value="reports">Rapoarte ({reports.length})</TabsTrigger>
+      <Tabs defaultValue="guides" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="guides">
+            Ghizi ({filteredGuides.length})
+          </TabsTrigger>
+          <TabsTrigger value="assignments">
+            Atribuiri ({filteredAssignments.length})
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            Rapoarte ({reports.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="guides" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredGuides.map((guide) => {
+            {filteredGuides.map(guide => {
               const guideAssignments = assignments.filter(a => a.guide_user_id === guide.id && a.is_active);
               const guideReports = reports.filter(r => r.guide_user_id === guide.id);
               
@@ -483,6 +856,35 @@ const GuideManager = () => {
                           <span className="font-medium">{guide.telefon}</span>
                         </div>
                       )}
+                    </div>
+
+                    {/* 🔴 BUTOANELE SUNT AICI - Edit, Toggle Active, Delete */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(guide)}
+                        className="flex-1"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editează
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleActive(guide.id, guide.is_active)}
+                        className={guide.is_active ? "" : "border-green-500 text-green-600"}
+                      >
+                        <Power className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDeleteDialog(guide)}
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -650,6 +1052,103 @@ const GuideManager = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleEditGuide}>
+            <DialogHeader>
+              <DialogTitle>Editează Ghid</DialogTitle>
+              <DialogDescription>
+                Modifică informațiile ghidului
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Email</Label>
+                <Input value={formData.email} disabled />
+                <p className="text-xs text-muted-foreground">
+                  Email-ul nu poate fi modificat
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-nume">Nume *</Label>
+                  <Input
+                    id="edit-nume"
+                    value={formData.nume}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nume: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-prenume">Prenume *</Label>
+                  <Input
+                    id="edit-prenume"
+                    value={formData.prenume}
+                    onChange={(e) =>
+                      setFormData({ ...formData, prenume: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-telefon">Telefon</Label>
+                <Input
+                  id="edit-telefon"
+                  type="tel"
+                  value={formData.telefon}
+                  onChange={(e) =>
+                    setFormData({ ...formData, telefon: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedGuideForAction(null);
+                  resetForm();
+                }}
+              >
+                Anulează
+              </Button>
+              <Button type="submit">Salvează</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ești sigur?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Această acțiune va șterge ghidul{" "}
+              <span className="font-semibold">
+                {selectedGuideForAction?.nume} {selectedGuideForAction?.prenume}
+              </span>
+              . Ghidul nu va mai putea accesa sistemul.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Șterge Ghid
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

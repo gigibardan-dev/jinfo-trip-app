@@ -1,0 +1,196 @@
+.
+|-- .env
+|-- .gitignore
+|-- COMPONENTS_DOCUMENTATION.md
+|-- RAPORT_PROIECT_TRAVELPRO.md
+|-- README.md
+|-- bun.lockb
+|-- components.json
+|-- eslint.config.js
+|-- index.html
+|-- package-lock.json
+|-- package.json
+|-- postcss.config.js
+|-- project_structure.txt
+|-- public
+|   |-- favicon.ico
+|   |-- manifest.json
+|   |-- placeholder.svg
+|   |-- robots.txt
+|   `-- service-worker.js
+|-- src
+|   |-- App.css
+|   |-- App.tsx
+|   |-- components
+|   |   |-- AdminDashboard.tsx
+|   |   |-- DocumentManager.tsx
+|   |   |-- ItineraryManager.tsx
+|   |   |-- Navigation.tsx
+|   |   |-- TouristDashboard.tsx
+|   |   |-- TouristDocuments.tsx
+|   |   |-- TripManager.tsx
+|   |   |-- admin
+|   |   |   |-- DocumentUploader.tsx
+|   |   |   |-- EnhancedTripManager.tsx
+|   |   |   |-- GroupManager.tsx
+|   |   |   |-- GuideManager.tsx
+|   |   |   |-- RichTextEditor.tsx
+|   |   |   `-- TouristManager.tsx
+|   |   |-- communications
+|   |   |   `-- CommunicationCenter.tsx
+|   |   |-- guide
+|   |   |   |-- GuideDailyReport.tsx
+|   |   |   |-- GuideDashboard.tsx
+|   |   |   `-- GuideItineraryManager.tsx
+|   |   |-- messaging
+|   |   |   `-- MessagingSystem.tsx
+|   |   |-- offline
+|   |   |   |-- OfflineManager.tsx
+|   |   |   `-- OfflineSavedDocuments.tsx
+|   |   |-- pwa
+|   |   |   `-- InstallPWAButton.tsx
+|   |   |-- settings
+|   |   |   `-- SettingsPanel.tsx
+|   |   |-- shared
+|   |   |   |-- ActivityCard.tsx
+|   |   |   |-- Footer.tsx
+|   |   |   |-- StatsCard.tsx
+|   |   |   `-- TripCard.tsx
+|   |   `-- ui
+|   |       |-- accordion.tsx
+|   |       |-- alert-dialog.tsx
+|   |       |-- alert.tsx
+|   |       |-- aspect-ratio.tsx
+|   |       |-- avatar.tsx
+|   |       |-- badge.tsx
+|   |       |-- breadcrumb.tsx
+|   |       |-- button.tsx
+|   |       |-- calendar.tsx
+|   |       |-- card.tsx
+|   |       |-- carousel.tsx
+|   |       |-- chart.tsx
+|   |       |-- checkbox.tsx
+|   |       |-- collapsible.tsx
+|   |       |-- command.tsx
+|   |       |-- context-menu.tsx
+|   |       |-- dialog.tsx
+|   |       |-- drawer.tsx
+|   |       |-- dropdown-menu.tsx
+|   |       |-- form.tsx
+|   |       |-- hover-card.tsx
+|   |       |-- input-otp.tsx
+|   |       |-- input.tsx
+|   |       |-- label.tsx
+|   |       |-- menubar.tsx
+|   |       |-- navigation-menu.tsx
+|   |       |-- pagination.tsx
+|   |       |-- popover.tsx
+|   |       |-- progress.tsx
+|   |       |-- radio-group.tsx
+|   |       |-- resizable.tsx
+|   |       |-- scroll-area.tsx
+|   |       |-- select.tsx
+|   |       |-- separator.tsx
+|   |       |-- sheet.tsx
+|   |       |-- sidebar.tsx
+|   |       |-- skeleton.tsx
+|   |       |-- slider.tsx
+|   |       |-- sonner.tsx
+|   |       |-- switch.tsx
+|   |       |-- table.tsx
+|   |       |-- tabs.tsx
+|   |       |-- textarea.tsx
+|   |       |-- toast.tsx
+|   |       |-- toaster.tsx
+|   |       |-- toggle-group.tsx
+|   |       |-- toggle.tsx
+|   |       |-- tooltip.tsx
+|   |       `-- use-toast.ts
+|   |-- hooks
+|   |   |-- use-mobile.tsx
+|   |   |-- use-toast.ts
+|   |   |-- useAuth.tsx
+|   |   |-- useNetworkSync.tsx
+|   |   |-- useOfflineDocument.tsx
+|   |   |-- useOfflineDocuments.tsx
+|   |   |-- usePWAInstall.tsx
+|   |   |-- useTypingIndicator.tsx
+|   |   `-- useWebPush.tsx
+|   |-- index.css
+|   |-- integrations
+|   |   `-- supabase
+|   |       |-- client.ts
+|   |       `-- types.ts
+|   |-- lib
+|   |   |-- offlineStorage.ts
+|   |   |-- sanitize.ts
+|   |   `-- utils.ts
+|   |-- main.tsx
+|   |-- pages
+|   |   |-- Auth.tsx
+|   |   |-- Index.tsx
+|   |   |-- NotFound.tsx
+|   |   |-- admin
+|   |   |   |-- CommunicationsPage.tsx
+|   |   |   |-- DocumentsPage.tsx
+|   |   |   |-- GuidesPage.tsx
+|   |   |   |-- SettingsPage.tsx
+|   |   |   |-- TouristsPage.tsx
+|   |   |   `-- TripsPage.tsx
+|   |   |-- guide
+|   |   |   |-- GuideDashboardPage.tsx
+|   |   |   |-- GuideDocumentsPage.tsx
+|   |   |   |-- GuideItineraryPage.tsx
+|   |   |   |-- GuideMessagesPage.tsx
+|   |   |   `-- GuideReportsPage.tsx
+|   |   `-- tourist
+|   |       |-- DocumentsPage.tsx
+|   |       |-- ItineraryPage.tsx
+|   |       `-- MessagesPage.tsx
+|   |-- registerServiceWorker.ts
+|   |-- types
+|   |   `-- index.ts
+|   `-- vite-env.d.ts
+|-- supabase
+|   |-- config.toml
+|   `-- migrations
+|       |-- 20250830162031_84e0766b-99ae-43fd-8b45-66fe4e39c661.sql
+|       |-- 20250830162049_57a00e99-6e16-4599-9598-8626d2597d91.sql
+|       |-- 20250830162511_e49e9122-a307-4f2a-8e1b-ac277cf4d9ea.sql
+|       |-- 20250830162835_f82a9e2f-c0f5-4429-b324-e6f95d686a18.sql
+|       |-- 20250830163906_9a78cbf9-eca4-4e4f-8505-2369e6e02032.sql
+|       |-- 20250830163933_b0f2c975-9fb6-4e4b-b337-a098495d3b3f.sql
+|       |-- 20250830163949_d9622eec-95e4-4ab5-a0cd-787f1c8120b4.sql
+|       |-- 20250830164007_51efb242-b22b-43ff-a4d7-5ea70cca1b9c.sql
+|       |-- 20250901065119_00775ece-ea1e-4c35-b467-50203af04d95.sql
+|       |-- 20250901095709_f8ea2eaa-a2de-45ac-8c8a-30039ad10df5.sql
+|       |-- 20250901103651_d8386a13-92bc-4bc5-b166-4afab630957e.sql
+|       |-- 20250901115919_b0e37024-a43a-4ad1-a315-73b053e77f6b.sql
+|       |-- 20250901115941_1d2236a5-f51a-41a7-99ce-fea28fda9b44.sql
+|       |-- 20250901115958_1e48a784-8108-4ef7-a30f-77ffb19a63bb.sql
+|       |-- 20250901120017_673d5c32-ec18-4c4a-8b44-41d32a6feb09.sql
+|       |-- 20250901120141_3012abb0-bc61-4f8f-9315-9c1c381358d1.sql
+|       |-- 20250903120941_4dfec983-58ca-4a2a-a8dc-1752f501cc22.sql
+|       |-- 20250903120959_1f8f18ab-211d-4704-aa94-ae812a24543e.sql
+|       |-- 20250903121025_4d0fba61-7c59-44bf-9e6a-5edbb265cbe1.sql
+|       |-- 20250903121036_34ccfc2b-ea64-4b5b-beb7-18f9bd5327de.sql
+|       |-- 20250903121055_8a919737-cab1-45e0-bf42-a8b40ea28830.sql
+|       |-- 20250903121111_c66aa5f9-8461-465a-9129-6c4103f17bd8.sql
+|       |-- 20250903121124_dba8893e-eab0-40ca-b325-022f5af89f8d.sql
+|       |-- 20250903121144_2ac74d2c-c118-4db1-8233-bf6eeac5b456.sql
+|       |-- 20250903121159_284ac425-94ee-47e2-8889-daaa039ef644.sql
+|       |-- 20251015055657_69d7d9f7-ae8c-498a-bcb0-89f18d7581bf.sql
+|       |-- 20251015055722_e2aa0c7f-c6ae-4c15-8ebc-271fad6b64af.sql
+|       |-- 20251015055733_89dd66bd-5597-4634-a12a-34a9173a45e5.sql
+|       |-- 20251019071208_c6a8ae47-07ee-4255-8807-4c0020454bb0.sql
+|       |-- 20251103083146_c4c06526-a180-451c-988d-d9f484c1b3af.sql
+|       |-- 20251103083225_8d01a12a-3d66-4cb8-839d-40724a354da2.sql
+|       `-- 20251108110713_7deaed95-6bd6-4a19-9b4f-f20334f1ea99.sql
+|-- tailwind.config.ts
+|-- tsconfig.app.json
+|-- tsconfig.json
+|-- tsconfig.node.json
+|-- vercel.json
+`-- vite.config.ts
+
+23 directories, 170 files

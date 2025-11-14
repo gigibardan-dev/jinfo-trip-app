@@ -16,8 +16,7 @@ export function useOfflineDocument(
   fileType: string,
   fileSize: number,
   fileUrl: string,
-  lastUpdated: string,
-  tripId?: string // 🆕 Added tripId parameter
+  lastUpdated: string
 ) {
   const [isOffline, setIsOffline] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -78,8 +77,7 @@ export function useOfflineDocument(
         fileSize,
         blob,
         lastUpdated,
-        fileUrl,
-        tripId // 🆕 Pass tripId for tracking
+        fileUrl
       );
       
       setIsOffline(true);
