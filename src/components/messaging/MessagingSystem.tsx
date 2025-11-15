@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useWebPush } from "@/hooks/useWebPush";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { MessageInput } from "./MessageInput";
+
 
 interface Conversation {
   id: string;
@@ -845,90 +847,6 @@ export const MessagingSystem = () => {
     </div>
   ));
 
-  const MessageInput = React.memo(({
-    onSend,
-    onTypingStart,
-    onTypingStop
-  }: {
-    onSend: (message: string) => void;
-    onTypingStart?: () => void;
-    onTypingStop?: () => void;
-  }) => {
-    const [localMessage, setLocalMessage] = useState("");
-    const inputRef = useRef<HTMLInputElement>(null);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const isTypingRef = useRef(false);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setLocalMessage(newValue);
-
-      if (newValue.length > 0 && onTypingStart && !isTypingRef.current) {
-        isTypingRef.current = true;
-        onTypingStart();
-      }
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      if (newValue.length > 0) {
-        typingTimeoutRef.current = setTimeout(() => {
-          if (onTypingStop) {
-            isTypingRef.current = false;
-            onTypingStop();
-          }
-        }, 3000);
-      } else if (onTypingStop) {
-        isTypingRef.current = false;
-        onTypingStop();
-      }
-    };
-
-    const handleSend = () => {
-      if (localMessage.trim()) {
-        onSend(localMessage.trim());
-        setLocalMessage("");
-        if (onTypingStop) {
-          isTypingRef.current = false;
-          onTypingStop();
-        }
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-      }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    };
-
-    return (
-      <div className="p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex gap-2 max-w-4xl mx-auto">
-          <Input
-            ref={inputRef}
-            placeholder="Scrie un mesaj..."
-            value={localMessage}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            className="flex-1 h-10 sm:h-11 rounded-full bg-muted/50 border-none focus-visible:ring-2"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!localMessage.trim()}
-            size="icon"
-            className="flex-shrink-0 rounded-full h-10 w-10 sm:h-11 sm:w-11"
-          >
-            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-        </div>
-      </div>
-    );
-  }, () => true);
 
   const MessagesView = React.memo(() => {
 
