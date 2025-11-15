@@ -227,25 +227,27 @@ export const MessagingSystem = () => {
 
   // Auto-scroll INSTANT când se deschide conversația
   useEffect(() => {
-    if (selectedConversation && messages.length > 0) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-      }, 50);
+    if (messages.length > 0 && messagesEndRef.current) {
+      setTimeout(() => {
+        const endElement = messagesEndRef.current;
+        let parent = endElement?.parentElement;
+        let attempts = 0;
 
-      return () => clearTimeout(timer);
+        while (parent && attempts < 10) {
+          const style = window.getComputedStyle(parent);
+          const overflowY = style.overflowY;
+
+          if (overflowY === 'scroll' || overflowY === 'auto') {
+            parent.scrollTop = parent.scrollHeight;
+            break;
+          }
+
+          parent = parent.parentElement;
+          attempts++;
+        }
+      }, 300);
     }
-  }, [selectedConversation?.id]);
-
-  // Auto-scroll SMOOTH când apar mesaje noi
-  useEffect(() => {
-    if (messages.length > 0) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [messages]);
+  }, [messages.length, selectedConversation?.id]);
 
   const fetchConversationsDebounced = useCallback(() => {
     if (fetchConversationsTimeoutRef.current) {
