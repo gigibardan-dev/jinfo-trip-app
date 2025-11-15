@@ -370,6 +370,8 @@ const DocumentCard = ({
   document: TouristDocument; 
   onOfflineSaved?: () => void;
 }) => {
+
+
   const {
     isOffline,
     isDownloading,
@@ -383,7 +385,8 @@ const DocumentCard = ({
     document.file_type,
     document.file_size,
     document.file_url,
-    document.upload_date
+    document.upload_date,
+    document.trip_id 
   );
   
   const handleDownloadOffline = async () => {

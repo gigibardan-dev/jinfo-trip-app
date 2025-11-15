@@ -19,6 +19,8 @@ export function useOfflineDocument(
   lastUpdated: string,
   tripId?: string // 🆕 Added tripId parameter
 ) {
+
+
   const [isOffline, setIsOffline] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
@@ -68,7 +70,7 @@ export function useOfflineDocument(
       if (!response.ok) throw new Error('Failed to fetch document');
       
       const data = await response.blob();
-      
+
       // Save blob to offline storage
       const blob = new Blob([data], { type: fileType });
       await saveDocumentOfflineFromBlob(

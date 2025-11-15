@@ -50,23 +50,27 @@ async function trackInDatabase(
   tripId: string | undefined,
   fileSize: number
 ): Promise<void> {
+  
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !tripId) return; // Skip if no user or tripId
+    
+    if (!user || !tripId) {
+      return;
+    }
 
+    
+    
     await supabase.from('offline_cache_status').upsert({
       user_id: user.id,
       trip_id: tripId,
-      resource_type: 'documents', // ✅ FIXED: 'documents' (plural) not 'document'
+      resource_type: 'documents',
       resource_id: fileId,
       cache_size: fileSize,
       cached_at: new Date().toISOString(),
     });
 
-    console.log(`[OfflineStorage] Tracked ${fileId} in database`);
   } catch (error) {
     console.error('[OfflineStorage] Failed to track in database:', error);
-    // Don't throw - offline functionality should work even if DB tracking fails
   }
 }
 
@@ -86,7 +90,6 @@ async function untrackFromDatabase(fileId: string): Promise<void> {
         resource_id: fileId,
       });
 
-    console.log(`[OfflineStorage] Untracked ${fileId} from database`);
   } catch (error) {
     console.error('[OfflineStorage] Failed to untrack from database:', error);
     // Don't throw
