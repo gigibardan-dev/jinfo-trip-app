@@ -1,8 +1,3 @@
-// 🔧 FIX pentru Input Inactiv - MessageInput Component
-// 
-// Această componentă înlocuiește MessageInput din MessagingSystem.tsx
-// care avea problema cu React.memo(() => true) ce bloca re-renderingul
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +9,6 @@ interface MessageInputProps {
   onTypingStop?: () => void;
 }
 
-// ✅ FĂRĂ React.memo(() => true) care bloca re-renderingul!
 export const MessageInput = ({ 
   onSend, 
   onTypingStart, 
@@ -22,36 +16,11 @@ export const MessageInput = ({
 }: MessageInputProps) => {
   const [localMessage, setLocalMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isTypingRef = useRef(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalMessage(newValue);
-
-    // Typing indicator logic
-    if (newValue.length > 0 && onTypingStart && !isTypingRef.current) {
-      isTypingRef.current = true;
-      onTypingStart();
-    }
-
-    // Clear previous timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set new timeout to stop typing indicator
-    if (newValue.length > 0) {
-      typingTimeoutRef.current = setTimeout(() => {
-        if (onTypingStop) {
-          isTypingRef.current = false;
-          onTypingStop();
-        }
-      }, 3000);
-    } else if (onTypingStop) {
-      isTypingRef.current = false;
-      onTypingStop();
-    }
+    // ✅ NU APELĂM onTypingStart/onTypingStop
   };
 
   const handleSend = () => {
@@ -59,21 +28,7 @@ export const MessageInput = ({
     
     if (trimmedMessage) {
       onSend(trimmedMessage);
-      setLocalMessage(""); // Clear input
-      
-      // Stop typing indicator
-      if (onTypingStop) {
-        isTypingRef.current = false;
-        onTypingStop();
-      }
-      
-      // Clear timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-
-      // Focus back to input
+      setLocalMessage("");
       inputRef.current?.focus();
     }
   };
