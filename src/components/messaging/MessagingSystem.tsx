@@ -68,10 +68,16 @@ export const MessagingSystem = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedConversationRef = useRef<Conversation | null>(null); // ← ADAUGĂ REF
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
+
+  // Update ref când se schimbă selectedConversation
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   // Request notification permission (desktop only)
   useEffect(() => {
@@ -125,10 +131,14 @@ export const MessagingSystem = () => {
     console.log('🔌 Setting up Realtime subscription for user:', user.id);
 
     const channel = supabase
-      .channel('new-messages')
+      .channel(`chat-messages-${user.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'chat_messages'
+        },
         async (payload: any) => {
           console.log('📨 Realtime INSERT received:', payload);
           const newMsg = payload.new as Message;
@@ -146,8 +156,11 @@ export const MessagingSystem = () => {
             ? `${senderData.nume} ${senderData.prenume}`
             : 'Cineva';
 
-          // Show toast DOAR pentru mesaje de la alții
-          if (newMsg.sender_id !== user.id) {
+          // Show toast DOAR pentru mesaje de la alții ȘI dacă NU ești în conversația respectivă
+          const currentConversation = selectedConversationRef.current; // ← Folosește REF
+          
+          if (newMsg.sender_id !== user.id && 
+              (!currentConversation || newMsg.conversation_id !== currentConversation.id)) {
             toast({
               title: "Mesaj nou",
               description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
@@ -165,7 +178,7 @@ export const MessagingSystem = () => {
           }
 
           // CRITICAL: Adaugă mesajul în conversația curentă
-          if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
+          if (currentConversation && newMsg.conversation_id === currentConversation.id) {
             console.log('✅ Adding message to current conversation');
             setMessages(prev => {
               // Verifică dacă mesajul există deja
@@ -186,7 +199,7 @@ export const MessagingSystem = () => {
             // Mark as read instant dacă e de la altcineva
             if (newMsg.sender_id !== user.id) {
               setTimeout(() => {
-                markMessagesAsRead(selectedConversation.id);
+                markMessagesAsRead(currentConversation.id);
               }, 500);
             }
           } else if (newMsg.sender_id !== user.id) {
@@ -205,26 +218,24 @@ export const MessagingSystem = () => {
           fetchConversationsDebounced();
         }
       )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
-        (payload: any) => {
-          // Update messages for read receipts
-          if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
-              )
-            );
-          }
+      .subscribe((status) => {
+        console.log('🔌 Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to Realtime');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime channel error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Realtime connection timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('🔴 Realtime connection closed');
         }
-      )
-      .subscribe();
+      });
 
     return () => {
+      console.log('🔌 Cleaning up Realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, selectedConversation, showNotification, toast, permission]);
+  }, [user]); // ← DOAR user în dependencies, NU selectedConversation!
 
   // Auto-scroll to bottom
   useEffect(() => {
