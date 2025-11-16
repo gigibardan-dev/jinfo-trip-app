@@ -6,15 +6,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Send, MessageSquare, Users, User, MessageCircle, ArrowLeft, Check, CheckCheck } from "lucide-react";
+import { Search, MessageSquare, Users, User, MessageCircle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useWebPush } from "@/hooks/useWebPush";
-import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { MessageInput } from "./MessageInput";
-
 
 interface Conversation {
   id: string;
@@ -71,16 +69,11 @@ export const MessagingSystem = () => {
   const hasFetchedRef = useRef(false);
   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(
-    selectedConversation?.id || null,
-    user?.id || null
-  );
-
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
 
-  // Request notification permission on mount (only on desktop)
+  // Request notification permission (desktop only)
   useEffect(() => {
     if (user && isSupported && permission === 'default') {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -90,7 +83,7 @@ export const MessagingSystem = () => {
     }
   }, [user, isSupported, permission, requestPermission]);
 
-  // Fetch conversations - cu prevent double call
+  // Fetch conversations once
   useEffect(() => {
     if (user && !hasFetchedRef.current) {
       hasFetchedRef.current = true;
@@ -101,7 +94,7 @@ export const MessagingSystem = () => {
     }
   }, [user]);
 
-  // Fetch tourists & groups - SEPARAT
+  // Fetch tourists & groups
   useEffect(() => {
     if (user && canInitiateChat) {
       fetchTourists();
@@ -109,18 +102,15 @@ export const MessagingSystem = () => {
     }
   }, [user, canInitiateChat]);
 
-  // Safety net - dacă loading e true mai mult de 5 secunde
+  // Safety loading timeout
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-      }
+      if (loading) setLoading(false);
     }, 5000);
-
     return () => clearTimeout(timer);
   }, [loading]);
 
-  // Fetch messages când se selectează o conversație
+  // Fetch messages when conversation selected
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.id);
@@ -128,40 +118,43 @@ export const MessagingSystem = () => {
     }
   }, [selectedConversation]);
 
-  // Real-time notifications for new messages
+  // Real-time subscription for new messages
   useEffect(() => {
     if (!user) return;
+
+    console.log('🔌 Setting up Realtime subscription for user:', user.id);
 
     const channel = supabase
       .channel('new-messages')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-        },
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         async (payload: any) => {
+          console.log('📨 Realtime INSERT received:', payload);
           const newMsg = payload.new as Message;
 
+          // Fetch sender info
+          const { data: senderData } = await supabase
+            .from('profiles')
+            .select('nume, prenume, email')
+            .eq('id', newMsg.sender_id)
+            .single();
+
+          console.log('👤 Sender data:', senderData);
+
+          const senderName = senderData
+            ? `${senderData.nume} ${senderData.prenume}`
+            : 'Cineva';
+
+          // Show toast DOAR pentru mesaje de la alții
           if (newMsg.sender_id !== user.id) {
-            const { data: senderData } = await supabase
-              .from('profiles')
-              .select('nume, prenume, email')
-              .eq('id', newMsg.sender_id)
-              .single();
-
-            const senderName = senderData
-              ? `${senderData.nume} ${senderData.prenume}`
-              : 'Cineva';
-
             toast({
               title: "Mesaj nou",
               description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
               duration: 3000,
             });
 
-            // Push notification doar dacă granted și document hidden
+            // Push notification
             if (document.hidden && permission === 'granted') {
               showNotification('Mesaj nou', {
                 body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
@@ -169,49 +162,57 @@ export const MessagingSystem = () => {
                 requireInteraction: false,
               });
             }
-
-            // Dacă mesajul e în conversația curentă, adaugă-l direct
-            if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
-              setMessages(prev => {
-                const exists = prev.some(m => m.id === newMsg.id);
-                if (exists) return prev;
-
-                return [...prev, {
-                  ...newMsg,
-                  sender: senderData
-                }];
-              });
-
-              // Mark as read instant
-              markMessagesAsRead(selectedConversation.id);
-            } else {
-              // Dacă e în altă conversație, update unread count
-              setConversations(prev =>
-                prev.map(conv =>
-                  conv.id === newMsg.conversation_id
-                    ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
-                    : conv
-                )
-              );
-            }
-
-            // Debounced fetch pentru last_message
-            fetchConversationsDebounced();
           }
+
+          // CRITICAL: Adaugă mesajul în conversația curentă
+          if (selectedConversation && newMsg.conversation_id === selectedConversation.id) {
+            console.log('✅ Adding message to current conversation');
+            setMessages(prev => {
+              // Verifică dacă mesajul există deja
+              const exists = prev.some(m => m.id === newMsg.id);
+              if (exists) {
+                console.log('⚠️ Message already exists, skipping');
+                return prev;
+              }
+              
+              console.log('➕ Adding new message to state');
+              // Adaugă mesajul NOU cu sender info
+              return [...prev, { 
+                ...newMsg, 
+                sender: senderData 
+              }];
+            });
+
+            // Mark as read instant dacă e de la altcineva
+            if (newMsg.sender_id !== user.id) {
+              setTimeout(() => {
+                markMessagesAsRead(selectedConversation.id);
+              }, 500);
+            }
+          } else if (newMsg.sender_id !== user.id) {
+            console.log('📊 Updating unread count for other conversation');
+            // Update unread count pentru alte conversații
+            setConversations(prev =>
+              prev.map(conv =>
+                conv.id === newMsg.conversation_id
+                  ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
+                  : conv
+              )
+            );
+          }
+
+          // Debounced fetch pentru last_message
+          fetchConversationsDebounced();
         }
       )
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'chat_messages',
-        },
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
         (payload: any) => {
-          // Update mesajele din UI (pentru read receipts)
+          // Update messages for read receipts
           if (selectedConversation && payload.new.conversation_id === selectedConversation.id) {
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
+            setMessages(prev =>
+              prev.map(msg =>
                 msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
               )
             );
@@ -225,10 +226,10 @@ export const MessagingSystem = () => {
     };
   }, [user, selectedConversation, showNotification, toast, permission]);
 
-  // Auto-scroll INSTANT când se deschide conversația
+  // Auto-scroll to bottom
   useEffect(() => {
     if (messages.length > 0 && messagesEndRef.current) {
-      setTimeout(() => {
+      const scrollToBottom = () => {
         const endElement = messagesEndRef.current;
         let parent = endElement?.parentElement;
         let attempts = 0;
@@ -245,7 +246,14 @@ export const MessagingSystem = () => {
           parent = parent.parentElement;
           attempts++;
         }
-      }, 300);
+      };
+
+      // Scroll imediat
+      scrollToBottom();
+      
+      // ȘI cu mic delay pentru siguranță
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
     }
   }, [messages.length, selectedConversation?.id]);
 
@@ -253,7 +261,6 @@ export const MessagingSystem = () => {
     if (fetchConversationsTimeoutRef.current) {
       clearTimeout(fetchConversationsTimeoutRef.current);
     }
-
     fetchConversationsTimeoutRef.current = setTimeout(() => {
       fetchConversations();
     }, 300);
@@ -296,7 +303,6 @@ export const MessagingSystem = () => {
       );
 
       setConversations(conversationsWithUnread);
-
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -322,25 +328,8 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
       setMessages(messagesData || []);
-
-      await markMessagesAsDelivered(conversationId);
     } catch (error) {
       console.error('Error fetching messages:', error);
-    }
-  };
-
-  const markMessagesAsDelivered = async (conversationId: string) => {
-    if (!user) return;
-
-    try {
-      await supabase
-        .from('chat_messages')
-        .update({ delivered_at: new Date().toISOString() })
-        .eq('conversation_id', conversationId)
-        .neq('sender_id', user.id)
-        .is('delivered_at', null);
-    } catch (error) {
-      console.error('Error marking messages as delivered:', error);
     }
   };
 
@@ -361,7 +350,7 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
 
-      // Update local state INSTANT
+      // Update local state instantly
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
@@ -370,7 +359,7 @@ export const MessagingSystem = () => {
         )
       );
 
-      // Debounced fetch pentru sincronizare completă
+      // Debounced fetch for full sync
       if (data && data.length > 0) {
         fetchConversationsDebounced();
       }
@@ -384,13 +373,11 @@ export const MessagingSystem = () => {
 
     try {
       if (isGuide && !isAdmin) {
-        const { data: assignments, error: assignError } = await supabase
+        const { data: assignments } = await supabase
           .from('guide_assignments')
           .select('trip_id')
           .eq('guide_user_id', user?.id)
           .eq('is_active', true);
-
-        if (assignError) throw assignError;
 
         if (!assignments || assignments.length === 0) {
           setTourists([]);
@@ -398,13 +385,11 @@ export const MessagingSystem = () => {
         }
 
         const tripIds = assignments.map(a => a.trip_id);
-        const { data: trips, error: tripsError } = await supabase
+        const { data: trips } = await supabase
           .from('trips')
           .select('group_id')
           .in('id', tripIds)
           .not('group_id', 'is', null);
-
-        if (tripsError) throw tripsError;
 
         if (!trips || trips.length === 0) {
           setTourists([]);
@@ -412,12 +397,10 @@ export const MessagingSystem = () => {
         }
 
         const groupIds = [...new Set(trips.map(t => t.group_id).filter(Boolean))];
-        const { data: members, error: membersError } = await supabase
+        const { data: members } = await supabase
           .from('group_members')
           .select('user_id')
           .in('group_id', groupIds);
-
-        if (membersError) throw membersError;
 
         if (!members || members.length === 0) {
           setTourists([]);
@@ -453,13 +436,11 @@ export const MessagingSystem = () => {
 
     try {
       if (isGuide && !isAdmin) {
-        const { data: assignments, error: assignError } = await supabase
+        const { data: assignments } = await supabase
           .from('guide_assignments')
           .select('trip_id')
           .eq('guide_user_id', user?.id)
           .eq('is_active', true);
-
-        if (assignError) throw assignError;
 
         if (!assignments || assignments.length === 0) {
           setGroups([]);
@@ -467,13 +448,11 @@ export const MessagingSystem = () => {
         }
 
         const tripIds = assignments.map(a => a.trip_id);
-        const { data: trips, error: tripsError } = await supabase
+        const { data: trips } = await supabase
           .from('trips')
           .select('group_id')
           .in('id', tripIds)
           .not('group_id', 'is', null);
-
-        if (tripsError) throw tripsError;
 
         if (!trips || trips.length === 0) {
           setGroups([]);
@@ -510,9 +489,9 @@ export const MessagingSystem = () => {
       const conversationData = {
         conversation_type: newChatType,
         group_id: newChatType === 'group' ? selectedRecipient : null,
-        title: newChatType === 'group' ?
-          groups.find(g => g.id === selectedRecipient)?.nume_grup :
-          null
+        title: newChatType === 'group'
+          ? groups.find(g => g.id === selectedRecipient)?.nume_grup
+          : null
       };
 
       const { data: conversation, error: convError } = await supabase
@@ -584,54 +563,26 @@ export const MessagingSystem = () => {
     if (!messageText || !selectedConversation || !user) return;
 
     try {
-      // Optimistic UI
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        conversation_id: selectedConversation.id,
-        sender_id: user.id,
-        content: messageText,
-        is_read: false,
-        created_at: new Date().toISOString(),
-        sender: {
-          nume: profile?.nume,
-          prenume: profile?.prenume,
-          email: profile?.email
-        }
-      };
-
-      setMessages(prev => [...prev, optimisticMessage]);
-
-      const { data, error } = await supabase
+      // INSERT în DB
+      const { error } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: messageText
-        })
-        .select(`
-          *,
-          sender:profiles(nume, prenume, email)
-        `)
-        .single();
+        });
 
       if (error) throw error;
 
-      // Înlocuiește mesajul optimistic
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === optimisticMessage.id ? data : msg
-        )
-      );
+      // FALLBACK: Dacă Realtime nu aduce mesajul în 500ms, refetch manual
+      setTimeout(() => {
+        fetchMessages(selectedConversation.id);
+      }, 500);
 
+      // Refresh conversations pentru last_message
       fetchConversationsDebounced();
     } catch (error) {
       console.error('Error sending message:', error);
-
-      // Șterge mesajul optimistic
-      setMessages(prev =>
-        prev.filter(msg => !msg.id.startsWith('temp-'))
-      );
-
       toast({
         title: "Eroare",
         description: "Nu s-a putut trimite mesajul",
@@ -677,7 +628,7 @@ export const MessagingSystem = () => {
 
   const ConversationsList = React.memo(() => (
     <div className="flex flex-col h-full">
-      <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg sm:text-xl font-bold">Mesaje</h2>
           {canInitiateChat && (
@@ -784,22 +735,22 @@ export const MessagingSystem = () => {
               const isSelected = selectedConversation?.id === conversation.id;
               const lastMessageTime = conversation.last_message?.created_at
                 ? new Date(conversation.last_message.created_at).toLocaleTimeString('ro-RO', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-                : '';
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : null;
 
               return (
                 <button
                   key={conversation.id}
-                  className={cn(
-                    "w-full p-3 sm:p-4 text-left transition-all hover:bg-accent/50 active:bg-accent",
-                    isSelected && "bg-primary/10 hover:bg-primary/15 active:bg-primary/20"
-                  )}
                   onClick={() => setSelectedConversation(conversation)}
+                  className={cn(
+                    "w-full p-3 sm:p-4 text-left transition-all hover:bg-muted/50",
+                    isSelected && "bg-muted/80 border-l-4 border-primary"
+                  )}
                 >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0">
+                  <div className="flex gap-3 items-start">
+                    <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
                       <AvatarFallback className={cn(
                         "bg-gradient-to-br font-semibold text-white",
                         conversation.conversation_type === 'group'
@@ -849,13 +800,11 @@ export const MessagingSystem = () => {
     </div>
   ));
 
-
   const MessagesView = React.memo(() => {
-
     if (!selectedConversation) {
       return (
         <div className="flex-1 flex items-center justify-center bg-muted/20">
-          <div className="text-center p-8">
+          <div className="text-center p-4 sm:p-8">
             <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-base sm:text-lg font-semibold mb-2">Selectează o conversație</h3>
             <p className="text-sm text-muted-foreground">
@@ -874,12 +823,12 @@ export const MessagingSystem = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden h-9 w-9"
+              className="lg:hidden h-9 w-9 flex-shrink-0"
               onClick={() => setSelectedConversation(null)}
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Avatar className="w-10 h-10 sm:w-11 sm:h-11">
+            <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
               <AvatarFallback className={cn(
                 "bg-gradient-to-br font-semibold text-white",
                 selectedConversation.conversation_type === 'group'
@@ -946,80 +895,32 @@ export const MessagingSystem = () => {
                           </AvatarFallback>
                         </Avatar>
                       )}
-
-                      {/* ✅ Container mesaj - MĂRIT + min-w-0 */}
                       <div className={cn(
-                        "flex flex-col gap-0.5 min-w-0",
-                        "max-w-[85%] sm:max-w-[75%] lg:max-w-[600px]", // ← Mai larg
-                        isOwn ? "items-end" : "items-start"
+                        "flex flex-col gap-0.5 max-w-[85%] sm:max-w-[70%]",
+                        isOwn && "items-end"
                       )}>
-                        {showSender && (
-                          <p className="text-xs font-medium text-muted-foreground px-3 mb-0.5">
+                        {showSender && !isOwn && (
+                          <span className="text-xs text-muted-foreground px-3 mb-0.5">
                             {message.sender?.nume} {message.sender?.prenume}
-                          </p>
+                          </span>
                         )}
-
-                        {/* ✅ Bula mesaj - break AGRESIV */}
-                        <div
-                          className={cn(
-                            "rounded-2xl px-3 sm:px-4 py-2 shadow-sm w-full min-w-0",
-                            isOwn
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-background border border-border/50 rounded-bl-md"
-                          )}
-                        >
-                          <p
-                            className={cn(
-                              "text-sm sm:text-base leading-relaxed",
-                              "break-all overflow-wrap-anywhere", // ← break-all forțează rupere
-                              "whitespace-pre-wrap max-w-full"
-                            )}
-                            style={{
-                              wordBreak: 'break-word',
-                              overflowWrap: 'anywhere',
-                              hyphens: 'auto',
-                              WebkitHyphens: 'auto',
-                              MozHyphens: 'auto'
-                            }}
-                          >
+                        <div className={cn(
+                          "px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl",
+                          isOwn
+                            ? "bg-primary text-primary-foreground rounded-br-md"
+                            : "bg-muted text-foreground rounded-bl-md"
+                        )} style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                             {message.content}
                           </p>
-
-                          <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
-                            <p className={cn(
-                              "text-[10px] sm:text-xs whitespace-nowrap", // ← whitespace-nowrap pentru ora
-                              isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                            )}>
-                              {new Date(message.created_at).toLocaleTimeString('ro-RO', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                            {isOwn && (
-                              <span className="text-primary-foreground/70">
-                                {message.read_at ? (
-                                  <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
-                                ) : message.delivered_at ? (
-                                  <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4" />
-                                ) : (
-                                  <Check className="w-3 h-3 sm:w-4 sm:h-4" />
-                                )}
-                              </span>
-                            )}
-                          </div>
                         </div>
+                        <span className="text-xs text-muted-foreground px-3">
+                          {new Date(message.created_at).toLocaleTimeString('ro-RO', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
                       </div>
-
-                      {isOwn && (
-                        <Avatar className={cn(
-                          "w-7 h-7 sm:w-8 sm:h-8 mb-0.5 flex-shrink-0",
-                          !showAvatar && "opacity-0"
-                        )}>
-                          <AvatarFallback className="text-xs bg-primary text-primary-foreground font-semibold">
-                            {profile?.nume?.[0]}{profile?.prenume?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
                     </div>
                   );
                 })}
@@ -1029,32 +930,9 @@ export const MessagingSystem = () => {
           </div>
         </ScrollArea>
 
-        {/* Typing Indicator */}
-        {typingUsers.length > 0 && (
-          <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t flex-shrink-0">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in-0 max-w-4xl mx-auto">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-              </div>
-              <span className="text-xs">
-                {typingUsers.length === 1
-                  ? `${typingUsers[0].name} scrie...`
-                  : `${typingUsers.length} persoane scriu...`
-                }
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Message Input */}
         <div className="flex-shrink-0">
-          <MessageInput
-            onSend={sendMessage}
-            onTypingStart={profile ? () => startTyping(`${profile.nume} ${profile.prenume}`) : undefined}
-            onTypingStop={stopTyping}
-          />
+          <MessageInput onSend={sendMessage} />
         </div>
       </div>
     );
@@ -1072,10 +950,10 @@ export const MessagingSystem = () => {
         <MessagesView />
       </div>
 
-      {/* Mobile Layout */}
+      {/* Mobile Layout - Full Height */}
       <div className="lg:hidden">
         {selectedConversation ? (
-          <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background flex flex-col">
+          <div className="fixed inset-0 top-14 bottom-16 border-t bg-background flex flex-col z-10">
             <MessagesView />
           </div>
         ) : (
