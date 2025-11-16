@@ -156,11 +156,13 @@ export const MessagingSystem = () => {
             ? `${senderData.nume} ${senderData.prenume}`
             : 'Cineva';
 
-          // Show toast DOAR pentru mesaje de la alții ȘI dacă NU ești în conversația respectivă
-          const currentConversation = selectedConversationRef.current; // ← Folosește REF
+          // Get current conversation from ref
+          const currentConversation = selectedConversationRef.current;
           
+          // Show toast DOAR pentru mesaje de la alții ȘI dacă NU ești în conversația respectivă
           if (newMsg.sender_id !== user.id && 
               (!currentConversation || newMsg.conversation_id !== currentConversation.id)) {
+            console.log('📢 Showing toast notification');
             toast({
               title: "Mesaj nou",
               description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
@@ -168,13 +170,23 @@ export const MessagingSystem = () => {
             });
 
             // Push notification
-            if (document.hidden && permission === 'granted') {
+            if (typeof document !== 'undefined' && document.hidden && permission === 'granted') {
               showNotification('Mesaj nou', {
                 body: `${senderName}: ${newMsg.content.substring(0, 100)}`,
                 tag: newMsg.conversation_id,
                 requireInteraction: false,
               });
             }
+
+            // Update unread count pentru conversația respectivă
+            console.log('📊 Updating unread count for conversation:', newMsg.conversation_id);
+            setConversations(prev =>
+              prev.map(conv =>
+                conv.id === newMsg.conversation_id
+                  ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
+                  : conv
+              )
+            );
           }
 
           // CRITICAL: Adaugă mesajul în conversația curentă
@@ -198,24 +210,39 @@ export const MessagingSystem = () => {
 
             // Mark as read instant dacă e de la altcineva
             if (newMsg.sender_id !== user.id) {
-              setTimeout(() => {
-                markMessagesAsRead(currentConversation.id);
+              console.log('📖 Marking messages as read');
+              setTimeout(async () => {
+                try {
+                  await supabase
+                    .from('chat_messages')
+                    .update({
+                      is_read: true,
+                      read_at: new Date().toISOString()
+                    })
+                    .eq('conversation_id', currentConversation.id)
+                    .neq('sender_id', user.id)
+                    .eq('is_read', false);
+
+                  // Update local state
+                  setConversations(prev =>
+                    prev.map(conv =>
+                      conv.id === currentConversation.id
+                        ? { ...conv, unread_count: 0 }
+                        : conv
+                    )
+                  );
+                } catch (error) {
+                  console.error('Error marking as read:', error);
+                }
               }, 500);
             }
-          } else if (newMsg.sender_id !== user.id) {
-            console.log('📊 Updating unread count for other conversation');
-            // Update unread count pentru alte conversații
-            setConversations(prev =>
-              prev.map(conv =>
-                conv.id === newMsg.conversation_id
-                  ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
-                  : conv
-              )
-            );
           }
 
-          // Debounced fetch pentru last_message
-          fetchConversationsDebounced();
+          // Refresh conversations list
+          console.log('🔄 Refreshing conversations list');
+          setTimeout(() => {
+            fetchConversations();
+          }, 300);
         }
       )
       .subscribe((status) => {
@@ -235,7 +262,7 @@ export const MessagingSystem = () => {
       console.log('🔌 Cleaning up Realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [user]); // ← DOAR user în dependencies, NU selectedConversation!
+  }, [user]); // ← DOAR user, scoatem toast și showNotification!
 
   // Auto-scroll to bottom
   useEffect(() => {
