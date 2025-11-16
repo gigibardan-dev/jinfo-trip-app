@@ -134,7 +134,7 @@ export const MessagingSystem = () => {
     console.log('📍 Current conversation:', selectedConversationRef.current?.id);
 
     const channel = supabase
-      .channel(`chat-messages-${user.id}`)
+      .channel('public:chat_messages') // ← GLOBAL channel pentru toate mesajele
       .on(
         'postgres_changes',
         { 
