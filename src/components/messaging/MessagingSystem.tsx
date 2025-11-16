@@ -20,6 +20,7 @@ interface Conversation {
   title?: string;
   group_id?: string;
   created_at: string;
+  updated_at: string; // ← ADAUGĂ updated_at
   participants?: any[];
   last_message?: any;
   unread_count?: number;
@@ -68,7 +69,8 @@ export const MessagingSystem = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const selectedConversationRef = useRef<Conversation | null>(null); // ← ADAUGĂ REF
+  const selectedConversationRef = useRef<Conversation | null>(null);
+  const lastMessagesLengthRef = useRef(0); // ← Track last messages count
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
@@ -129,6 +131,7 @@ export const MessagingSystem = () => {
     if (!user) return;
 
     console.log('🔌 Setting up Realtime subscription for user:', user.id);
+    console.log('📍 Current conversation:', selectedConversationRef.current?.id);
 
     const channel = supabase
       .channel(`chat-messages-${user.id}`)
@@ -140,6 +143,7 @@ export const MessagingSystem = () => {
           table: 'chat_messages'
         },
         async (payload: any) => {
+          console.log('🔔 ===== REALTIME CALLBACK TRIGGERED =====');
           console.log('📨 Realtime INSERT received:', payload);
           const newMsg = payload.new as Message;
 
@@ -192,7 +196,11 @@ export const MessagingSystem = () => {
           // CRITICAL: Adaugă mesajul în conversația curentă
           if (currentConversation && newMsg.conversation_id === currentConversation.id) {
             console.log('✅ Adding message to current conversation');
+            
+            // Folosește functional update pentru a evita stale closure
             setMessages(prev => {
+              console.log('📊 Current messages count:', prev.length);
+              
               // Verifică dacă mesajul există deja
               const exists = prev.some(m => m.id === newMsg.id);
               if (exists) {
@@ -202,10 +210,13 @@ export const MessagingSystem = () => {
               
               console.log('➕ Adding new message to state');
               // Adaugă mesajul NOU cu sender info
-              return [...prev, { 
+              const updatedMessages = [...prev, { 
                 ...newMsg, 
                 sender: senderData 
               }];
+              
+              console.log('📊 Updated messages count:', updatedMessages.length);
+              return updatedMessages;
             });
 
             // Mark as read instant dacă e de la altcineva
@@ -238,11 +249,27 @@ export const MessagingSystem = () => {
             }
           }
 
-          // Refresh conversations list
-          console.log('🔄 Refreshing conversations list');
-          setTimeout(() => {
-            fetchConversations();
-          }, 300);
+          // Update last_message în conversations - ÎNTOTDEAUNA
+          // (necesară pentru ca lista să se actualizeze)
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === newMsg.conversation_id) {
+                return {
+                  ...conv,
+                  last_message: { 
+                    content: newMsg.content, 
+                    created_at: newMsg.created_at 
+                  },
+                  updated_at: newMsg.created_at
+                };
+              }
+              return conv;
+            }).sort((a, b) => {
+              const timeA = new Date(a.updated_at).getTime();
+              const timeB = new Date(b.updated_at).getTime();
+              return timeB - timeA;
+            })
+          );
         }
       )
       .subscribe((status) => {
@@ -264,36 +291,53 @@ export const MessagingSystem = () => {
     };
   }, [user]); // ← DOAR user, scoatem toast și showNotification!
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom - DOAR când apar mesaje NOI
   useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
-      const scrollToBottom = () => {
-        const endElement = messagesEndRef.current;
-        let parent = endElement?.parentElement;
-        let attempts = 0;
+    console.log('📜 Scroll effect triggered', { 
+      messagesLength: messages.length,
+      lastLength: lastMessagesLengthRef.current,
+      hasRef: !!messagesEndRef.current 
+    });
 
-        while (parent && attempts < 10) {
-          const style = window.getComputedStyle(parent);
-          const overflowY = style.overflowY;
-
-          if (overflowY === 'scroll' || overflowY === 'auto') {
-            parent.scrollTop = parent.scrollHeight;
-            break;
-          }
-
-          parent = parent.parentElement;
-          attempts++;
-        }
-      };
-
-      // Scroll imediat
-      scrollToBottom();
-      
-      // ȘI cu mic delay pentru siguranță
-      setTimeout(scrollToBottom, 50);
-      setTimeout(scrollToBottom, 150);
+    // Scroll DOAR dacă numărul de mesaje a CRESCUT (mesaj nou)
+    const hasNewMessage = messages.length > lastMessagesLengthRef.current;
+    
+    if (!hasNewMessage || messages.length === 0 || !messagesEndRef.current) {
+      console.log('⏭️ Skipping scroll - no new messages');
+      lastMessagesLengthRef.current = messages.length;
+      return;
     }
-  }, [messages.length, selectedConversation?.id]);
+
+    const scrollToBottom = () => {
+      const endElement = messagesEndRef.current;
+      if (!endElement) return;
+
+      let parent = endElement.parentElement;
+      let attempts = 0;
+
+      while (parent && attempts < 10) {
+        const style = window.getComputedStyle(parent);
+        const overflowY = style.overflowY;
+
+        if (overflowY === 'scroll' || overflowY === 'auto') {
+          console.log('⬇️ Scrolling to bottom because new message arrived');
+          parent.scrollTop = parent.scrollHeight;
+          break;
+        }
+
+        parent = parent.parentElement;
+        attempts++;
+      }
+    };
+
+    // Delay mic pentru a aștepta ca DOM-ul să se actualizeze
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    // Update ref
+    lastMessagesLengthRef.current = messages.length;
+
+    return () => clearTimeout(timeoutId);
+  }, [messages.length]);
 
   const fetchConversationsDebounced = useCallback(() => {
     if (fetchConversationsTimeoutRef.current) {
@@ -838,7 +882,12 @@ export const MessagingSystem = () => {
     </div>
   ));
 
-  const MessagesView = React.memo(() => {
+  const MessagesView = () => {
+    console.log('🔄 MessagesView RE-RENDER', { 
+      messagesCount: messages.length, 
+      conversationId: selectedConversation?.id 
+    });
+
     if (!selectedConversation) {
       return (
         <div className="flex-1 flex items-center justify-center bg-muted/20">
@@ -974,7 +1023,7 @@ export const MessagingSystem = () => {
         </div>
       </div>
     );
-  });
+  }; // Închide MessagesView (fără React.memo)
 
   // ==================== MAIN RENDER ====================
 
