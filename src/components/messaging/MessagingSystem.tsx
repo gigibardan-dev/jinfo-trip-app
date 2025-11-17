@@ -20,7 +20,7 @@ interface Conversation {
   title?: string;
   group_id?: string;
   created_at: string;
-  updated_at: string; // ← ADAUGĂ updated_at
+  updated_at: string;
   participants?: any[];
   last_message?: any;
   unread_count?: number;
@@ -70,7 +70,7 @@ export const MessagingSystem = () => {
   const hasFetchedRef = useRef(false);
   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const selectedConversationRef = useRef<Conversation | null>(null);
-  const lastMessagesLengthRef = useRef(0); // ← Track last messages count
+  const lastMessagesLengthRef = useRef(0);
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
@@ -134,7 +134,7 @@ export const MessagingSystem = () => {
     console.log('📍 Current conversation:', selectedConversationRef.current?.id);
 
     const channel = supabase
-      .channel('public:chat_messages') // ← GLOBAL channel pentru toate mesajele
+      .channel('public:chat_messages')
       .on(
         'postgres_changes',
         { 
@@ -181,27 +181,15 @@ export const MessagingSystem = () => {
                 requireInteraction: false,
               });
             }
-
-            // Update unread count pentru conversația respectivă
-            console.log('📊 Updating unread count for conversation:', newMsg.conversation_id);
-            setConversations(prev =>
-              prev.map(conv =>
-                conv.id === newMsg.conversation_id
-                  ? { ...conv, unread_count: (conv.unread_count || 0) + 1 }
-                  : conv
-              )
-            );
           }
 
           // CRITICAL: Adaugă mesajul în conversația curentă
           if (currentConversation && newMsg.conversation_id === currentConversation.id) {
             console.log('✅ Adding message to current conversation');
             
-            // Folosește functional update pentru a evita stale closure
             setMessages(prev => {
               console.log('📊 Current messages count:', prev.length);
               
-              // Verifică dacă mesajul există deja
               const exists = prev.some(m => m.id === newMsg.id);
               if (exists) {
                 console.log('⚠️ Message already exists, skipping');
@@ -209,7 +197,6 @@ export const MessagingSystem = () => {
               }
               
               console.log('➕ Adding new message to state');
-              // Adaugă mesajul NOU cu sender info
               const updatedMessages = [...prev, { 
                 ...newMsg, 
                 sender: senderData 
@@ -234,7 +221,7 @@ export const MessagingSystem = () => {
                     .neq('sender_id', user.id)
                     .eq('is_read', false);
 
-                  // Update local state
+                  // Update DOAR unread count, NU last_message
                   setConversations(prev =>
                     prev.map(conv =>
                       conv.id === currentConversation.id
@@ -247,29 +234,52 @@ export const MessagingSystem = () => {
                 }
               }, 500);
             }
+            
+            // ⚠️ KEY FIX: Update last_message DUPĂ scroll (delay 200ms)
+            // Asta permite scroll-ului să se facă ÎNAINTE de re-render
+            console.log('⏱️ Scheduling conversations update AFTER scroll');
+            setTimeout(() => {
+              setConversations(prev =>
+                prev.map(conv => {
+                  if (conv.id === currentConversation.id) {
+                    return {
+                      ...conv,
+                      last_message: { 
+                        content: newMsg.content, 
+                        created_at: newMsg.created_at 
+                      },
+                      updated_at: newMsg.created_at
+                    };
+                  }
+                  return conv;
+                })
+              );
+              console.log('✅ Conversations updated after scroll');
+            }, 200); // Delay pentru a nu perturba scroll-ul
+          } else {
+            // Mesaj în ALTĂ conversație - update last_message + unread
+            console.log('📫 Message in OTHER conversation - updating list');
+            setConversations(prev =>
+              prev.map(conv => {
+                if (conv.id === newMsg.conversation_id) {
+                  return {
+                    ...conv,
+                    last_message: { 
+                      content: newMsg.content, 
+                      created_at: newMsg.created_at 
+                    },
+                    updated_at: newMsg.created_at,
+                    unread_count: (conv.unread_count || 0) + 1
+                  };
+                }
+                return conv;
+              }).sort((a, b) => {
+                const timeA = new Date(a.updated_at).getTime();
+                const timeB = new Date(b.updated_at).getTime();
+                return timeB - timeA;
+              })
+            );
           }
-
-          // Update last_message în conversations - ÎNTOTDEAUNA
-          // (necesară pentru ca lista să se actualizeze)
-          setConversations(prev =>
-            prev.map(conv => {
-              if (conv.id === newMsg.conversation_id) {
-                return {
-                  ...conv,
-                  last_message: { 
-                    content: newMsg.content, 
-                    created_at: newMsg.created_at 
-                  },
-                  updated_at: newMsg.created_at
-                };
-              }
-              return conv;
-            }).sort((a, b) => {
-              const timeA = new Date(a.updated_at).getTime();
-              const timeB = new Date(b.updated_at).getTime();
-              return timeB - timeA;
-            })
-          );
         }
       )
       .subscribe((status) => {
@@ -289,7 +299,7 @@ export const MessagingSystem = () => {
       console.log('🔌 Cleaning up Realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [user]); // ← DOAR user, scoatem toast și showNotification!
+  }, [user]); // Doar user în dependencies!
 
   // Auto-scroll to bottom - DOAR când apar mesaje NOI
   useEffect(() => {
@@ -299,7 +309,6 @@ export const MessagingSystem = () => {
       hasRef: !!messagesEndRef.current 
     });
 
-    // Scroll DOAR dacă numărul de mesaje a CRESCUT (mesaj nou)
     const hasNewMessage = messages.length > lastMessagesLengthRef.current;
     
     if (!hasNewMessage || messages.length === 0 || !messagesEndRef.current) {
@@ -330,10 +339,7 @@ export const MessagingSystem = () => {
       }
     };
 
-    // Delay mic pentru a aștepta ca DOM-ul să se actualizeze
     const timeoutId = setTimeout(scrollToBottom, 100);
-    
-    // Update ref
     lastMessagesLengthRef.current = messages.length;
 
     return () => clearTimeout(timeoutId);
@@ -432,7 +438,6 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
 
-      // Update local state instantly
       setConversations(prev =>
         prev.map(conv =>
           conv.id === conversationId
@@ -441,7 +446,6 @@ export const MessagingSystem = () => {
         )
       );
 
-      // Debounced fetch for full sync
       if (data && data.length > 0) {
         fetchConversationsDebounced();
       }
@@ -645,7 +649,6 @@ export const MessagingSystem = () => {
     if (!messageText || !selectedConversation || !user) return;
 
     try {
-      // INSERT în DB
       const { error } = await supabase
         .from('chat_messages')
         .insert({
@@ -656,12 +659,10 @@ export const MessagingSystem = () => {
 
       if (error) throw error;
 
-      // FALLBACK: Dacă Realtime nu aduce mesajul în 500ms, refetch manual
       setTimeout(() => {
         fetchMessages(selectedConversation.id);
       }, 500);
 
-      // Refresh conversations pentru last_message
       fetchConversationsDebounced();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -1023,7 +1024,7 @@ export const MessagingSystem = () => {
         </div>
       </div>
     );
-  }; // Închide MessagesView (fără React.memo)
+  };
 
   // ==================== MAIN RENDER ====================
 
@@ -1037,7 +1038,7 @@ export const MessagingSystem = () => {
         <MessagesView />
       </div>
 
-      {/* Mobile Layout - Full Height */}
+      {/* Mobile Layout - DESIGN-UL TĂU PĂSTRAT */}
       <div className="lg:hidden">
         {selectedConversation ? (
           <div className="fixed inset-0 top-14 bottom-16 border-t bg-background flex flex-col z-10">
