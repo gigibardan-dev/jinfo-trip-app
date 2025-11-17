@@ -132,9 +132,14 @@ export const MessagingSystem = () => {
 
     console.log('🔌 Setting up Realtime subscription for user:', user.id);
     console.log('📍 Current conversation:', selectedConversationRef.current?.id);
+    console.log('🔍 Testing Realtime connection...');
 
     const channel = supabase
-      .channel('public:chat_messages')
+      .channel('public:chat_messages', {
+        config: {
+          broadcast: { self: true }, // Important pentru a primi propriile tale mesaje
+        }
+      })
       .on(
         'postgres_changes',
         { 
@@ -145,6 +150,7 @@ export const MessagingSystem = () => {
         async (payload: any) => {
           console.log('🔔 ===== REALTIME CALLBACK TRIGGERED =====');
           console.log('📨 Realtime INSERT received:', payload);
+          console.log('📨 Raw payload:', JSON.stringify(payload, null, 2));
           const newMsg = payload.new as Message;
 
           // Fetch sender info
@@ -282,12 +288,16 @@ export const MessagingSystem = () => {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log('🔌 Realtime subscription status:', status);
+        if (err) {
+          console.error('❌ Realtime subscription error:', err);
+        }
         if (status === 'SUBSCRIBED') {
           console.log('✅ Successfully subscribed to Realtime');
+          console.log('📡 Listening for INSERT events on chat_messages table');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Realtime channel error');
+          console.error('❌ Realtime channel error - check RLS policies!');
         } else if (status === 'TIMED_OUT') {
           console.error('⏱️ Realtime connection timed out');
         } else if (status === 'CLOSED') {
@@ -709,7 +719,7 @@ export const MessagingSystem = () => {
 
   // ==================== SUB-COMPONENTS ====================
 
-  const ConversationsList = React.memo(() => (
+  const ConversationsList = () => (
     <div className="flex flex-col h-full">
       <div className="p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
@@ -881,7 +891,7 @@ export const MessagingSystem = () => {
         )}
       </ScrollArea>
     </div>
-  ));
+  );
 
   const MessagesView = () => {
     console.log('🔄 MessagesView RE-RENDER', { 
