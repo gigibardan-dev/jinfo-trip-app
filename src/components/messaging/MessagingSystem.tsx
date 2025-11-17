@@ -130,9 +130,6 @@ export const MessagingSystem = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('🔌 Setting up Realtime subscription for user:', user.id);
-    console.log('📍 Current conversation:', selectedConversationRef.current?.id);
-    console.log('🔍 Testing Realtime connection...');
 
     const channel = supabase
       .channel('public:chat_messages', {
@@ -148,9 +145,6 @@ export const MessagingSystem = () => {
           table: 'chat_messages'
         },
         async (payload: any) => {
-          console.log('🔔 ===== REALTIME CALLBACK TRIGGERED =====');
-          console.log('📨 Realtime INSERT received:', payload);
-          console.log('📨 Raw payload:', JSON.stringify(payload, null, 2));
           const newMsg = payload.new as Message;
 
           // Fetch sender info
@@ -160,7 +154,6 @@ export const MessagingSystem = () => {
             .eq('id', newMsg.sender_id)
             .single();
 
-          console.log('👤 Sender data:', senderData);
 
           const senderName = senderData
             ? `${senderData.nume} ${senderData.prenume}`
@@ -172,7 +165,6 @@ export const MessagingSystem = () => {
           // Show toast DOAR pentru mesaje de la alții ȘI dacă NU ești în conversația respectivă
           if (newMsg.sender_id !== user.id && 
               (!currentConversation || newMsg.conversation_id !== currentConversation.id)) {
-            console.log('📢 Showing toast notification');
             toast({
               title: "Mesaj nou",
               description: `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
@@ -191,30 +183,24 @@ export const MessagingSystem = () => {
 
           // CRITICAL: Adaugă mesajul în conversația curentă
           if (currentConversation && newMsg.conversation_id === currentConversation.id) {
-            console.log('✅ Adding message to current conversation');
             
             setMessages(prev => {
-              console.log('📊 Current messages count:', prev.length);
               
               const exists = prev.some(m => m.id === newMsg.id);
               if (exists) {
-                console.log('⚠️ Message already exists, skipping');
                 return prev;
               }
               
-              console.log('➕ Adding new message to state');
               const updatedMessages = [...prev, { 
                 ...newMsg, 
                 sender: senderData 
               }];
               
-              console.log('📊 Updated messages count:', updatedMessages.length);
               return updatedMessages;
             });
 
             // Mark as read instant dacă e de la altcineva
             if (newMsg.sender_id !== user.id) {
-              console.log('📖 Marking messages as read');
               setTimeout(async () => {
                 try {
                   await supabase
@@ -236,14 +222,12 @@ export const MessagingSystem = () => {
                     )
                   );
                 } catch (error) {
-                  console.error('Error marking as read:', error);
                 }
               }, 500);
             }
             
             // ⚠️ KEY FIX: Update last_message DUPĂ scroll (delay 200ms)
             // Asta permite scroll-ului să se facă ÎNAINTE de re-render
-            console.log('⏱️ Scheduling conversations update AFTER scroll');
             setTimeout(() => {
               setConversations(prev =>
                 prev.map(conv => {
@@ -260,11 +244,9 @@ export const MessagingSystem = () => {
                   return conv;
                 })
               );
-              console.log('✅ Conversations updated after scroll');
             }, 200); // Delay pentru a nu perturba scroll-ul
           } else {
             // Mesaj în ALTĂ conversație - update last_message + unread
-            console.log('📫 Message in OTHER conversation - updating list');
             setConversations(prev =>
               prev.map(conv => {
                 if (conv.id === newMsg.conversation_id) {
@@ -289,40 +271,25 @@ export const MessagingSystem = () => {
         }
       )
       .subscribe((status, err) => {
-        console.log('🔌 Realtime subscription status:', status);
         if (err) {
-          console.error('❌ Realtime subscription error:', err);
         }
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to Realtime');
-          console.log('📡 Listening for INSERT events on chat_messages table');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Realtime channel error - check RLS policies!');
         } else if (status === 'TIMED_OUT') {
-          console.error('⏱️ Realtime connection timed out');
         } else if (status === 'CLOSED') {
-          console.warn('🔴 Realtime connection closed');
         }
       });
 
     return () => {
-      console.log('🔌 Cleaning up Realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [user]); // Doar user în dependencies!
 
   // Auto-scroll to bottom - DOAR când apar mesaje NOI
   useEffect(() => {
-    console.log('📜 Scroll effect triggered', { 
-      messagesLength: messages.length,
-      lastLength: lastMessagesLengthRef.current,
-      hasRef: !!messagesEndRef.current 
-    });
-
     const hasNewMessage = messages.length > lastMessagesLengthRef.current;
     
     if (!hasNewMessage || messages.length === 0 || !messagesEndRef.current) {
-      console.log('⏭️ Skipping scroll - no new messages');
       lastMessagesLengthRef.current = messages.length;
       return;
     }
@@ -339,7 +306,6 @@ export const MessagingSystem = () => {
         const overflowY = style.overflowY;
 
         if (overflowY === 'scroll' || overflowY === 'auto') {
-          console.log('⬇️ Scrolling to bottom because new message arrived');
           parent.scrollTop = parent.scrollHeight;
           break;
         }
@@ -402,7 +368,6 @@ export const MessagingSystem = () => {
 
       setConversations(conversationsWithUnread);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
       toast({
         title: "Eroare",
         description: "Nu s-au putut încărca conversațiile",
@@ -427,7 +392,6 @@ export const MessagingSystem = () => {
       if (error) throw error;
       setMessages(messagesData || []);
     } catch (error) {
-      console.error('Error fetching messages:', error);
     }
   };
 
@@ -460,7 +424,6 @@ export const MessagingSystem = () => {
         fetchConversationsDebounced();
       }
     } catch (error) {
-      console.error('Error marking messages as read:', error);
     }
   };
 
@@ -523,7 +486,6 @@ export const MessagingSystem = () => {
         setTourists(data || []);
       }
     } catch (error) {
-      console.error('Error fetching tourists:', error);
     }
   };
 
@@ -574,7 +536,6 @@ export const MessagingSystem = () => {
         setGroups(data || []);
       }
     } catch (error) {
-      console.error('Error fetching groups:', error);
     }
   };
 
@@ -646,7 +607,6 @@ export const MessagingSystem = () => {
       setSelectedRecipient("");
       fetchConversations();
     } catch (error) {
-      console.error('Error creating conversation:', error);
       toast({
         title: "Eroare",
         description: "Nu s-a putut crea conversația",
@@ -675,7 +635,6 @@ export const MessagingSystem = () => {
 
       fetchConversationsDebounced();
     } catch (error) {
-      console.error('Error sending message:', error);
       toast({
         title: "Eroare",
         description: "Nu s-a putut trimite mesajul",
@@ -894,11 +853,6 @@ export const MessagingSystem = () => {
   );
 
   const MessagesView = () => {
-    console.log('🔄 MessagesView RE-RENDER', { 
-      messagesCount: messages.length, 
-      conversationId: selectedConversation?.id 
-    });
-
     if (!selectedConversation) {
       return (
         <div className="flex-1 flex items-center justify-center bg-muted/20">
