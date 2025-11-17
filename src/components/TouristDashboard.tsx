@@ -12,7 +12,9 @@ import {
   Clock,
   Camera,
   Users,
-  AlertCircle
+  AlertCircle,
+  Phone,
+  MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +41,19 @@ interface GroupInfo {
   member_count: number;
 }
 
+interface DocumentStats {
+  total: number;
+  cached: number;
+}
+
+interface GuideInfo {
+  id: string;
+  nume: string;
+  prenume: string;
+  telefon?: string;
+  email: string;
+}
+
 const TouristDashboard = () => {
   const [currentTrip, setCurrentTrip] = useState<UserTrip | null>(null);
   const [userGroups, setUserGroups] = useState<GroupInfo[]>([]);
@@ -46,6 +61,10 @@ const TouristDashboard = () => {
   const [todayActivities, setTodayActivities] = useState<any[]>([]);
   const [groupMemberCount, setGroupMemberCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [documentStats, setDocumentStats] = useState<DocumentStats>({ total: 0, cached: 0 });
+  const [assignedGuide, setAssignedGuide] = useState<GuideInfo | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [newDocumentsCount, setNewDocumentsCount] = useState(0);
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -124,6 +143,12 @@ const TouristDashboard = () => {
               setTodayActivities(activities || []);
             }
           }
+
+          // 6. Fetch document statistics
+          await fetchDocumentStats(activeTrip.id);
+
+          // 7. Fetch assigned guide
+          await fetchAssignedGuide(activeTrip.id);
         }
 
         const groupsInfo = memberGroups.map(mg => ({
@@ -143,6 +168,97 @@ const TouristDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocumentStats = async (tripId: string) => {
+    try {
+      // Total documents for this trip
+      const { count: totalCount } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact', head: true })
+        .eq('trip_id', tripId);
+
+      // Cached documents for this user in offline_cache_status table
+      const { count: cachedCount } = await supabase
+        .from('offline_cache_status')
+        .select('resource_id', { count: 'exact', head: true })
+        .eq('user_id', user!.id)
+        .eq('resource_type', 'documents')
+        .eq('trip_id', tripId);
+
+      setDocumentStats({
+        total: totalCount || 0,
+        cached: cachedCount || 0
+      });
+
+      // Count new documents (uploaded in last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { count: newDocsCount } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact', head: true })
+        .eq('trip_id', tripId)
+        .gte('upload_date', sevenDaysAgo.toISOString());
+
+      setNewDocumentsCount(newDocsCount || 0);
+    } catch (error) {
+      console.error('[DocumentStats] Error:', error);
+    }
+  };
+
+  const fetchAssignedGuide = async (tripId: string) => {
+    try {
+      // Step 1: Get guide_user_id from guide_assignments
+      const { data: assignments, error: assignError } = await supabase
+        .from('guide_assignments')
+        .select('guide_user_id')
+        .eq('trip_id', tripId)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (assignError) {
+        console.error('[GuideInfo] Assignment query error:', assignError);
+        return;
+      }
+
+      if (!assignments || assignments.length === 0) {
+        return;
+      }
+
+      const guideUserId = assignments[0].guide_user_id;
+
+      // Step 2: Get guide profile
+      const { data: guideProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, nume, prenume, telefon, email')
+        .eq('id', guideUserId)
+        .single();
+
+      if (profileError) {
+        console.error('[GuideInfo] Profile query error:', profileError);
+        return;
+      }
+
+      if (guideProfile) {
+        setAssignedGuide(guideProfile);
+      }
+    } catch (error) {
+      console.error('[GuideInfo] Error:', error);
+    }
+  };
+
+  const handleCallGuide = () => {
+    if (assignedGuide?.telefon) {
+      window.location.href = `tel:${assignedGuide.telefon}`;
+    }
+  };
+
+  const handleWhatsAppGuide = () => {
+    if (assignedGuide?.telefon) {
+      const phone = assignedGuide.telefon.replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${phone}`, '_blank');
     }
   };
 
@@ -176,10 +292,10 @@ const TouristDashboard = () => {
   };
 
   const quickActions = [
-    { label: "Vezi Itinerariu", icon: Calendar, color: "primary", path: "/itinerary" },
-    { label: "Documente", icon: FileText, color: "accent", path: "/documents" },
-    { label: "Hărți Offline", icon: MapPin, color: "success", path: "/maps" },
-    { label: "Check-in", icon: Camera, color: "warning", path: "/checkin" }
+    { label: "Vezi Itinerariu", icon: Calendar, color: "primary", path: "/itinerary", badge: 0 },
+    { label: "Documente", icon: FileText, color: "accent", path: "/documents", badge: newDocumentsCount },
+    { label: "Hărți Offline", icon: MapPin, color: "success", path: "/maps", badge: 0 },
+    { label: "Check-in", icon: Camera, color: "warning", path: "/checkin", badge: 0 }
   ];
 
   const getStatusColor = (status: string) => {
@@ -291,10 +407,17 @@ const TouristDashboard = () => {
           <Link key={index} to={action.path}>
             <Button
               variant="outline"
-              className="h-16 w-full flex flex-col gap-2 hover:shadow-medium transition-all"
+              className="h-16 w-full flex flex-col gap-2 hover:shadow-medium transition-all relative"
             >
               <action.icon className="w-5 h-5" />
               <span className="text-xs">{action.label}</span>
+              
+              {/* Badge - appears only if count > 0 */}
+              {action.badge > 0 && (
+                <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">
+                  {action.badge > 9 ? '9+' : action.badge}
+                </div>
+              )}
             </Button>
           </Link>
         ))}
@@ -322,7 +445,7 @@ const TouristDashboard = () => {
                   {todayActivities.map((activity, index) => (
                     <div
                       key={activity.id}
-                      className="border rounded-lg p-4 transition-all hover:shadow-soft"
+                      className="border rounded-lg p-4 px-2.5 sm:px-4 transition-all hover:shadow-soft"
                     >
                       <div className="flex items-start gap-4">
                         <div className="text-2xl">{getActivityIcon(activity.activity_type)}</div>
@@ -404,6 +527,62 @@ const TouristDashboard = () => {
             </CardContent>
           </Card>
 
+          {/* Guide Widget - NEW! */}
+          {assignedGuide && (
+            <Card className="shadow-soft border-0">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  Ghidul Tău
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-lg font-semibold">
+                      {assignedGuide.nume} {assignedGuide.prenume}
+                    </p>
+                    {assignedGuide.telefon && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                        <Phone className="w-3 h-3" />
+                        {assignedGuide.telefon}
+                      </p>
+                    )}
+                  </div>
+
+                  {assignedGuide.telefon && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleCallGuide}
+                        className="w-full"
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Sună
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleWhatsAppGuide}
+                        className="w-full text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        WhatsApp
+                      </Button>
+                    </div>
+                  )}
+
+                  {!assignedGuide.telefon && (
+                    <p className="text-xs text-muted-foreground">
+                      Contact telefonic indisponibil
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Group Info */}
           <Card className="shadow-soft border-0">
             <CardHeader>
@@ -436,12 +615,20 @@ const TouristDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 text-sm text-muted-foreground text-center py-4">
-                <FileText className="w-12 h-12 mx-auto opacity-50" />
-                <p>Verifică documentele în secțiunea dedicată</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total documente</span>
+                  <span className="font-semibold">{documentStats.total}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Salvate offline</span>
+                  <Badge variant="secondary">{documentStats.cached}</Badge>
+                </div>
+
                 <Link to="/documents">
                   <Button variant="outline" size="sm" className="w-full mt-2">
-                    Vezi Documente
+                    Vezi Toate Documentele
                   </Button>
                 </Link>
               </div>
@@ -460,10 +647,66 @@ const TouristDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentTrip.descriere) }}
-            />
+            <div className="relative">
+              <div 
+                className={`prose prose-sm max-w-none overflow-hidden transition-all duration-300 ${
+                  isDescriptionExpanded ? 'max-h-[2000px]' : 'max-h-[10.5rem]'
+                }`}
+                style={{
+                  lineHeight: '1.5rem', // 1.5rem per line
+                  // 7 lines * 1.5rem = 10.5rem
+                }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentTrip.descriere) }}
+              />
+              
+              {/* Gradient fade-out overlay when collapsed */}
+              {!isDescriptionExpanded && currentTrip.descriere.length > 300 && (
+                <div 
+                  className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to top, hsl(var(--card)) 0%, transparent 100%)'
+                  }}
+                />
+              )}
+            </div>
+            
+            {/* Show button only if content is long enough */}
+            {currentTrip.descriere.length > 300 && (
+              <div className="mt-4 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-primary hover:text-primary/80"
+                >
+                  {isDescriptionExpanded ? (
+                    <>
+                      <span>Arată mai puțin</span>
+                      <svg 
+                        className="ml-2 w-4 h-4 transition-transform" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </>
+                  ) : (
+                    <>
+                      <span>Citește mai mult</span>
+                      <svg 
+                        className="ml-2 w-4 h-4 transition-transform" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
