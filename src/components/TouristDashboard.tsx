@@ -292,10 +292,8 @@ const TouristDashboard = () => {
   };
 
   const quickActions = [
-    { label: "Vezi Itinerariu", icon: Calendar, color: "primary", path: "/itinerary", badge: 0 },
-    { label: "Documente", icon: FileText, color: "accent", path: "/documents", badge: newDocumentsCount },
-    { label: "Hărți Offline", icon: MapPin, color: "success", path: "/maps", badge: 0 },
-    { label: "Check-in", icon: Camera, color: "warning", path: "/checkin", badge: 0 }
+    { label: "Hărți Offline", icon: MapPin, color: "success", path: "/maps" },
+    { label: "Check-in", icon: Camera, color: "warning", path: "/checkin" }
   ];
 
   const getStatusColor = (status: string) => {
@@ -402,22 +400,15 @@ const TouristDashboard = () => {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {quickActions.map((action, index) => (
           <Link key={index} to={action.path}>
             <Button
               variant="outline"
-              className="h-16 w-full flex flex-col gap-2 hover:shadow-medium transition-all relative"
+              className="h-16 w-full flex flex-col gap-2 hover:shadow-medium transition-all"
             >
               <action.icon className="w-5 h-5" />
               <span className="text-xs">{action.label}</span>
-              
-              {/* Badge - appears only if count > 0 */}
-              {action.badge > 0 && (
-                <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">
-                  {action.badge > 9 ? '9+' : action.badge}
-                </div>
-              )}
             </Button>
           </Link>
         ))}
@@ -612,6 +603,13 @@ const TouristDashboard = () => {
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
                 Documente
+                
+                {/* Badge pentru documente noi */}
+                {newDocumentsCount > 0 && (
+                  <div className="ml-auto bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">
+                    {newDocumentsCount > 9 ? '9+' : newDocumentsCount}
+                  </div>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
