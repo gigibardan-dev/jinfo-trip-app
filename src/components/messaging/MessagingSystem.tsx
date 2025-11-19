@@ -122,7 +122,11 @@ export const MessagingSystem = () => {
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.id);
-      markMessagesAsRead(selectedConversation.id);
+      // Mark as read after a short delay to ensure messages are loaded
+      const timer = setTimeout(() => {
+        markMessagesAsRead(selectedConversation.id);
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [selectedConversation]);
 

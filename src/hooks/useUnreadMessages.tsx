@@ -68,7 +68,10 @@ export const useUnreadMessages = () => {
           table: 'chat_messages'
         },
         () => {
-          fetchUnreadCount();
+          // Delay refetch to ensure DB is updated
+          setTimeout(() => {
+            fetchUnreadCount();
+          }, 100);
         }
       )
       .subscribe();
