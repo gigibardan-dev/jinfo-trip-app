@@ -13,6 +13,7 @@ import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Se
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist" | "guide";
@@ -24,6 +25,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const { profile, signOut } = useAuth();
+  const unreadMessages = useUnreadMessages();
 
   useEffect(() => {
     const path = location.pathname;
@@ -188,6 +190,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                 userRole === "guide" ? guideNavItems : touristNavItems).map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
+                  const isMessagesTab = item.id === "messages";
 
                   return (
                     <button
@@ -201,7 +204,14 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                       {isActive && (
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
                       )}
-                      <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                      <div className="relative">
+                        <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                        {isMessagesTab && unreadMessages > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold shadow-lg animate-pulse">
+                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                          </div>
+                        )}
+                      </div>
                       <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
                         {item.label}
                       </span>
@@ -219,6 +229,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                 userRole === "guide" ? guideNavItems : touristNavItems).map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
+                  const isMessagesTab = item.id === "messages";
 
                   return (
                     <button
@@ -232,7 +243,14 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                       {isActive && item.id !== "more" && (
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-b-full" />
                       )}
-                      <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                      <div className="relative">
+                        <Icon className={`w-5 h-5 mb-1 ${isActive ? "stroke-[2.5]" : "stroke-2"}`} />
+                        {isMessagesTab && unreadMessages > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold shadow-lg animate-pulse">
+                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                          </div>
+                        )}
+                      </div>
                       <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"} leading-tight text-center`}>
                         {item.label}
                       </span>
