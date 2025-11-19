@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, User, Mail, Phone, Camera } from "lucide-react";
+import { User, Mail, Phone, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import Navigation from "@/components/Navigation";
 
 const ProfilePage = () => {
   const { user, profile, loading } = useAuth();
@@ -24,25 +25,32 @@ const ProfilePage = () => {
     avatar_url: profile?.avatar_url || "",
   });
 
+  const getUserRole = (): "admin" | "tourist" | "guide" => {
+    if (!profile?.role) return "tourist";
+    return profile.role as "admin" | "tourist" | "guide";
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <Skeleton className="h-10 w-32" />
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex justify-center">
-                <Skeleton className="h-32 w-32 rounded-full" />
-              </div>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-background">
+        <Navigation userRole={getUserRole()} />
+        <div className="pt-14 pb-4 p-4 md:p-8">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex justify-center">
+                  <Skeleton className="h-32 w-32 rounded-full" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -112,17 +120,10 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Înapoi
-        </Button>
-
-        <Card className="border-border shadow-soft">
+      <Navigation userRole={getUserRole()} />
+      <div className="pt-14 pb-4">
+        <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
+          <Card className="border-border shadow-soft">
           <CardHeader>
             <CardTitle className="text-2xl">Profilul meu</CardTitle>
             <CardDescription>
@@ -271,6 +272,7 @@ const ProfilePage = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
