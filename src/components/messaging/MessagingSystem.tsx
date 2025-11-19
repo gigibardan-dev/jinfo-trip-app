@@ -310,18 +310,39 @@ export const MessagingSystem = () => {
     return null;
   }, []);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback((force = false) => {
+    const viewport = getScrollViewport();
+    if (!viewport) return;
+
+    // Scroll only if forced or user is near bottom
+    if (force || isUserAtBottomRef.current) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [getScrollViewport]);
+
   // Check if user is at bottom of scroll area
   const checkIfUserAtBottom = useCallback(() => {
     const viewport = getScrollViewport();
-    if (!viewport) return true; // Default to true if we can't check
+    if (!viewport) return true;
     
-    const threshold = 100; // pixels from bottom
+    const threshold = 150; // pixels from bottom
     const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < threshold;
     isUserAtBottomRef.current = isAtBottom;
     return isAtBottom;
   }, [getScrollViewport]);
 
-  // Auto-scroll to bottom ONLY if user is already at bottom
+  // Initial scroll to bottom when conversation changes
+  useEffect(() => {
+    if (selectedConversation && messages.length > 0) {
+      // Force scroll to bottom when conversation opens
+      isUserAtBottomRef.current = true;
+      const timeoutId = setTimeout(() => scrollToBottom(true), 150);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedConversation?.id, scrollToBottom]);
+
+  // Auto-scroll to bottom ONLY if user is already at bottom (for new messages)
   useEffect(() => {
     const hasNewMessage = messages.length > lastMessagesLengthRef.current;
     
@@ -330,23 +351,11 @@ export const MessagingSystem = () => {
       return;
     }
 
-    const scrollToBottom = () => {
-      // Only auto-scroll if user was at bottom
-      if (!isUserAtBottomRef.current) {
-        return;
-      }
-
-      const viewport = getScrollViewport();
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    };
-
-    const timeoutId = setTimeout(scrollToBottom, 100);
+    const timeoutId = setTimeout(() => scrollToBottom(false), 100);
     lastMessagesLengthRef.current = messages.length;
 
     return () => clearTimeout(timeoutId);
-  }, [messages.length, getScrollViewport]);
+  }, [messages.length, scrollToBottom]);
 
   // Track scroll position to update isUserAtBottomRef
   useEffect(() => {
@@ -357,7 +366,7 @@ export const MessagingSystem = () => {
       checkIfUserAtBottom();
     };
 
-    viewport.addEventListener('scroll', handleScroll);
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
     
     // Initial check
     checkIfUserAtBottom();
