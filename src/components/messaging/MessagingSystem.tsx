@@ -71,6 +71,7 @@ export const MessagingSystem = () => {
   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const selectedConversationRef = useRef<Conversation | null>(null);
   const lastMessagesLengthRef = useRef(0);
+  const isUserAtBottomRef = useRef(true);
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
@@ -289,33 +290,55 @@ export const MessagingSystem = () => {
     };
   }, [user]); // Doar user în dependencies!
 
-  // Auto-scroll to bottom - DOAR când apar mesaje NOI
+  // Get ScrollArea viewport element
+  const getScrollViewport = useCallback(() => {
+    const endElement = messagesEndRef.current;
+    if (!endElement) return null;
+
+    // ScrollArea from Radix creates a viewport div with data-radix-scroll-area-viewport
+    let parent = endElement.parentElement;
+    let attempts = 0;
+
+    while (parent && attempts < 10) {
+      if (parent.hasAttribute('data-radix-scroll-area-viewport')) {
+        return parent;
+      }
+      parent = parent.parentElement;
+      attempts++;
+    }
+
+    return null;
+  }, []);
+
+  // Check if user is at bottom of scroll area
+  const checkIfUserAtBottom = useCallback(() => {
+    const viewport = getScrollViewport();
+    if (!viewport) return true; // Default to true if we can't check
+    
+    const threshold = 100; // pixels from bottom
+    const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < threshold;
+    isUserAtBottomRef.current = isAtBottom;
+    return isAtBottom;
+  }, [getScrollViewport]);
+
+  // Auto-scroll to bottom ONLY if user is already at bottom
   useEffect(() => {
     const hasNewMessage = messages.length > lastMessagesLengthRef.current;
     
-    if (!hasNewMessage || messages.length === 0 || !messagesEndRef.current) {
+    if (!hasNewMessage || messages.length === 0) {
       lastMessagesLengthRef.current = messages.length;
       return;
     }
 
     const scrollToBottom = () => {
-      const endElement = messagesEndRef.current;
-      if (!endElement) return;
+      // Only auto-scroll if user was at bottom
+      if (!isUserAtBottomRef.current) {
+        return;
+      }
 
-      let parent = endElement.parentElement;
-      let attempts = 0;
-
-      while (parent && attempts < 10) {
-        const style = window.getComputedStyle(parent);
-        const overflowY = style.overflowY;
-
-        if (overflowY === 'scroll' || overflowY === 'auto') {
-          parent.scrollTop = parent.scrollHeight;
-          break;
-        }
-
-        parent = parent.parentElement;
-        attempts++;
+      const viewport = getScrollViewport();
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
       }
     };
 
@@ -323,7 +346,26 @@ export const MessagingSystem = () => {
     lastMessagesLengthRef.current = messages.length;
 
     return () => clearTimeout(timeoutId);
-  }, [messages.length]);
+  }, [messages.length, getScrollViewport]);
+
+  // Track scroll position to update isUserAtBottomRef
+  useEffect(() => {
+    const viewport = getScrollViewport();
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      checkIfUserAtBottom();
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    
+    // Initial check
+    checkIfUserAtBottom();
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+    };
+  }, [checkIfUserAtBottom, getScrollViewport, selectedConversation]);
 
   const fetchConversationsDebounced = useCallback(() => {
     if (fetchConversationsTimeoutRef.current) {
