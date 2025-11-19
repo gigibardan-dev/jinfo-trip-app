@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, Phone, Camera } from "lucide-react";
+import { User, Mail, Phone, Camera, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Navigation from "@/components/Navigation";
 
@@ -18,6 +18,7 @@ const ProfilePage = () => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     nume: profile?.nume || "",
     prenume: profile?.prenume || "",
@@ -60,6 +61,56 @@ const ProfilePage = () => {
     return null;
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+
+    setIsUploading(true);
+    try {
+      // Delete old avatar if exists
+      if (formData.avatar_url) {
+        const oldPath = formData.avatar_url.split('/').slice(-2).join('/');
+        await supabase.storage.from('avatars').remove([oldPath]);
+      }
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+      toast({
+        title: "Avatar actualizat",
+        description: "Imaginea ta de profil a fost schimbată cu succes.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut încărca imaginea.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -69,7 +120,6 @@ const ProfilePage = () => {
           nume: formData.nume,
           prenume: formData.prenume,
           telefon: formData.telefon,
-          avatar_url: formData.avatar_url,
         })
         .eq("id", user.id);
 
@@ -140,36 +190,29 @@ const ProfilePage = () => {
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && (
-                  <div className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors shadow-medium">
-                    <Camera className="h-4 w-4" />
-                  </div>
-                )}
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors shadow-medium"
+                >
+                  <Upload className="h-4 w-4" />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploading}
+                  />
+                </label>
               </div>
+              {isUploading && (
+                <p className="text-sm text-muted-foreground">Se încarcă imaginea...</p>
+              )}
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
                 {profile.role === "admin" ? "Administrator" : profile.role === "guide" ? "Ghid" : "Turist"}
               </span>
             </div>
 
-            {/* Avatar URL Input (only in edit mode) */}
-            {isEditing && (
-              <div className="space-y-2">
-                <Label htmlFor="avatar_url" className="flex items-center gap-2">
-                  <Camera className="h-4 w-4 text-muted-foreground" />
-                  URL Avatar
-                </Label>
-                <Input
-                  id="avatar_url"
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={formData.avatar_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, avatar_url: e.target.value })
-                  }
-                  className="bg-background"
-                />
-              </div>
-            )}
 
             {/* Email (read-only) */}
             <div className="space-y-2">
