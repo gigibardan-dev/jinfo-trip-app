@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Navigation from "@/components/Navigation";
 
 const ProfilePage = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, updateProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -87,19 +87,11 @@ const ProfilePage = () => {
       // Get public URL
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
       
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: data.publicUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
+      // Update profile using updateProfile from context (updates both DB and state)
+      await updateProfile({ avatar_url: data.publicUrl });
+      
+      // Update local form data
       setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
-      toast({
-        title: "Avatar actualizat",
-        description: "Imaginea ta de profil a fost schimbată cu succes.",
-      });
     } catch (error: any) {
       toast({
         title: "Eroare",
@@ -140,6 +132,18 @@ const ProfilePage = () => {
       setIsSaving(false);
     }
   };
+
+  // Sync formData with profile when profile updates
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        nume: profile.nume || "",
+        prenume: profile.prenume || "",
+        telefon: profile.telefon || "",
+        avatar_url: profile.avatar_url || "",
+      });
+    }
+  }, [profile]);
 
   const handleCancel = () => {
     setFormData({
