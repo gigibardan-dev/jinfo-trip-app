@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -190,7 +190,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                 userRole === "guide" ? guideNavItems : touristNavItems).map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
-                  const isMessagesTab = item.id === "messages";
+                  const isMessagesTab = item.id === "messages" || (userRole === "admin" && item.id === "communications");
 
                   return (
                     <button
@@ -268,18 +268,29 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
           <SheetContent side="bottom" className="h-auto">
             <SheetHeader>
               <SheetTitle>Mai multe opțiuni</SheetTitle>
+              <SheetDescription>
+                Selectează o opțiune din lista de mai jos
+              </SheetDescription>
             </SheetHeader>
             <div className="grid grid-cols-2 gap-4 mt-6 pb-4">
               {adminMoreItems.map((item) => {
                 const Icon = item.icon;
+                const isCommunications = item.id === "communications";
                 return (
                   <Button
                     key={item.id}
                     variant="outline"
-                    className="h-20 flex flex-col gap-2"
+                    className="h-20 flex flex-col gap-2 relative"
                     onClick={() => handleMoreItemClick(item.path, item.id)}
                   >
-                    <Icon className="w-6 h-6" />
+                    <div className="relative">
+                      <Icon className="w-6 h-6" />
+                      {isCommunications && unreadMessages > 0 && (
+                        <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold shadow-lg animate-pulse">
+                          {unreadMessages > 9 ? '9+' : unreadMessages}
+                        </div>
+                      )}
+                    </div>
                     <span className="text-sm">{item.label}</span>
                   </Button>
                 );
