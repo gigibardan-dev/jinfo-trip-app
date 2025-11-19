@@ -169,7 +169,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+  <div className="min-h-screen bg-background transition-colors duration-200">
       <Navigation userRole={getUserRole()} />
       <div className="pt-14 pb-4">
         <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">

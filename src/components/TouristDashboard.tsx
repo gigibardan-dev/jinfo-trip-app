@@ -391,7 +391,7 @@ const TouristDashboard = () => {
             
             {/* Status Badge - Right side on desktop, below on mobile */}
             <div className="flex items-center justify-start lg:justify-end">
-              <Badge variant="secondary" className="bg-white/20 text-primary-foreground border-0 px-4 py-2">
+              <Badge variant="secondary" className="bg-white/20 dark:bg-black/20 text-primary-foreground border-0 px-4 py-2">
                 <Wifi className="w-4 h-4 mr-2" />
                 Online
               </Badge>

@@ -102,7 +102,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-ocean flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-ocean dark:bg-gradient-to-br dark:from-primary-dark dark:to-primary transition-colors duration-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -113,7 +113,7 @@ const Auth = () => {
           <p className="text-primary-foreground/80">Platforma ta de călătorii</p>
         </div>
 
-        <Card className="bg-card/95 backdrop-blur-sm border-border/20">
+        <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">
           <CardHeader>
             <CardTitle className="text-center text-xl">Autentificare</CardTitle>
           </CardHeader>
