@@ -303,21 +303,20 @@ export const MessagingSystem = () => {
 
   // Scroll to bottom function
   const scrollToBottom = useCallback((force = false) => {
-    const viewport = getScrollViewport();
-    console.log('[Messaging][scrollToBottom] called', { force, hasViewport: !!viewport, isUserAtBottom: isUserAtBottomRef.current });
-    if (!viewport) return;
+    const endElement = messagesEndRef.current;
+    console.log('[Messaging][scrollToBottom] called', {
+      force,
+      hasEndElement: !!endElement,
+      isUserAtBottom: isUserAtBottomRef.current,
+    });
 
-    // Scroll only if forced or user is near bottom
+    if (!endElement) return;
+
     if (force || isUserAtBottomRef.current) {
-      console.log('[Messaging][scrollToBottom] performing scroll', {
-        scrollTopBefore: viewport.scrollTop,
-        scrollHeight: viewport.scrollHeight,
-        clientHeight: viewport.clientHeight,
-      });
-      viewport.scrollTop = viewport.scrollHeight;
-      console.log('[Messaging][scrollToBottom] scroll done', { scrollTopAfter: viewport.scrollTop });
+      console.log('[Messaging][scrollToBottom] using scrollIntoView');
+      endElement.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
     }
-  }, [getScrollViewport]);
+  }, []);
 
   // Check if user is at bottom of scroll area
   const checkIfUserAtBottom = useCallback(() => {
