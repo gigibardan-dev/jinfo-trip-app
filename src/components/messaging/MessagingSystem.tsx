@@ -65,13 +65,14 @@ export const MessagingSystem = () => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [newChatType, setNewChatType] = useState<'direct' | 'group'>('direct');
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasFetchedRef = useRef(false);
-  const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const selectedConversationRef = useRef<Conversation | null>(null);
-  const lastMessagesLengthRef = useRef(0);
-  const isUserAtBottomRef = useRef(true);
+   const [loading, setLoading] = useState(true);
+   const messagesEndRef = useRef<HTMLDivElement>(null);
+   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+   const hasFetchedRef = useRef(false);
+   const fetchConversationsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   const selectedConversationRef = useRef<Conversation | null>(null);
+   const lastMessagesLengthRef = useRef(0);
+   const isUserAtBottomRef = useRef(true);
 
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
@@ -290,25 +291,15 @@ export const MessagingSystem = () => {
     };
   }, [user]); // Doar user în dependencies!
 
-  // Get ScrollArea viewport element
-  const getScrollViewport = useCallback(() => {
-    const endElement = messagesEndRef.current;
-    if (!endElement) return null;
-
-    // ScrollArea from Radix creates a viewport div with data-radix-scroll-area-viewport
-    let parent = endElement.parentElement;
-    let attempts = 0;
-
-    while (parent && attempts < 10) {
-      if (parent.hasAttribute('data-radix-scroll-area-viewport')) {
-        return parent;
-      }
-      parent = parent.parentElement;
-      attempts++;
-    }
-
-    return null;
-  }, []);
+   // Get scroll container element (native div instead of Radix viewport)
+   const getScrollViewport = useCallback(() => {
+     const container = messagesContainerRef.current;
+     if (!container) {
+       console.log('[Messaging][getScrollViewport] no container ref');
+       return null;
+     }
+     return container;
+   }, []);
 
   // Scroll to bottom function
   const scrollToBottom = useCallback((force = false) => {
@@ -1006,7 +997,7 @@ export const MessagingSystem = () => {
         </div>
 
         {/* Messages - SCROLLABLE */}
-        <ScrollArea className="flex-1 bg-muted/20">
+        <div ref={messagesContainerRef} className="flex-1 bg-muted/20 overflow-y-auto">
           <div className="p-3 sm:p-4 space-y-2 sm:space-y-3 max-w-4xl mx-auto min-h-full">
             {messages.length === 0 ? (
               <div className="text-center py-8 sm:py-12 flex items-center justify-center min-h-[300px]">
@@ -1074,13 +1065,13 @@ export const MessagingSystem = () => {
                         </span>
                       </div>
                     </div>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </>
-            )}
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </>
+          )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Message Input */}
         <div className="flex-shrink-0">
