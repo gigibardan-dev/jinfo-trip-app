@@ -23,7 +23,7 @@ const Index = () => {
   // If not authenticated, show landing page with login option
   if (!user && !loading) {
     return (
-      <div className="min-h-screen bg-gradient-ocean">
+      <div className="min-h-screen bg-gradient-ocean dark:bg-gradient-to-br dark:from-primary-dark dark:to-primary transition-colors duration-200">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-12">
@@ -39,7 +39,7 @@ const Index = () => {
 
           {/* Features Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <Card className="bg-card/95 backdrop-blur-sm border-border/20">
+            <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">
               <CardContent className="p-6">
                 <Users className="w-8 h-8 text-primary mb-3" />
                 <h3 className="font-semibold mb-2">Management Turiști</h3>
@@ -47,7 +47,7 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/95 backdrop-blur-sm border-border/20">
+            <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">
               <CardContent className="p-6">
                 <Map className="w-8 h-8 text-primary mb-3" />
                 <h3 className="font-semibold mb-2">Itinerarii Interactive</h3>
@@ -55,7 +55,7 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/95 backdrop-blur-sm border-border/20">
+            <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">
               <CardContent className="p-6">
                 <FileText className="w-8 h-8 text-primary mb-3" />
                 <h3 className="font-semibold mb-2">Documente Digitale</h3>
@@ -63,7 +63,7 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/95 backdrop-blur-sm border-border/20">
+            <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">
               <CardContent className="p-6">
                 <Settings className="w-8 h-8 text-primary mb-3" />
                 <h3 className="font-semibold mb-2">PWA Advanced</h3>

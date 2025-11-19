@@ -14,6 +14,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist" | "guide";
@@ -115,7 +116,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
   return (
     <>
       {/* Top Bar - Minimal */}
-      <div className="bg-gradient-ocean border-b shadow-soft fixed top-0 left-0 right-0 z-50">
+      <div className="bg-gradient-ocean dark:bg-gradient-to-r dark:from-primary dark:to-primary-dark border-b dark:border-border shadow-soft fixed top-0 left-0 right-0 z-50 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-14">
             {/* Logo */}
@@ -136,6 +137,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
             {/* Right Actions */}
             <div className="flex items-center space-x-2">
+              <ThemeToggle />
               <InstallPWAButton />
 
               {/* User Dropdown */}
@@ -178,7 +180,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
       </div>
 
       {/* Bottom Navigation - Fixed */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-card border-t dark:border-border shadow-lg z-50 transition-colors duration-200">
         <div className="max-w-7xl mx-auto">
           {/* DESKTOP - Admin 7 tabs / Guide 5 / Tourist 4 */}
           <div className="hidden md:block">
