@@ -810,7 +810,7 @@ export type Database = {
         | "insurance"
         | "itinerary"
         | "custom"
-      group_role: "primary" | "member"
+      group_role: "primary" | "member" | "guide"
       message_type: "info" | "urgent" | "reminder" | "update"
       resource_type: "documents" | "itinerary" | "maps" | "images"
       target_type: "broadcast" | "group" | "individual"
@@ -961,7 +961,7 @@ export const Constants = {
         "itinerary",
         "custom",
       ],
-      group_role: ["primary", "member"],
+      group_role: ["primary", "member", "guide"],
       message_type: ["info", "urgent", "reminder", "update"],
       resource_type: ["documents", "itinerary", "maps", "images"],
       target_type: ["broadcast", "group", "individual"],

@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import DOMPurify from 'dompurify';
 
 interface UserTrip {
@@ -60,7 +61,7 @@ const TouristDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [todayActivities, setTodayActivities] = useState<any[]>([]);
   const [groupMemberCount, setGroupMemberCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const unreadMessages = useUnreadMessages();
   const [documentStats, setDocumentStats] = useState<DocumentStats>({ total: 0, cached: 0 });
   const [assignedGuide, setAssignedGuide] = useState<GuideInfo | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);

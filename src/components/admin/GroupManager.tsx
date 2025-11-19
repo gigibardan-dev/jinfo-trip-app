@@ -47,7 +47,7 @@ interface TouristGroup {
 
 interface GroupMember {
   user_id: string;
-  role_in_group: 'primary' | 'member';
+  role_in_group: 'primary' | 'member' | 'guide';
   joined_at: string;
   profiles: {
     nume: string;
