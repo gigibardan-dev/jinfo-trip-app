@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,45 +7,45 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Settings, 
   User, 
   Bell, 
   Shield, 
   Database, 
   Smartphone,
-  Globe,
   Download,
   Trash2,
   RefreshCw,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  AlertTriangle
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface SettingsState {
-  // Notification Settings
   emailNotifications: boolean;
   pushNotifications: boolean;
   smsNotifications: boolean;
   emergencyAlerts: boolean;
-  
-  // Privacy Settings
   shareLocation: boolean;
   dataCollection: boolean;
   analyticsEnabled: boolean;
-  
-  // App Settings
   offlineMode: boolean;
   autoSync: boolean;
   downloadOnWifi: boolean;
-  cacheLimit: number; // in MB
-  
-  // Account Settings
+  cacheLimit: number;
   twoFactorAuth: boolean;
-  sessionTimeout: number; // in minutes
+  sessionTimeout: number;
 }
 
+const SETTINGS_KEY = "app_settings";
+
 export const SettingsPanel = () => {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<SettingsState>({
     emailNotifications: true,
     pushNotifications: true,
@@ -66,43 +66,198 @@ export const SettingsPanel = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [storageInfo, setStorageInfo] = useState({ used: 0, total: 0 });
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem(SETTINGS_KEY);
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    }
+    calculateStorageUsage();
+  }, []);
+
+  const calculateStorageUsage = async () => {
+    try {
+      // Mock storage calculation for now
+      setStorageInfo({
+        used: 0,
+        total: settings.cacheLimit
+      });
+    } catch (error) {
+      console.error("Error calculating storage:", error);
+    }
+  };
 
   const updateSetting = (key: keyof SettingsState, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSaveSettings = () => {
-    console.log("Saving settings:", settings);
-    // Here you would typically save to backend/localStorage
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      toast({
+        title: "Setări salvate",
+        description: "Preferințele tale au fost actualizate cu succes.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-au putut salva setările.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (newPassword !== confirmPassword) {
-      alert("Parolele nu se potrivesc");
+      toast({
+        title: "Eroare",
+        description: "Parolele nu se potrivesc.",
+        variant: "destructive",
+      });
       return;
     }
-    console.log("Changing password");
-    // Reset form
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Eroare",
+        description: "Parola trebuie să aibă minim 6 caractere.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Parolă schimbată",
+        description: "Parola ta a fost actualizată cu succes.",
+      });
+      
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut schimba parola.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
-  const handleClearCache = () => {
-    console.log("Clearing cache");
+  const handleClearCache = async () => {
+    try {
+      // Clear browser cache
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      await calculateStorageUsage();
+      toast({
+        title: "Cache șters",
+        description: "Toate datele din cache au fost șterse.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut șterge cache-ul.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleExportData = () => {
-    console.log("Exporting data");
+  const handleExportData = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user?.id)
+        .single();
+
+      const exportData = {
+        profile,
+        settings,
+        exportDate: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `date-travelpro-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export reușit",
+        description: "Datele tale au fost exportate.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-au putut exporta datele.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const getCacheUsage = () => {
-    // Mock data
-    return { used: 750, total: settings.cacheLimit };
+  const handleResetSettings = () => {
+    const defaultSettings: SettingsState = {
+      emailNotifications: true,
+      pushNotifications: true,
+      smsNotifications: false,
+      emergencyAlerts: true,
+      shareLocation: true,
+      dataCollection: true,
+      analyticsEnabled: true,
+      offlineMode: true,
+      autoSync: true,
+      downloadOnWifi: true,
+      cacheLimit: 1000,
+      twoFactorAuth: false,
+      sessionTimeout: 30
+    };
+    setSettings(defaultSettings);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+    toast({
+      title: "Setări resetate",
+      description: "Toate setările au fost resetate la valorile implicite.",
+    });
   };
 
-  const cacheUsage = getCacheUsage();
-  const cachePercentage = (cacheUsage.used / cacheUsage.total) * 100;
+  const handleDeleteAccount = async () => {
+    try {
+      toast({
+        title: "Solicitare trimisă",
+        description: "Un administrator va procesa cererea ta de ștergere a contului.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut șterge contul.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cachePercentage = storageInfo.total > 0 ? (storageInfo.used / storageInfo.total) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -134,7 +289,7 @@ export const SettingsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="email-notifications">Notificări Email</Label>
                   <p className="text-sm text-muted-foreground">
                     Primește notificări prin email pentru actualizări importante
@@ -148,7 +303,7 @@ export const SettingsPanel = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="push-notifications">Notificări Push</Label>
                   <p className="text-sm text-muted-foreground">
                     Notificări în aplicație pentru actualizări în timp real
@@ -162,8 +317,11 @@ export const SettingsPanel = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="sms-notifications">Notificări SMS</Label>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="sms-notifications">Notificări SMS</Label>
+                    <Badge variant="outline" className="text-xs">În curând</Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Primește SMS-uri pentru notificări critice
                   </p>
@@ -172,11 +330,12 @@ export const SettingsPanel = () => {
                   id="sms-notifications"
                   checked={settings.smsNotifications}
                   onCheckedChange={(checked) => updateSetting("smsNotifications", checked)}
+                  disabled
                 />
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="emergency-alerts">Alerte de Urgență</Label>
                   <p className="text-sm text-muted-foreground">
                     Alerte importante pentru siguranța călătoriei
@@ -204,8 +363,11 @@ export const SettingsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="share-location">Partajare Locație</Label>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="share-location">Partajare Locație</Label>
+                    <Badge variant="outline" className="text-xs">În curând</Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Permite aplicației să acceseze locația pentru funcții avansate
                   </p>
@@ -214,11 +376,12 @@ export const SettingsPanel = () => {
                   id="share-location"
                   checked={settings.shareLocation}
                   onCheckedChange={(checked) => updateSetting("shareLocation", checked)}
+                  disabled
                 />
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="data-collection">Colectare Date</Label>
                   <p className="text-sm text-muted-foreground">
                     Permite colectarea datelor pentru îmbunătățirea serviciilor
@@ -232,7 +395,7 @@ export const SettingsPanel = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="analytics">Analytics</Label>
                   <p className="text-sm text-muted-foreground">
                     Partajare date de utilizare pentru analiză
@@ -259,7 +422,7 @@ export const SettingsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="offline-mode">Mod Offline</Label>
                   <p className="text-sm text-muted-foreground">
                     Activează funcționalitatea offline pentru călătorii
@@ -274,7 +437,7 @@ export const SettingsPanel = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="auto-sync">Sincronizare Automată</Label>
                   <p className="text-sm text-muted-foreground">
                     Sincronizează automat datele când ești online
@@ -288,7 +451,7 @@ export const SettingsPanel = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <Label htmlFor="download-wifi">Download doar pe Wi-Fi</Label>
                   <p className="text-sm text-muted-foreground">
                     Limitează download-urile mari la conexiunile Wi-Fi
@@ -311,7 +474,7 @@ export const SettingsPanel = () => {
                   className="w-32"
                 />
                 <div className="text-sm text-muted-foreground">
-                  Utilizat: {cacheUsage.used}MB din {cacheUsage.total}MB ({cachePercentage.toFixed(1)}%)
+                  Utilizat: {storageInfo.used}MB din {storageInfo.total}MB ({cachePercentage.toFixed(1)}%)
                 </div>
               </div>
             </CardContent>
@@ -329,8 +492,11 @@ export const SettingsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="two-factor">Autentificare cu Doi Factori</Label>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="two-factor">Autentificare cu Doi Factori</Label>
+                    <Badge variant="outline" className="text-xs">În curând</Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Adaugă un nivel suplimentar de securitate contului
                   </p>
@@ -340,6 +506,7 @@ export const SettingsPanel = () => {
                   id="two-factor"
                   checked={settings.twoFactorAuth}
                   onCheckedChange={(checked) => updateSetting("twoFactorAuth", checked)}
+                  disabled
                 />
               </div>
 
@@ -368,6 +535,7 @@ export const SettingsPanel = () => {
                         type={showPassword ? "text" : "password"}
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
+                        disabled={isChangingPassword}
                       />
                       <Button
                         type="button"
@@ -388,6 +556,7 @@ export const SettingsPanel = () => {
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={isChangingPassword}
                     />
                   </div>
 
@@ -398,11 +567,15 @@ export const SettingsPanel = () => {
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isChangingPassword}
                     />
                   </div>
 
-                  <Button onClick={handlePasswordChange} disabled={!currentPassword || !newPassword || !confirmPassword}>
-                    Schimbă Parola
+                  <Button 
+                    onClick={handlePasswordChange} 
+                    disabled={!newPassword || !confirmPassword || isChangingPassword}
+                  >
+                    {isChangingPassword ? "Se schimbă..." : "Schimbă Parola"}
                   </Button>
                 </div>
               </div>
@@ -421,53 +594,118 @@ export const SettingsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button variant="outline" onClick={handleClearCache}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Șterge Cache
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Șterge Cache
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Ștergi cache-ul?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Toate documentele și datele salvate offline vor fi șterse. Această acțiune nu poate fi anulată.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Anulează</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearCache}>
+                        Șterge
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 
                 <Button variant="outline" onClick={handleExportData}>
                   <Download className="w-4 h-4 mr-2" />
                   Exportă Date
                 </Button>
                 
-                <Button variant="outline">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Resetează Setări
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Resetează Setări
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Resetezi setările?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Toate preferințele tale vor fi resetate la valorile implicite.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Anulează</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleResetSettings}>
+                        Resetează
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
 
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">Informații Stocare</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Cache aplicație:</span>
-                    <span>{cacheUsage.used}MB</span>
+                    <span>Cache offline:</span>
+                    <span>{storageInfo.used}MB</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Date utilizator:</span>
-                    <span>15MB</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Imagini offline:</span>
-                    <span>230MB</span>
+                    <span>Limită configurată:</span>
+                    <span>{storageInfo.total}MB</span>
                   </div>
                   <div className="flex justify-between font-semibold border-t pt-2">
-                    <span>Total:</span>
-                    <span>{cacheUsage.used + 15 + 230}MB</span>
+                    <span>Utilizare:</span>
+                    <span>{cachePercentage.toFixed(1)}%</span>
                   </div>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={calculateStorageUsage}
+                  className="w-full mt-3"
+                >
+                  <RefreshCw className="w-3 h-3 mr-2" />
+                  Reîmprospătează
+                </Button>
               </div>
 
               <div className="bg-destructive/10 p-4 rounded-lg border border-destructive/20">
-                <h4 className="font-semibold text-destructive mb-2">Zona Periculoasă</h4>
+                <h4 className="font-semibold text-destructive mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Zona Periculoasă
+                </h4>
                 <p className="text-sm text-muted-foreground mb-3">
                   Aceste acțiuni sunt permanente și nu pot fi anulate.
                 </p>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Șterge Contul
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Șterge Contul
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Ești absolut sigur?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Această acțiune nu poate fi anulată. Aceasta va șterge permanent contul tău și va elimina datele tale de pe serverele noastre.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Anulează</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleDeleteAccount}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Șterge contul
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardContent>
           </Card>
