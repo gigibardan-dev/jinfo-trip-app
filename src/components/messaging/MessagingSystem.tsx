@@ -301,21 +301,22 @@ export const MessagingSystem = () => {
      return container;
    }, []);
 
-  // Scroll to bottom function
+  // Scroll to bottom function - scrollăm fereastra până jos
   const scrollToBottom = useCallback((force = false) => {
-    const endElement = messagesEndRef.current;
-    console.log('[Messaging][scrollToBottom] called', {
-      force,
-      hasEndElement: !!endElement,
-      isUserAtBottom: isUserAtBottomRef.current,
-    });
+    console.log('[Messaging][scrollToBottom] window scroll', { force, isUserAtBottom: isUserAtBottomRef.current });
 
-    if (!endElement) return;
-
-    if (force || isUserAtBottomRef.current) {
-      console.log('[Messaging][scrollToBottom] using scrollIntoView');
-      endElement.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+    // respectăm în continuare flag-ul, dar folosim scroll pe window
+    if (!force && !isUserAtBottomRef.current) {
+      return;
     }
+
+    window.requestAnimationFrame(() => {
+      const target = document.scrollingElement || document.documentElement;
+      if (!target) return;
+      const top = target.scrollHeight;
+      console.log('[Messaging][scrollToBottom] window.scrollTo', { top });
+      window.scrollTo({ top, behavior: 'auto' });
+    });
   }, []);
 
   // Check if user is at bottom of scroll area
