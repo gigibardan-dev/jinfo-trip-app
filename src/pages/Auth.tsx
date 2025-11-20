@@ -123,12 +123,12 @@ const Auth = () => {
     <div className="min-h-screen bg-gradient-ocean dark:bg-gradient-to-br dark:from-primary-dark dark:to-primary transition-colors duration-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-full mb-4">
-            <Plane className="w-8 h-8 text-accent-foreground" />
+          <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/jinfologo.png" alt="JinfoTours.ro" className="w-16 h-16 object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-primary-foreground mb-2">TravelPro</h1>
-          <p className="text-primary-foreground/80">Platforma ta de călătorii</p>
+          <h1 className="text-3xl font-bold text-primary-foreground mb-2">JinfoApp</h1>
+          <p className="text-primary-foreground/80">by JinfoTours.ro</p>
         </div>
 
         <Card className="bg-card/95 dark:bg-card/90 backdrop-blur-sm border-border/20 dark:border-border/10 transition-colors duration-200">

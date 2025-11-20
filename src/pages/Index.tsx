@@ -27,12 +27,12 @@ const Index = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-full mb-6">
-              <Plane className="w-10 h-10 text-accent-foreground" />
+            <div className="inline-flex items-center justify-center mb-6">
+              <img src="/jinfologo.png" alt="JinfoTours.ro" className="w-20 h-20 object-contain" />
             </div>
-            <h1 className="text-5xl font-bold text-primary-foreground mb-4">TravelPro</h1>
+            <h1 className="text-5xl font-bold text-primary-foreground mb-4">JinfoApp</h1>
             <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-              Platforma completă pentru gestionarea călătoriilor. Administratorii gestionează turiștii și călătoriile, 
+              Platforma completă pentru gestionarea călătoriilor JinfoTours.ro. Administratorii gestionează turiștii și călătoriile,
               iar turiștii accesează informațiile offline.
             </p>
           </div>

@@ -5,7 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-const DB_NAME = 'TravelProOfflineDB';
+const DB_NAME = 'JinfoAppOfflineDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'documents';
 
