@@ -527,13 +527,24 @@ const TouristManager = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="email">Email *</Label>
+                      {editingTourist && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                        >
+                          Editabil
+                        </Button>
+                      )}
+                    </div>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      disabled={!!editingTourist}
                       required
                     />
                   </div>

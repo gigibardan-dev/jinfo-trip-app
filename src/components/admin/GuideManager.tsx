@@ -1142,11 +1142,24 @@ const GuideManager = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input value={formData.email} disabled />
-                <p className="text-xs text-muted-foreground">
-                  Email-ul nu poate fi modificat
-                </p>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                  >
+                    Editabil
+                  </Button>
+                </div>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">

@@ -63,7 +63,6 @@ export const SettingsPanel = () => {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -146,7 +145,6 @@ export const SettingsPanel = () => {
         description: "Parola ta a fost actualizată cu succes.",
       });
       
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
@@ -528,14 +526,16 @@ export const SettingsPanel = () => {
                 <h3 className="text-lg font-semibold mb-4">Schimbare Parolă</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Parola Curentă</Label>
+                    <Label htmlFor="new-password">Parola Nouă</Label>
                     <div className="relative">
                       <Input
-                        id="current-password"
+                        id="new-password"
                         type={showPassword ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
                         disabled={isChangingPassword}
+                        minLength={6}
+                        placeholder="Minim 6 caractere"
                       />
                       <Button
                         type="button"
@@ -550,25 +550,27 @@ export const SettingsPanel = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">Parola Nouă</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isChangingPassword}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirmă Parola Nouă</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isChangingPassword}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isChangingPassword}
+                        minLength={6}
+                        placeholder="Reintroduceți parola"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
                   </div>
 
                   <Button 
