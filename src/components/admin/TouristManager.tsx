@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -709,30 +719,41 @@ const TouristManager = () => {
                     Înregistrat: {new Date(tourist.created_at).toLocaleDateString('ro-RO')}
                   </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleEdit(tourist)}
-                      className="flex-1"
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Editează
-                    </Button>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleEdit(tourist)}
+                        className="flex-1"
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Editează
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                      >
+                        {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDelete(tourist.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                      onClick={() => handlePromoteToAdmin(tourist)}
+                      className="w-full text-warning border-warning hover:bg-warning hover:text-warning-foreground"
                     >
-                      {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleDelete(tourist.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-3 h-3" />
+                      <Shield className="w-3 h-3 mr-1" />
+                      Promovează la Admin
                     </Button>
                   </div>
                 </div>
@@ -829,6 +850,14 @@ const TouristManager = () => {
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handlePromoteToAdmin(tourist)}
+                        className="text-warning hover:text-warning"
+                      >
+                        <Shield className="w-3 h-3" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -850,6 +879,28 @@ const TouristManager = () => {
           </p>
         </div>
       )}
+
+      {/* Promote to Admin Confirmation Dialog */}
+      <AlertDialog open={showPromoteDialog} onOpenChange={setShowPromoteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promovează la Administrator?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să dai drepturi de administrator pentru{" "}
+              <span className="font-semibold">
+                {selectedTouristForPromotion?.nume} {selectedTouristForPromotion?.prenume}
+              </span>
+              ? Acest user va avea acces complet la sistem.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPromoteToAdmin}>
+              Da, promovează
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
