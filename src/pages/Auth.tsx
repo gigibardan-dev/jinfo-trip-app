@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plane, Mail, Lock, User, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
@@ -22,6 +24,9 @@ const Auth = () => {
     role: "tourist"
   });
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -75,29 +80,42 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const createDemoTourist = async () => {
-    // Create demo tourist account if it doesn't exist
-    await signUp("turist@travelpro.ro", "turist123", {
-      nume: "Turist",
-      prenume: "Demo", 
-      telefon: "+40700000000",
-      role: "tourist"
-    });
-  };
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
+      toast({
+        title: "Email invalid",
+        description: "Te rugăm să introduci o adresă de email validă.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const fillDemoData = async (type: 'admin' | 'tourist') => {
-    if (type === 'admin') {
-      setLoginData({
-        email: "admin@travelpro.ro",
-        password: "admin123"
+    setResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
       });
-    } else {
-      // Create tourist account first if needed
-      await createDemoTourist();
-      setLoginData({
-        email: "turist@travelpro.ro", 
-        password: "turist123"
+
+      if (error) throw error;
+
+      toast({
+        title: "Email trimis!",
+        description: "Verifică emailul pentru link-ul de resetare a parolei.",
       });
+
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut trimite emailul de resetare. Te rugăm să încerci din nou.",
+        variant: "destructive",
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -161,31 +179,17 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Se conectează..." : "Conectare"}
                   </Button>
-                </form>
-
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground text-center">Conturi demo:</p>
-                  <div className="flex gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => fillDemoData('admin')}
+                  
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      Admin Demo
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => fillDemoData('tourist')}
-                    >
-                      Turist Demo
-                    </Button>
+                      Ai uitat parola?
+                    </button>
                   </div>
-                </div>
+                </form>
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-4">
@@ -294,6 +298,38 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Forgot Password Dialog */}
+        <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Resetare Parolă</DialogTitle>
+              <DialogDescription>
+                Introdu adresa ta de email și îți vom trimite un link pentru resetarea parolei.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="adresa@email.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={resetLoading}>
+                {resetLoading ? "Se trimite..." : "Trimite link de resetare"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

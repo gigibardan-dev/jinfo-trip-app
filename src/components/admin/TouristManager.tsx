@@ -21,7 +21,8 @@ import {
   UserMinus,
   Eye,
   LayoutGrid,
-  List
+  List,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,12 +66,24 @@ interface TouristFormData {
   group_ids: string[];
 }
 
+// Helper function to generate temporary password
+const generateTemporaryPassword = (length = 8): string => {
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+};
+
 const TouristManager = () => {
   const [tourists, setTourists] = useState<Tourist[]>([]);
   const [groups, setGroups] = useState<TouristGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingTourist, setEditingTourist] = useState<Tourist | null>(null);
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
+  const [selectedTouristForPromotion, setSelectedTouristForPromotion] = useState<Tourist | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -168,49 +181,23 @@ const TouristManager = () => {
           description: "Turistul a fost actualizat cu succes.",
         });
       } else {
-        // 🔴 SOLUȚIA 1: Edge Function (ideal - no auto-login)
-        const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-tourist-user', {
-          body: {
-            email: formData.email,
-            password: formData.password,
-            nume: formData.nume,
-            prenume: formData.prenume,
-            telefon: formData.telefon || null,
-            avatar_url: formData.avatar_url || null,
-            group_ids: formData.group_ids
-          }
-        });
-
-        if (!edgeFunctionError && edgeFunctionData?.success) {
-          // Success - admin rămâne logat!
-          toast({
-            title: "Succes",
-            description: "Turistul a fost creat cu succes.",
-          });
-
-          setShowDialog(false);
-          setEditingTourist(null);
-          resetForm();
-          fetchTourists();
-          return;
-        }
-
-        // 🔴 SOLUȚIA 2: Fallback cu session restore
-        console.log("Edge Function not available, using fallback method");
-
+        // Generează parolă temporară
+        const tempPassword = generateTemporaryPassword();
+        
         // Salvează session-ul admin
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-        // Create new tourist
+        // Create new tourist cu intended_role
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
-          password: formData.password,
+          password: tempPassword,
           options: {
+            emailRedirectTo: `${window.location.origin}/reset-password`,
             data: {
               nume: formData.nume,
               prenume: formData.prenume,
               telefon: formData.telefon,
-              role: 'tourist'
+              intended_role: 'tourist' // ✅ Trigger-ul va folosi asta!
             }
           }
         });
@@ -219,7 +206,7 @@ const TouristManager = () => {
 
         if (authData.user) {
           // Așteaptă ca trigger să creeze profilul
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Update profile cu avatar
           if (formData.avatar_url) {
@@ -232,6 +219,18 @@ const TouristManager = () => {
           // Add group memberships
           await updateGroupMemberships(authData.user.id);
 
+          // Trimite email de reset password
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+            formData.email,
+            {
+              redirectTo: `${window.location.origin}/reset-password`
+            }
+          );
+
+          if (resetError) {
+            console.error('Error sending reset email:', resetError);
+          }
+
           // CRITICAL: Restore admin session
           if (currentSession) {
             await supabase.auth.setSession({
@@ -242,8 +241,8 @@ const TouristManager = () => {
         }
 
         toast({
-          title: "Succes",
-          description: "Turistul a fost creat cu succes.",
+          title: "Tourist creat cu succes!",
+          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
         });
       }
 
@@ -301,6 +300,59 @@ const TouristManager = () => {
       group_ids: tourist.group_memberships?.map(gm => gm.group_id) || []
     });
     setShowDialog(true);
+  };
+
+  const handlePromoteToAdmin = async (tourist: Tourist) => {
+    setSelectedTouristForPromotion(tourist);
+    setShowPromoteDialog(true);
+  };
+
+  const confirmPromoteToAdmin = async () => {
+    if (!selectedTouristForPromotion) return;
+
+    try {
+      const { data: existingRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', selectedTouristForPromotion.id)
+        .eq('role', 'admin')
+        .single();
+
+      if (existingRoles) {
+        toast({ title: "User-ul este deja administrator" });
+        setShowPromoteDialog(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: selectedTouristForPromotion.id,
+          role: 'admin',
+          assigned_by: user?.id
+        });
+
+      if (error) throw error;
+
+      await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', selectedTouristForPromotion.id);
+
+      toast({
+        title: "Promovare reușită!",
+        description: `${selectedTouristForPromotion.nume} ${selectedTouristForPromotion.prenume} este acum administrator.`,
+      });
+
+      setShowPromoteDialog(false);
+      fetchTourists();
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = async (touristId: string) => {
