@@ -127,11 +127,11 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
               )}
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center">
-                <Plane className="w-5 h-5 text-accent-foreground" />
+              <div className="w-9 h-9 flex items-center justify-center">
+                <img src="/jinfologo.png" alt="JinfoTours.ro" className="w-9 h-9 object-contain" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-primary-foreground">TravelPro</h1>
+                <h1 className="text-lg font-bold text-primary-foreground">JinfoApp</h1>
               </div>
             </button>
 

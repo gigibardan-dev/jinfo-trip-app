@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center space-x-1">
-            <span>© 2024 TravelPro.</span>
+            <span>© 2024 JinfoTours.ro.</span>
             <span>Toate drepturile rezervate.</span>
           </div>
           <div className="flex items-center space-x-1 mt-2 sm:mt-0">
