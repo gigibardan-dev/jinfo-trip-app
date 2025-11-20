@@ -30,6 +30,7 @@ import {
   UserPlus,
   UserMinus,
   Eye,
+  EyeOff,
   LayoutGrid,
   List,
   Shield
@@ -107,6 +108,7 @@ const TouristManager = () => {
     avatar_url: "",
     group_ids: []
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -183,14 +185,24 @@ const TouristManager = () => {
 
         if (updateError) throw updateError;
 
-        // Update email if changed (admin can change without confirmation)
+        // Update email and/or password if changed (admin can change without confirmation)
+        const authUpdates: { email?: string; password?: string } = {};
+        
         if (formData.email !== editingTourist.email) {
-          const { error: emailError } = await supabase.auth.admin.updateUserById(
+          authUpdates.email = formData.email;
+        }
+        
+        if (formData.password && formData.password.trim().length >= 6) {
+          authUpdates.password = formData.password;
+        }
+        
+        if (Object.keys(authUpdates).length > 0) {
+          const { error: authError } = await supabase.auth.admin.updateUserById(
             editingTourist.id,
-            { email: formData.email }
+            authUpdates
           );
 
-          if (emailError) throw emailError;
+          if (authError) throw authError;
         }
 
         // Update group memberships
@@ -435,6 +447,7 @@ const TouristManager = () => {
       avatar_url: "",
       group_ids: []
     });
+    setShowPassword(false);
   };
 
   const filteredTourists = tourists.filter(tourist => {
@@ -525,19 +538,35 @@ const TouristManager = () => {
                     />
                   </div>
 
-                  {!editingTourist && (
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Parolă *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">
+                      Parolă {editingTourist ? "(opțional - lasă gol pentru a nu schimba)" : "*"}
+                    </Label>
+                    <div className="relative">
                       <Input
                         id="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
+                        placeholder={editingTourist ? "Lasă gol pentru a păstra parola actuală" : "Minim 6 caractere"}
+                        required={!editingTourist}
                         minLength={6}
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
                     </div>
-                  )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
