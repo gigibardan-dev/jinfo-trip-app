@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText, Edit, Trash2, Power, Phone, Mail, Shield } from "lucide-react";
+import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText, Edit, Trash2, Power, Phone, Mail, Shield, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,7 @@ const GuideManager = () => {
     telefon: "",
     password: ""
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -300,6 +301,7 @@ const GuideManager = () => {
       telefon: "",
       password: ""
     });
+    setShowPassword(false);
   };
 
   const handleEdit = (guide: Guide) => {
@@ -338,14 +340,24 @@ const GuideManager = () => {
 
       if (error) throw error;
 
-      // Update email if changed (admin can change without confirmation)
+      // Update email and/or password if changed (admin can change without confirmation)
+      const authUpdates: { email?: string; password?: string } = {};
+      
       if (formData.email !== selectedGuideForAction.email) {
-        const { error: emailError } = await supabase.auth.admin.updateUserById(
+        authUpdates.email = formData.email;
+      }
+      
+      if (formData.password && formData.password.trim().length >= 6) {
+        authUpdates.password = formData.password;
+      }
+      
+      if (Object.keys(authUpdates).length > 0) {
+        const { error: authError } = await supabase.auth.admin.updateUserById(
           selectedGuideForAction.id,
-          { email: formData.email }
+          authUpdates
         );
 
-        if (emailError) throw emailError;
+        if (authError) throw authError;
       }
 
       toast({
@@ -707,14 +719,30 @@ const GuideManager = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="password">Parolă *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      minLength={6}
+                      placeholder="Minim 6 caractere"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Minim 6 caractere
                   </p>
@@ -1154,6 +1182,39 @@ const GuideManager = () => {
                     setFormData({ ...formData, telefon: e.target.value })
                   }
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-password">
+                  Parolă (opțional - lasă gol pentru a nu schimba)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    placeholder="Lasă gol pentru a păstra parola actuală"
+                    minLength={6}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Minim 6 caractere dacă vrei să schimbi parola
+                </p>
               </div>
             </div>
             <DialogFooter>
