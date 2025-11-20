@@ -338,6 +338,16 @@ const GuideManager = () => {
 
       if (error) throw error;
 
+      // Update email if changed (admin can change without confirmation)
+      if (formData.email !== selectedGuideForAction.email) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(
+          selectedGuideForAction.id,
+          { email: formData.email }
+        );
+
+        if (emailError) throw emailError;
+      }
+
       toast({
         title: "Succes",
         description: "Ghid actualizat cu succes",
@@ -907,24 +917,23 @@ const GuideManager = () => {
                         >
                           <Power className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(guide)}
-                          className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDeleteDialog(guide)}
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => openPromoteDialog(guide)}
-                        className="w-full text-warning border-warning hover:bg-warning hover:text-warning-foreground"
+                        className="text-warning border-warning hover:bg-warning hover:text-warning-foreground"
                       >
-                        <Shield className="h-4 w-4 mr-1" />
-                        Promovează la Admin
+                        <Shield className="h-4 w-4" />
                       </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

@@ -183,6 +183,16 @@ const TouristManager = () => {
 
         if (updateError) throw updateError;
 
+        // Update email if changed (admin can change without confirmation)
+        if (formData.email !== editingTourist.email) {
+          const { error: emailError } = await supabase.auth.admin.updateUserById(
+            editingTourist.id,
+            { email: formData.email }
+          );
+
+          if (emailError) throw emailError;
+        }
+
         // Update group memberships
         await updateGroupMemberships(editingTourist.id);
 
@@ -745,16 +755,15 @@ const TouristManager = () => {
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePromoteToAdmin(tourist)}
+                        className="text-warning border-warning hover:bg-warning hover:text-warning-foreground"
+                      >
+                        <Shield className="w-3 h-3" />
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePromoteToAdmin(tourist)}
-                      className="w-full text-warning border-warning hover:bg-warning hover:text-warning-foreground"
-                    >
-                      <Shield className="w-3 h-3 mr-1" />
-                      Promovează la Admin
-                    </Button>
                   </div>
                 </div>
               </CardContent>
