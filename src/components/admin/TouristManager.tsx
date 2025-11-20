@@ -185,7 +185,7 @@ const TouristManager = () => {
 
         if (updateError) throw updateError;
 
-        // Update email and/or password if changed (admin can change without confirmation)
+        // Update email and/or password using Edge Function
         const authUpdates: { email?: string; password?: string } = {};
         
         if (formData.email !== editingTourist.email) {
@@ -197,10 +197,12 @@ const TouristManager = () => {
         }
         
         if (Object.keys(authUpdates).length > 0) {
-          const { error: authError } = await supabase.auth.admin.updateUserById(
-            editingTourist.id,
-            authUpdates
-          );
+          const { error: authError } = await supabase.functions.invoke('admin-update-user', {
+            body: {
+              userId: editingTourist.id,
+              ...authUpdates
+            }
+          });
 
           if (authError) throw authError;
         }

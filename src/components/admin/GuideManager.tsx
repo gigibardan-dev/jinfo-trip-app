@@ -340,7 +340,7 @@ const GuideManager = () => {
 
       if (error) throw error;
 
-      // Update email and/or password if changed (admin can change without confirmation)
+      // Update email and/or password using Edge Function
       const authUpdates: { email?: string; password?: string } = {};
       
       if (formData.email !== selectedGuideForAction.email) {
@@ -352,10 +352,12 @@ const GuideManager = () => {
       }
       
       if (Object.keys(authUpdates).length > 0) {
-        const { error: authError } = await supabase.auth.admin.updateUserById(
-          selectedGuideForAction.id,
-          authUpdates
-        );
+        const { error: authError } = await supabase.functions.invoke('admin-update-user', {
+          body: {
+            userId: selectedGuideForAction.id,
+            ...authUpdates
+          }
+        });
 
         if (authError) throw authError;
       }
