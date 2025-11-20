@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import TouristsPage from "./pages/admin/TouristsPage";
 import TripsPage from "./pages/admin/TripsPage";
@@ -41,6 +42,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/documents" element={<TouristDocumentsPage />} />
                 <Route path="/tourists" element={<TouristsPage />} />
                 <Route path="/trips" element={<TripsPage />} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText, Edit, Trash2, Power, Phone, Mail } from "lucide-react";
+import { UserCheck, Plus, Search, Filter, MapPin, Calendar, Users, FileText, Edit, Trash2, Power, Phone, Mail, Shield } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,16 @@ interface GuideFormData {
   password: string;
 }
 
+// Helper function to generate temporary password
+const generateTemporaryPassword = (length = 8): string => {
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+};
+
 const GuideManager = () => {
   const { user } = useAuth();
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -86,6 +96,7 @@ const GuideManager = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState("");
   const [selectedTrip, setSelectedTrip] = useState("");
   const [selectedGuideForAction, setSelectedGuideForAction] = useState<Guide | null>(null);
@@ -214,46 +225,23 @@ const GuideManager = () => {
     e.preventDefault();
 
     try {
-      // 🔴 SOLUȚIA 1: Folosim Edge Function (dacă există)
-      const { data, error: edgeFunctionError } = await supabase.functions.invoke('create-guide-user', {
-        body: {
-          email: formData.email,
-          password: formData.password,
-          nume: formData.nume,
-          prenume: formData.prenume,
-          telefon: formData.telefon || null,
-        }
-      });
-
-      if (!edgeFunctionError) {
-        // Edge Function success - no auto-login!
-        toast({
-          title: "Succes",
-          description: "Ghidul a fost creat cu succes.",
-        });
-
-        setIsCreateDialogOpen(false);
-        resetForm();
-        fetchData();
-        return;
-      }
-
-      // 🔴 SOLUȚIA 2: Fallback - manual cu session restore
-      console.log("Edge Function not available, using fallback method");
+      // Generează parolă temporară
+      const tempPassword = generateTemporaryPassword();
       
       // 1. Salvează session-ul curent (admin-ul)
       const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-      // 2. Creează user în Supabase Auth
+      // 2. Creează user în Supabase Auth cu intended_role
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
+        password: tempPassword,
         options: {
+          emailRedirectTo: `${window.location.origin}/reset-password`,
           data: {
             nume: formData.nume,
             prenume: formData.prenume,
             telefon: formData.telefon,
-            role: 'guide'
+            intended_role: 'guide' // ✅ Trigger-ul va folosi asta!
           }
         }
       });
@@ -262,41 +250,22 @@ const GuideManager = () => {
 
       if (authData.user) {
         // 3. Așteaptă ca trigger-ul să creeze profilul
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // 4. FORȚEAZĂ rolul guide în profiles (trigger-ul pune automat tourist!)
-        const { error: updateProfileError } = await supabase
-          .from('profiles')
-          .update({ 
-            role: 'guide',
-            telefon: formData.telefon 
-          })
-          .eq('id', authData.user.id);
+        // 4. Restore session-ul admin-ului (CRITICAL!)
+        // 5. Trimite email de reset password
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          formData.email,
+          {
+            redirectTo: `${window.location.origin}/reset-password`
+          }
+        );
 
-        if (updateProfileError) {
-          console.error('Error updating profile:', updateProfileError);
+        if (resetError) {
+          console.error('Error sending reset email:', resetError);
         }
 
-        // 5. FORȚEAZĂ rolul guide în user_roles
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', authData.user.id)
-          .eq('role', 'tourist');
-
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: 'guide',
-            assigned_by: user?.id
-          });
-
-        if (roleError && !roleError.message.includes('duplicate')) {
-          console.error('Error adding guide role:', roleError);
-        }
-
-        // 6. Restore session-ul admin-ului (CRITICAL!)
+        // 6. Restore session-ul admin-ului
         if (currentSession) {
           await supabase.auth.setSession({
             access_token: currentSession.access_token,
@@ -305,8 +274,8 @@ const GuideManager = () => {
         }
 
         toast({
-          title: "Succes",
-          description: "Ghidul a fost creat cu succes.",
+          title: "Ghid creat cu succes!",
+          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
         });
 
         setIsCreateDialogOpen(false);
@@ -416,6 +385,66 @@ const GuideManager = () => {
   const openDeleteDialog = (guide: Guide) => {
     setSelectedGuideForAction(guide);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openPromoteDialog = (guide: Guide) => {
+    setSelectedGuideForAction(guide);
+    setIsPromoteDialogOpen(true);
+  };
+
+  const handlePromoteToAdmin = async () => {
+    if (!selectedGuideForAction) return;
+
+    try {
+      // Check if user already has admin role
+      const { data: existingRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', selectedGuideForAction.id)
+        .eq('role', 'admin')
+        .single();
+
+      if (existingRoles) {
+        toast({
+          title: "User-ul este deja administrator",
+          variant: "default"
+        });
+        setIsPromoteDialogOpen(false);
+        return;
+      }
+
+      // Insert admin role
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: selectedGuideForAction.id,
+          role: 'admin',
+          assigned_by: user?.id
+        });
+
+      if (error) throw error;
+
+      // Update profiles table (backwards compat)
+      await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', selectedGuideForAction.id);
+
+      toast({
+        title: "Promovare reușită!",
+        description: `${selectedGuideForAction.nume} ${selectedGuideForAction.prenume} este acum administrator.`,
+      });
+
+      setIsPromoteDialogOpen(false);
+      fetchData();
+
+    } catch (error: any) {
+      toast({
+        title: "Eroare la promovare",
+        description: error.message || "Nu s-a putut promova user-ul.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = async () => {
@@ -858,32 +887,43 @@ const GuideManager = () => {
                       )}
                     </div>
 
-                    {/* 🔴 BUTOANELE SUNT AICI - Edit, Toggle Active, Delete */}
-                    <div className="flex gap-2 pt-2 border-t">
+                    {/* Butoane acțiuni */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(guide)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editează
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleActive(guide.id, guide.is_active)}
+                          className={guide.is_active ? "" : "border-green-500 text-green-600"}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteDialog(guide)}
+                          className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEdit(guide)}
-                        className="flex-1"
+                        onClick={() => openPromoteDialog(guide)}
+                        className="w-full text-warning border-warning hover:bg-warning hover:text-warning-foreground"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editează
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleActive(guide.id, guide.is_active)}
-                        className={guide.is_active ? "" : "border-green-500 text-green-600"}
-                      >
-                        <Power className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(guide)}
-                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        <Shield className="h-4 w-4 mr-1" />
+                        Promovează la Admin
                       </Button>
                     </div>
                   </CardContent>
@@ -1145,6 +1185,28 @@ const GuideManager = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Șterge Ghid
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Promote to Admin Confirmation Dialog */}
+      <AlertDialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promovează la Administrator?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să dai drepturi de administrator pentru{" "}
+              <span className="font-semibold">
+                {selectedGuideForAction?.nume} {selectedGuideForAction?.prenume}
+              </span>
+              ? Acest user va avea acces complet la sistem.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePromoteToAdmin}>
+              Da, promovează
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
