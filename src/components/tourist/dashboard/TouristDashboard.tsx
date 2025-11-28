@@ -334,7 +334,7 @@ const TouristDashboard = () => {
   // No active trip found
   if (!currentTrip) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 md:px-8 lg:px-16">
         <Card className="shadow-medium border-0">
           <CardContent className="p-8 text-center">
             <MapPin className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
@@ -360,7 +360,7 @@ const TouristDashboard = () => {
   const progress = calculateTripProgress();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:px-8 lg:px-16">
       {/* Trip Header - REAL DATA */}
       <Card className="shadow-medium border-0 bg-gradient-hero text-primary-foreground">
         <CardContent className="p-4">
