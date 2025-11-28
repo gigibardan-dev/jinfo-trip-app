@@ -55,6 +55,18 @@ export const MessageThread = ({
     }
   }, [conversation?.id]);
 
+  // Periodic refresh as safety net in case realtime misses an event
+  useEffect(() => {
+    if (!conversation?.id) return;
+
+    const interval = setInterval(() => {
+      console.log('[MessageThread] Polling refresh for conversation', conversation.id);
+      fetchMessages();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [conversation?.id]);
+
   // 🔧 FIX BUG 1 - Mark messages as read when conversation loads or changes
   useEffect(() => {
     if (!conversation?.id || !currentUserId) return;
@@ -120,6 +132,8 @@ export const MessageThread = ({
   useEffect(() => {
     if (!conversation?.id) return;
 
+    console.log('[MessageThread] Subscribing to realtime for conversation', conversation.id);
+
     const channel = supabase
       .channel(`messages:${conversation.id}`)
       .on(
@@ -131,49 +145,63 @@ export const MessageThread = ({
           filter: `conversation_id=eq.${conversation.id}`
         },
         async (payload: any) => {
+          console.log('[MessageThread] Realtime INSERT received', payload);
           const newMsg = payload.new as Message;
 
-          // Fetch sender info
-          const { data: senderData } = await supabase
-            .from('profiles')
-            .select('nume, prenume, email')
-            .eq('id', newMsg.sender_id)
-            .single();
+          try {
+            // Fetch sender info
+            const { data: senderData, error: senderError } = await supabase
+              .from('profiles')
+              .select('nume, prenume, email')
+              .eq('id', newMsg.sender_id)
+              .single();
 
-          // Add message to list (at the end for chronological order)
-          setMessages(prev => {
-            const exists = prev.some(m => m.id === newMsg.id);
-            if (exists) return prev;
-            
-            return [...prev, { ...newMsg, sender: senderData }];
-          });
+            if (senderError) {
+              console.error('[MessageThread] Error loading sender for realtime msg', senderError);
+            }
 
-          // Auto-mark as read if it's from someone else
-          if (newMsg.sender_id !== currentUserId) {
-            setTimeout(async () => {
-              try {
-                await supabase
-                  .from('chat_messages')
-                  .update({
-                    is_read: true,
-                    read_at: new Date().toISOString()
-                  })
-                  .eq('id', newMsg.id);
+            // Add message to list (at the end for chronological order)
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === newMsg.id);
+              if (exists) return prev;
+              return [...prev, { ...newMsg, sender: senderData }];
+            });
 
-                onMessagesRead?.();
-              } catch (error) {
-                console.error('Error auto-marking message as read:', error);
-              }
-            }, 500);
+            // Auto-mark as read if it's from someone else
+            if (newMsg.sender_id !== currentUserId) {
+              setTimeout(async () => {
+                try {
+                  const { error } = await supabase
+                    .from('chat_messages')
+                    .update({
+                      is_read: true,
+                      read_at: new Date().toISOString()
+                    })
+                    .eq('id', newMsg.id);
+
+                  if (error) {
+                    console.error('[MessageThread] Error auto-marking message as read:', error);
+                  } else {
+                    onMessagesRead?.();
+                  }
+                } catch (error) {
+                  console.error('[MessageThread] Exception auto-marking message as read:', error);
+                }
+              }, 500);
+            }
+          } catch (error) {
+            console.error('[MessageThread] Error handling realtime message:', error);
           }
         }
       )
       .subscribe();
 
     return () => {
+      console.log('[MessageThread] Removing realtime channel for conversation', conversation.id);
       supabase.removeChannel(channel);
     };
   }, [conversation?.id, currentUserId, onMessagesRead]);
+
 
   const fetchMessages = async () => {
     if (!conversation?.id) return;
