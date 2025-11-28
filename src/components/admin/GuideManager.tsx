@@ -615,9 +615,9 @@ const GuideManager = () => {
 
   const filteredGuides = guides.filter(guide => {
     const matchesSearch = 
-      guide.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guide.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guide.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (guide.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (guide.prenume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (guide.email || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = 
       filterStatus === 'all' || 
@@ -631,9 +631,9 @@ const GuideManager = () => {
     if (!assignment.guides || !assignment.trips) return false;
 
     const matchesSearch = 
-      assignment.guides.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.guides.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.trips.nume.toLowerCase().includes(searchTerm.toLowerCase());
+      (assignment.guides.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (assignment.guides.prenume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (assignment.trips.nume || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = 
       filterStatus === 'all' || 
