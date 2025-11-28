@@ -268,13 +268,30 @@ export const SettingsPanel = () => {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
-          <TabsTrigger value="notifications">Notificări</TabsTrigger>
-          <TabsTrigger value="privacy">Confidențialitate</TabsTrigger>
-          <TabsTrigger value="app">Aplicație</TabsTrigger>
-          <TabsTrigger value="account">Cont</TabsTrigger>
-          <TabsTrigger value="data">Date</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 h-auto gap-1 p-1">
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
+              <Bell className="w-4 h-4 sm:hidden mr-1.5" />
+              Notificări
+            </TabsTrigger>
+            <TabsTrigger value="privacy" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background whitespace-nowrap">
+              <Shield className="w-4 h-4 sm:hidden mr-1.5" />
+              Confidențialitate
+            </TabsTrigger>
+            <TabsTrigger value="app" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
+              <Smartphone className="w-4 h-4 sm:hidden mr-1.5" />
+              Aplicație
+            </TabsTrigger>
+            <TabsTrigger value="account" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
+              <User className="w-4 h-4 sm:hidden mr-1.5" />
+              Cont
+            </TabsTrigger>
+            <TabsTrigger value="data" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
+              <Database className="w-4 h-4 sm:hidden mr-1.5" />
+              Date
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Notifications Settings */}
         <TabsContent value="notifications" className="space-y-6">
