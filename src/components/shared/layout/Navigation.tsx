@@ -63,7 +63,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
   // Guide Nav Items (5 tabs)
   const guideNavItems = [
-    { id: "dashboard", label: "Acasă", icon: Home, path: "/guide-dashboard" },
+    { id: "dashboard", label: "Acasă", icon: Home, path: "/" },
     { id: "itinerary", label: "Itinerariu", icon: Plane, path: "/guide-itinerary" },
     { id: "reports", label: "Rapoarte", icon: ClipboardList, path: "/guide-reports" },
     { id: "documents", label: "Documente", icon: FileText, path: "/guide-documents" },
@@ -121,10 +121,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
           <div className="flex justify-between items-center h-14">
             {/* Logo */}
             <button
-              onClick={() => handleNavigation(
-                userRole === "guide" ? "/guide/dashboard" : "/",
-                "dashboard"
-              )}
+              onClick={() => handleNavigation("/", "dashboard")}
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
               <div className="w-9 h-9 flex items-center justify-center">
