@@ -23,7 +23,7 @@ export function MapSettingsDialog({
   onConfigUpdated 
 }: MapSettingsDialogProps) {
   const [zoomMin, setZoomMin] = useState(mapConfig?.zoom_min || 5);
-  const [zoomMax, setZoomMax] = useState(mapConfig?.zoom_max || 13);
+  const [zoomMax, setZoomMax] = useState(mapConfig?.zoom_max || 10);
   const [locations, setLocations] = useState(mapConfig?.locations || []);
   const [newCityName, setNewCityName] = useState("");
   const [isGeocoding, setIsGeocoding] = useState(false);
