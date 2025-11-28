@@ -536,6 +536,77 @@ export type Database = {
           },
         ]
       }
+      map_points_of_interest: {
+        Row: {
+          address: string | null
+          category: string
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_visible: boolean | null
+          lat: number
+          lng: number
+          name: string
+          notes: string | null
+          phone: string | null
+          trip_id: string
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean | null
+          lat: number
+          lng: number
+          name: string
+          notes?: string | null
+          phone?: string | null
+          trip_id: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean | null
+          lat?: number
+          lng?: number
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          trip_id?: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_points_of_interest_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offline_cache_status: {
         Row: {
           cache_size: number

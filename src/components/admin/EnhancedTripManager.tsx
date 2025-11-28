@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route, Map, RefreshCw, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route, Map, RefreshCw, Loader2, CheckCircle2, AlertCircle, Sparkles, Hotel, Utensils, Camera, Hospital, Bus, ShoppingBag } from "lucide-react";
 import ItineraryManager from "@/components/ItineraryManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,17 @@ import RichTextEditor from "./RichTextEditor";
 import DOMPurify from 'dompurify';
 import { MapPreviewDialog } from "./MapPreviewDialog";
 import { MapSettingsDialog } from "./MapSettingsDialog";
+import POIDialog from "./POIDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Trip {
   id: string;
@@ -70,6 +81,10 @@ const EnhancedCircuitManager = () => {
   const [isGeneratingMap, setIsGeneratingMap] = useState(false);
   const [showMapPreview, setShowMapPreview] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);
+  const [pointsOfInterest, setPointsOfInterest] = useState<any[]>([]);
+  const [showPOIDialog, setShowPOIDialog] = useState(false);
+  const [editingPOI, setEditingPOI] = useState<any>(null);
+  const [deletingPOI, setDeletingPOI] = useState<any>(null);
   const [formData, setFormData] = useState<TripFormData>({
     nume: "",
     destinatie: "",
@@ -167,6 +182,65 @@ const EnhancedCircuitManager = () => {
       setGroups(data || []);
     } catch (error) {
       console.error('Error fetching groups:', error);
+    }
+  };
+
+  const fetchPOIs = async (tripId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('map_points_of_interest')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      setPointsOfInterest(data || []);
+    } catch (error) {
+      console.error('Error fetching POIs:', error);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    const iconMap: Record<string, any> = {
+      hotel: Hotel,
+      restaurant: Utensils,
+      attraction: Camera,
+      emergency: Hospital,
+      transport: Bus,
+      shop: ShoppingBag,
+      other: MapPin,
+    };
+    return iconMap[category] || MapPin;
+  };
+
+  const handleDeletePOI = async () => {
+    if (!deletingPOI) return;
+
+    try {
+      const { error } = await supabase
+        .from('map_points_of_interest')
+        .delete()
+        .eq('id', deletingPOI.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succes",
+        description: "Punctul de interes a fost șters.",
+      });
+
+      if (editingTrip) {
+        fetchPOIs(editingTrip.id);
+      }
+    } catch (error: any) {
+      console.error('Error deleting POI:', error);
+      toast({
+        title: "Eroare",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPOI(null);
     }
   };
 
@@ -269,8 +343,9 @@ const EnhancedCircuitManager = () => {
       group_id: trip.group_id,
       status: trip.status
     });
-    // Load map config if exists
+    // Load map config and POIs if exists
     fetchMapConfig(trip.id);
+    fetchPOIs(trip.id);
     setShowDialog(true);
   };
 
@@ -672,9 +747,9 @@ const EnhancedCircuitManager = () => {
                     )}
                   </TabsContent>
 
-                  <TabsContent value="map" className="space-y-4">
+                   <TabsContent value="map" className="space-y-4">
                     {editingTrip?.offline_map_configs ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                           <Card className="p-4">
                             <h4 className="text-sm font-medium mb-2">Orașe Detectate</h4>
@@ -724,6 +799,85 @@ const EnhancedCircuitManager = () => {
                               </>
                             )}
                           </Button>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                              <MapPin className="w-5 h-5" />
+                              Puncte de Interes Custom
+                            </h3>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setEditingPOI(null);
+                                setShowPOIDialog(true);
+                                fetchPOIs(editingTrip.id);
+                              }}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Adaugă POI
+                            </Button>
+                          </div>
+
+                          {pointsOfInterest.length > 0 ? (
+                            <div className="space-y-2">
+                              {pointsOfInterest.map((poi) => {
+                                const CategoryIcon = getCategoryIcon(poi.category);
+                                return (
+                                  <Card key={poi.id} className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className={`p-2 rounded-lg bg-${poi.color}-100`}>
+                                          <CategoryIcon className={`w-4 h-4 text-${poi.color}-600`} />
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <h4 className="font-medium">{poi.name}</h4>
+                                            {!poi.is_visible && (
+                                              <Badge variant="secondary" className="text-xs">Ascuns</Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-muted-foreground">
+                                            {poi.lat.toFixed(4)}, {poi.lng.toFixed(4)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            setEditingPOI(poi);
+                                            setShowPOIDialog(true);
+                                          }}
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => setDeletingPOI(poi)}
+                                        >
+                                          <Trash2 className="w-4 h-4 text-destructive" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center p-6 border border-dashed rounded-lg">
+                              <MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                Nu există puncte de interes adăugate încă
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -950,6 +1104,49 @@ const EnhancedCircuitManager = () => {
           }}
         />
       )}
+
+      {/* POI Dialog */}
+      {editingTrip && editingTrip.offline_map_configs && (
+        <POIDialog
+          open={showPOIDialog}
+          onOpenChange={setShowPOIDialog}
+          tripId={editingTrip.id}
+          existingPOI={editingPOI}
+          onSuccess={() => {
+            fetchPOIs(editingTrip.id);
+            setShowPOIDialog(false);
+            setEditingPOI(null);
+          }}
+          mapBounds={
+            editingTrip.offline_map_configs
+              ? {
+                  north: editingTrip.offline_map_configs.bounds_north,
+                  south: editingTrip.offline_map_configs.bounds_south,
+                  east: editingTrip.offline_map_configs.bounds_east,
+                  west: editingTrip.offline_map_configs.bounds_west,
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {/* Delete POI Confirmation */}
+      <AlertDialog open={!!deletingPOI} onOpenChange={() => setDeletingPOI(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ștergi punctul de interes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sigur vrei să ștergi "{deletingPOI?.name}"? Această acțiune nu poate fi anulată.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePOI} className="bg-destructive hover:bg-destructive/90">
+              Șterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
