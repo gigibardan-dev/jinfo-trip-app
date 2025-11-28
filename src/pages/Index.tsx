@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, Users, Settings, Map, FileText, LogIn } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import AdminDashboard from "@/components/AdminDashboard";
+import AdminDashboard from "@/components/admin/dashboard/AdminDashboard";
 import TouristDashboard from "@/components/TouristDashboard";
 import { useAuth } from "@/hooks/useAuth";
 

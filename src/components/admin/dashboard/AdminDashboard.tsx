@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import GroupManager from "./admin/GroupManager";
+import GroupManager from "../GroupManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 
 // Import componentele pentru navigare
-import EnhancedTripManager from "./admin/EnhancedTripManager";
-import TouristManager from "./admin/TouristManager";
-import DocumentUploader from "./admin/DocumentUploader";
+import EnhancedTripManager from "../EnhancedTripManager";
+import TouristManager from "../TouristManager";
+import DocumentUploader from "../DocumentUploader";
 
 type ActiveView = 'dashboard' | 'trips' | 'tourists' | 'documents' | 'groups';
 
