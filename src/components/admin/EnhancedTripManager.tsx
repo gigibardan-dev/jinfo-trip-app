@@ -527,17 +527,13 @@ const EnhancedCircuitManager = () => {
               </DialogHeader>
               
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic">Informații de Bază</TabsTrigger>
                   <TabsTrigger value="details">Detalii</TabsTrigger>
                   <TabsTrigger value="settings">Setări</TabsTrigger>
-                  <TabsTrigger value="map">
-                    <Map className="w-4 h-4 mr-2" />
-                    Hartă Offline
-                  </TabsTrigger>
                 </TabsList>
                 
-                <form onSubmit={handleSubmit}>
+                <form id="trip-form" onSubmit={handleSubmit}>
                   <TabsContent value="basic" className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="nume">Numele Circuitului *</Label>
@@ -660,147 +656,150 @@ const EnhancedCircuitManager = () => {
                       </div>
                     )}
                   </TabsContent>
+                </form>
 
-                  <TabsContent value="map" className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Map className="w-5 h-5" />
-                          Hartă Offline
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Configurare automată pentru download offline
-                        </p>
-                      </div>
-                      {editingTrip && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleGenerateMapConfig(editingTrip.id)}
-                          disabled={isGeneratingMap}
-                        >
-                          {isGeneratingMap ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Generare...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              {mapConfig ? 'Re-generează' : 'Generează Automat'}
-                            </>
-                          )}
-                        </Button>
-                      )}
+                {/* Hartă Offline Section - Always Visible */}
+                <div className="space-y-4 pt-6 mt-6 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Map className="w-5 h-5" />
+                        Hartă Offline
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configurare automată pentru download offline
+                      </p>
                     </div>
-
-                    {!editingTrip && (
-                      <div className="bg-muted/30 rounded-lg p-6 text-center">
-                        <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Salvează mai întâi circuitul pentru a configura harta offline
-                        </p>
-                      </div>
-                    )}
-
-                    {editingTrip && mapConfig && (
-                      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Orașe detectate:</p>
-                            <p className="font-medium">{mapConfig.locations?.length || 0}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Storage estimat:</p>
-                            <p className="font-medium">{mapConfig.estimated_size_mb} MB</p>
-                          </div>
-                        </div>
-
-                        {mapConfig.locations && mapConfig.locations.length > 0 && (
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-2">Locații:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {mapConfig.locations.map((loc: any, idx: number) => (
-                                <Badge key={idx} variant="secondary">
-                                  <MapPin className="w-3 h-3 mr-1" />
-                                  {loc.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
+                    {editingTrip && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateMapConfig(editingTrip.id)}
+                        disabled={isGeneratingMap}
+                      >
+                        {isGeneratingMap ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generare...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            {mapConfig ? 'Re-generează' : 'Generează Automat'}
+                          </>
                         )}
+                      </Button>
+                    )}
+                  </div>
 
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowMapPreview(true)}
-                            className="flex-1"
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Preview
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowMapSettings(true)}
-                            className="flex-1"
-                          >
-                            <Settings className="w-4 h-4 mr-2" />
-                            Setări
-                          </Button>
+                  {!editingTrip && (
+                    <div className="bg-muted/30 rounded-lg p-6 text-center">
+                      <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Salvează mai întâi circuitul pentru a configura harta offline
+                      </p>
+                    </div>
+                  )}
+
+                  {editingTrip && mapConfig && (
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Orașe detectate:</p>
+                          <p className="font-medium">{mapConfig.locations?.length || 0}</p>
                         </div>
-
-                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Hartă configurată și disponibilă pentru download</span>
+                        <div>
+                          <p className="text-muted-foreground">Storage estimat:</p>
+                          <p className="font-medium">{mapConfig.estimated_size_mb} MB</p>
                         </div>
                       </div>
-                    )}
 
-                    {editingTrip && !mapConfig && (
-                      <div className="bg-muted/30 rounded-lg p-4 text-center space-y-2">
-                        <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Hartă offline nu este configurată încă
-                        </p>
+                      {mapConfig.locations && mapConfig.locations.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Locații:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {mapConfig.locations.map((loc: any, idx: number) => (
+                              <Badge key={idx} variant="secondary">
+                                <MapPin className="w-3 h-3 mr-1" />
+                                {loc.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleGenerateMapConfig(editingTrip.id)}
-                          disabled={isGeneratingMap}
+                          onClick={() => setShowMapPreview(true)}
+                          className="flex-1"
                         >
-                          {isGeneratingMap ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Generare automată...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              Generează Automat
-                            </>
-                          )}
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowMapSettings(true)}
+                          className="flex-1"
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Setări
                         </Button>
                       </div>
-                    )}
-                  </TabsContent>
 
-                  <div className="flex justify-end gap-2 mt-6">
-                    <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                      Anulează
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      className="bg-gradient-hero"
-                    >
-                      {editingTrip ? 'Actualizează' : 'Creează'}
-                    </Button>
-                  </div>
-                </form>
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Hartă configurată și disponibilă pentru download</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {editingTrip && !mapConfig && (
+                    <div className="bg-muted/30 rounded-lg p-4 text-center space-y-2">
+                      <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Hartă offline nu este configurată încă
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateMapConfig(editingTrip.id)}
+                        disabled={isGeneratingMap}
+                      >
+                        {isGeneratingMap ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generare automată...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Generează Automat
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                    Anulează
+                  </Button>
+                  <Button 
+                    type="submit"
+                    form="trip-form"
+                    className="bg-gradient-hero"
+                  >
+                    {editingTrip ? 'Actualizează' : 'Creează'}
+                  </Button>
+                </div>
               </Tabs>
             </DialogContent>
           </Dialog>
