@@ -50,7 +50,12 @@ const App = () => (
           <div className="min-h-screen flex flex-col">
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
             <div className="flex-1">
               <Suspense fallback={
                 <div className="container mx-auto p-6 space-y-6">
