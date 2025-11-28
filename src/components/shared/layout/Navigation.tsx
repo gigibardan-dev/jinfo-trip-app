@@ -15,7 +15,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { InstallPWAButton } from "@/components/shared/pwa/InstallPWAButton";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { OfflineBanner } from "@/components/shared/offline/OfflineBanner";
 
 interface NavigationProps {
   userRole?: "admin" | "tourist" | "guide";
@@ -116,9 +115,6 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
 
   return (
     <>
-      {/* Offline Banner */}
-      <OfflineBanner />
-
       {/* Top Bar - Minimal */}
       <div className="bg-gradient-ocean dark:bg-gradient-to-r dark:from-primary dark:to-primary-dark border-b dark:border-border shadow-soft fixed top-0 left-0 right-0 z-50 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4">

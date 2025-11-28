@@ -11,8 +11,6 @@ import { Search, MessageSquare, Users, User, MessageCircle, Trash2, AlertTriangl
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { useNetworkSync } from "@/hooks/useNetworkSync";
-import { WifiOff } from "lucide-react";
 
 interface Conversation {
   id: string;
@@ -71,16 +69,14 @@ export const ConversationList = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { isOnline } = useNetworkSync();
 
   useEffect(() => {
-    if (!currentUserId) return;
-
-    // Lăsăm fetch să se întâmple - Service Worker returnează cache
-    fetchConversations();
-    if (canInitiateChat) {
-      fetchTourists();
-      fetchGroups();
+    if (currentUserId) {
+      fetchConversations();
+      if (canInitiateChat) {
+        fetchTourists();
+        fetchGroups();
+      }
     }
   }, [currentUserId, canInitiateChat]);
 
@@ -195,13 +191,13 @@ export const ConversationList = ({
       );
 
       setConversations(conversationsWithDetails);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching conversations:', error);
-      
-      // Check dacă e offline error
-      if (error?.offline || error?.message?.includes('offline')) {
-        console.log('[ConversationList] Offline mode - no cached conversations');
-      }
+      toast({
+        title: "Eroare",
+        description: "Nu s-au putut încărca conversațiile",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -623,16 +619,7 @@ export const ConversationList = ({
       </div>
 
       <ScrollArea className="flex-1">
-        {!isOnline && filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <WifiOff className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-2 text-sm sm:text-base">Mod Offline</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Mesajele necesită conexiune la internet. 
-              Reconectează-te pentru a vedea conversațiile.
-            </p>
-          </div>
-        ) : filteredConversations.length === 0 ? (
+        {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
             <h3 className="font-semibold mb-2 text-sm sm:text-base">Nicio conversație</h3>

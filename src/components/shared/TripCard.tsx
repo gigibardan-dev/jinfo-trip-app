@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Users, Eye, Edit, Trash2 } from "lucide-react";
-import { memo } from "react";
 
 interface TripCardProps {
   id: string;
@@ -147,5 +146,3 @@ export const TripCard = ({
     </Card>
   );
 };
-
-export default memo(TripCard);

@@ -23,8 +23,6 @@ import {
 import { format, parseISO } from "date-fns";
 import { ro } from "date-fns/locale";
 import { toast } from "sonner";
-import { useNetworkSync } from "@/hooks/useNetworkSync";
-import { WifiOff } from "lucide-react";
 
 interface Trip {
   id: string;
@@ -76,12 +74,8 @@ const ItineraryPage = () => {
   const [itineraryDays, setItineraryDays] = useState<ItineraryDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isOnline } = useNetworkSync();
 
   useEffect(() => {
-    if (!profile?.id) return;
-
-    // Lăsăm fetch să se întâmple - Service Worker va returna cache dacă offline
     if (user && profile) {
       fetchUserTrips();
     }
@@ -95,21 +89,7 @@ const ItineraryPage = () => {
 
   const fetchUserTrips = async () => {
     try {
-      // Încearcă să încarci din cache imediat
-      const cached = localStorage.getItem('cached_itinerary_trips');
-      if (cached) {
-        try {
-          const { data } = JSON.parse(cached);
-          setTrips(data || []);
-          if (data && data.length > 0) {
-            setSelectedTrip(data[0]);
-          }
-        } catch (cacheError) {
-          console.error('[ItineraryPage] Error parsing cache:', cacheError);
-        }
-      }
-
-      // Get user's groups first (Service Worker returnează cache dacă offline)
+      // Get user's groups first
       const { data: memberGroups, error: groupsError } = await supabase
         .from('group_members')
         .select('group_id')
@@ -138,19 +118,9 @@ const ItineraryPage = () => {
       if (data && data.length > 0) {
         setSelectedTrip(data[0]);
       }
-
-      // Cache trips data
-      localStorage.setItem('cached_itinerary_trips', JSON.stringify({
-        data: data || [],
-        timestamp: new Date().toISOString()
-      }));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching trips:", error);
-      
-      // Check dacă e offline error
-      if (error?.offline || error?.message?.includes('offline')) {
-        console.log('[ItineraryPage] Offline mode - using cached data');
-      }
+      toast.error("Eroare la încărcarea circuitelor");
     }
   };
 
@@ -188,24 +158,9 @@ const ItineraryPage = () => {
       if (daysWithActivities.length > 0 && !selectedDay) {
         setSelectedDay(daysWithActivities[0].id);
       }
-
-      // Cache itinerary data
-      localStorage.setItem('cached_itinerary_data', JSON.stringify({
-        data: {
-          trips,
-          selectedTrip,
-          itineraryDays: daysWithActivities,
-          selectedDay: daysWithActivities.length > 0 ? daysWithActivities[0].id : null
-        },
-        timestamp: new Date().toISOString()
-      }));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching itinerary:", error);
-      
-      // Check dacă e offline error
-      if (error?.offline || error?.message?.includes('offline')) {
-        console.log('[ItineraryPage] Offline mode - using cached data');
-      }
+      toast.error("Eroare la încărcarea itinerarului");
     } finally {
       setLoading(false);
     }
