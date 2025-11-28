@@ -37,7 +37,7 @@ interface MessageThreadProps {
   refreshKey?: number;
 }
 
-export const MessageThread = ({
+const MessageThread = ({
   conversation,
   currentUserId,
   onMessagesRead,
@@ -332,3 +332,5 @@ export const MessageThread = ({
     </div>
   );
 };
+
+export default MessageThread;

@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ConversationList } from "./ConversationList";
-import { MessageThread } from "./MessageThread";
+import { MessageSkeleton } from "@/components/shared/skeletons/MessageSkeleton";
+
+// Lazy load MessageThread
+const MessageThread = lazy(() => import("./MessageThread"));
 
 interface Conversation {
   id: string;
@@ -83,13 +86,15 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
         </div>
         
         {selectedConversation ? (
-          <MessageThread
-            conversation={selectedConversation}
-            currentUserId={user.id}
-            onMessagesRead={handleMessagesRead}
-            showBackButton={false}
-            refreshKey={threadRefreshKey}
-          />
+          <Suspense fallback={<MessageSkeleton count={8} />}>
+            <MessageThread
+              conversation={selectedConversation}
+              currentUserId={user.id}
+              onMessagesRead={handleMessagesRead}
+              showBackButton={false}
+              refreshKey={threadRefreshKey}
+            />
+          </Suspense>
 
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/20">
@@ -108,14 +113,16 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
       <div className="lg:hidden">
         {selectedConversation ? (
           <div className="fixed inset-0 top-14 bottom-16 border-t bg-background flex flex-col z-10">
-            <MessageThread
-              conversation={selectedConversation}
-              currentUserId={user.id}
-              onMessagesRead={handleMessagesRead}
-              onBack={handleBackToList}
-              showBackButton={true}
-              refreshKey={threadRefreshKey}
-            />
+            <Suspense fallback={<MessageSkeleton count={8} />}>
+              <MessageThread
+                conversation={selectedConversation}
+                currentUserId={user.id}
+                onMessagesRead={handleMessagesRead}
+                onBack={handleBackToList}
+                showBackButton={true}
+                refreshKey={threadRefreshKey}
+              />
+            </Suspense>
           </div>
 
         ) : (
