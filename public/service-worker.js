@@ -107,21 +107,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: API Calls - Network First
+  // Strategy 3: API Calls - Network First, Cache Fallback
   if (request.url.includes('/rest/v1/') || request.url.includes('/functions/v1/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache API response
-          const responseClone = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          // Verifică că response e OK înainte de cache
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
           return response;
         })
         .catch(() => {
+          console.log('[SW] Network failed, returning cache for:', request.url);
           // Fallback to cache
-          return caches.match(request);
+          return caches.match(request).then((cached) => {
+            if (cached) {
+              console.log('[SW] Cache hit:', request.url);
+              return cached;
+            }
+            // No cache available - return error response
+            console.log('[SW] No cache for:', request.url);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Offline and no cache available',
+                offline: true 
+              }),
+              {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'application/json' }
+              }
+            );
+          });
         })
     );
     return;
