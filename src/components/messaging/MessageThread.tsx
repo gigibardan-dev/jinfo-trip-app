@@ -118,23 +118,44 @@ export const MessageThread = ({
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages.length]);
-  // Polling for new messages while the thread is open (fallback for unreliable realtime)
+
+  // Realtime subscription for new messages
   useEffect(() => {
-    if (!conversation?.id) {
-      console.log('[MessageThread] 🚫 No conversation ID, polling NOT started');
-      return;
-    }
+    if (!conversation?.id) return;
 
-    console.log('[MessageThread] ✅ POLLING STARTED for conversation', conversation.id, '- interval: 2000ms');
+    console.log('[MessageThread] 🔌 Setting up realtime subscription for', conversation.id);
 
-    const interval = setInterval(() => {
-      console.log('[MessageThread] 🔄 POLLING TICK - fetching messages for', conversation.id);
-      fetchMessages();
-    }, 2000);
+    const channel = supabase
+      .channel(`messages:${conversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `conversation_id=eq.${conversation.id}`
+        },
+        (payload) => {
+          console.log('[MessageThread] 📨 New message INSERT event:', payload.new);
+          
+          // Add new message to state if not already present
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === payload.new.id);
+            if (exists) return prev;
+            
+            // Fetch full message with sender data
+            fetchMessages();
+            return prev;
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('[MessageThread] 📡 Realtime status:', status);
+      });
 
     return () => {
-      console.log('[MessageThread] ⏹️ POLLING STOPPED for conversation', conversation.id);
-      clearInterval(interval);
+      console.log('[MessageThread] 🔌 Removing realtime subscription for', conversation.id);
+      supabase.removeChannel(channel);
     };
   }, [conversation?.id]);
  
