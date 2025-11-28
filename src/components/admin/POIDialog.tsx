@@ -105,9 +105,20 @@ export default function POIDialog({ open, onOpenChange, tripId, existingPOI, onS
   useEffect(() => {
     const category = categories.find(c => c.value === formData.category);
     if (category) {
+      // Map category to icon name directly (Lucide icons don't have .name property)
+      const iconMap: Record<string, string> = {
+        hotel: 'hotel',
+        restaurant: 'utensils',
+        attraction: 'camera',
+        emergency: 'hospital',
+        transport: 'bus',
+        shop: 'shopping-bag',
+        other: 'map-pin',
+      };
+      
       setFormData(prev => ({ 
         ...prev, 
-        icon: category.icon.name.toLowerCase().replace(/([A-Z])/g, '-$1').toLowerCase(),
+        icon: iconMap[category.value] || 'map-pin',
         color: category.color 
       }));
     }

@@ -452,7 +452,7 @@ const DocumentUploader = () => {
   };
 
   const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (doc.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (doc.descriere && doc.descriere.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = filterCategory === 'all' || doc.document_category === filterCategory;
     const matchesTrip = filterTrip === 'all' || doc.trip_id === filterTrip;

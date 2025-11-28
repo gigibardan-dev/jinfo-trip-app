@@ -576,9 +576,9 @@ const EnhancedCircuitManager = () => {
   };
 
   const filteredTrips = trips.filter(trip => {
-    const matchesSearch = trip.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.destinatie.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.tara.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (trip.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (trip.destinatie || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (trip.tara || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
     return matchesSearch && matchesStatus;
   });

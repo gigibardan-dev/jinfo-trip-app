@@ -360,7 +360,7 @@ const GroupManager = () => {
   };
 
   const filteredGroups = groups.filter(group => {
-    const matchesSearch = group.nume_grup.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (group.nume_grup || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
       (filterStatus === 'active' && group.is_active) ||
       (filterStatus === 'inactive' && !group.is_active);

@@ -454,9 +454,9 @@ const TouristManager = () => {
 
   const filteredTourists = tourists.filter(tourist => {
     const matchesSearch = 
-      tourist.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tourist.prenume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tourist.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (tourist.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tourist.prenume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tourist.email || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesGroup = filterGroup === 'all' || 
       tourist.group_memberships?.some(gm => gm.group_id === filterGroup);
@@ -464,7 +464,7 @@ const TouristManager = () => {
     const matchesStatus = filterStatus === 'all' || 
       (filterStatus === 'active' && tourist.is_active) ||
       (filterStatus === 'inactive' && !tourist.is_active);
-
+    
     return matchesSearch && matchesGroup && matchesStatus;
   });
 
