@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -126,21 +126,23 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
     }
   };
 
-  const filteredTrips = trips.filter(trip => {
-    const matchesSearch = (trip.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (trip.destinatie || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (trip.tara || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredTrips = useMemo(() => {
+    return trips.filter(trip => {
+      const matchesSearch = (trip.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (trip.destinatie || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (trip.tara || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [trips, searchTerm, filterStatus]);
 
   // Statistics
-  const stats = {
+  const stats = useMemo(() => ({
     total: trips.length,
     active: trips.filter(t => t.status === 'active').length,
     completed: trips.filter(t => t.status === 'completed').length,
     draft: trips.filter(t => t.status === 'draft').length
-  };
+  }), [trips]);
 
   if (loading) {
     return (
