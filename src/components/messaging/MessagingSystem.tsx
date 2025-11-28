@@ -24,7 +24,7 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
   const { user, profile } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
+  const [threadRefreshKey, setThreadRefreshKey] = useState(0);
   const isAdmin = profile?.role === 'admin';
   const isGuide = profile?.role === 'guide';
   const canInitiateChat = isAdmin || isGuide;
@@ -38,8 +38,8 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    setThreadRefreshKey(0);
   };
-
   const handleMessagesRead = () => {
     // Trigger refresh of conversation list to update unread counts
     setRefreshKey(prev => prev + 1);
@@ -47,6 +47,11 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
 
   const handleBackToList = () => {
     setSelectedConversation(null);
+    setThreadRefreshKey(0);
+  };
+
+  const handleNewMessageInCurrentConversation = () => {
+    setThreadRefreshKey((prev) => prev + 1);
   };
 
   if (!user) {
@@ -73,6 +78,7 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
             canInitiateChat={canInitiateChat}
             isAdmin={isAdmin}
             isGuide={isGuide}
+            onNewMessageInCurrentConversation={handleNewMessageInCurrentConversation}
           />
         </div>
         
@@ -118,6 +124,7 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
               canInitiateChat={canInitiateChat}
               isAdmin={isAdmin}
               isGuide={isGuide}
+              onNewMessageInCurrentConversation={handleNewMessageInCurrentConversation}
             />
           </div>
         )}

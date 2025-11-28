@@ -30,6 +30,7 @@ interface ConversationListProps {
   canInitiateChat: boolean;
   isAdmin: boolean;
   isGuide: boolean;
+  onNewMessageInCurrentConversation?: () => void;
 }
 
 interface Tourist {
@@ -52,7 +53,8 @@ export const ConversationList = ({
   currentUserId,
   canInitiateChat,
   isAdmin,
-  isGuide
+  isGuide,
+  onNewMessageInCurrentConversation,
 }: ConversationListProps) => {
   const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -89,8 +91,17 @@ export const ConversationList = ({
           schema: 'public', 
           table: 'chat_messages'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('[ConversationList] INSERT on chat_messages', payload);
+          try {
+            const convId = payload.new?.conversation_id;
+            if (convId && convId === selectedConversationId) {
+              console.log('[ConversationList] New message in currently open conversation', convId);
+              onNewMessageInCurrentConversation?.();
+            }
+          } catch (e) {
+            console.error('[ConversationList] Error handling INSERT payload', e);
+          }
           fetchConversations();
         }
       )
@@ -101,7 +112,7 @@ export const ConversationList = ({
           schema: 'public', 
           table: 'chat_messages'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('[ConversationList] UPDATE on chat_messages', payload);
           fetchConversations();
         }

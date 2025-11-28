@@ -33,6 +33,7 @@ interface MessageThreadProps {
   onMessagesRead?: () => void;
   onBack?: () => void;
   showBackButton?: boolean;
+  refreshKey?: number;
 }
 
 export const MessageThread = ({
@@ -40,7 +41,8 @@ export const MessageThread = ({
   currentUserId,
   onMessagesRead,
   onBack,
-  showBackButton = false
+  showBackButton = false,
+  refreshKey = 0,
 }: MessageThreadProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,12 +50,13 @@ export const MessageThread = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch messages when conversation changes
+  // Fetch messages when conversation changes or a refresh is requested
   useEffect(() => {
     if (conversation?.id) {
+      console.log('[MessageThread] useEffect trigger fetchMessages for', conversation.id, 'refreshKey', refreshKey);
       fetchMessages();
     }
-  }, [conversation?.id]);
+  }, [conversation?.id, refreshKey]);
 
   // 🔧 FIX BUG 1 - Mark messages as read when conversation loads or changes
   useEffect(() => {
@@ -116,22 +119,6 @@ export const MessageThread = ({
     }
   }, [messages.length]);
 
-  // Polling for new messages while the thread is open (fallback for unreliable realtime)
-  useEffect(() => {
-    if (!conversation?.id) return;
-
-    console.log('[MessageThread] Starting polling for conversation', conversation.id);
-
-    const interval = setInterval(() => {
-      console.log('[MessageThread] Polling fetchMessages for', conversation.id);
-      fetchMessages();
-    }, 2000);
-
-    return () => {
-      console.log('[MessageThread] Stopping polling for conversation', conversation.id);
-      clearInterval(interval);
-    };
-  }, [conversation?.id]);
 
 
   const fetchMessages = async () => {
