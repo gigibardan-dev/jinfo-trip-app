@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import GroupManager from "../GroupManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,16 +17,18 @@ import {
   ArrowLeft,
   UserCheck
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Import componentele pentru navigare
-import EnhancedTripManager from "../EnhancedTripManager";
 import TouristManager from "../TouristManager";
 import DocumentUploader from "../DocumentUploader";
+import GroupManager from "../GroupManager";
 
-type ActiveView = 'dashboard' | 'trips' | 'tourists' | 'documents' | 'groups';
+type ActiveView = 'dashboard' | 'tourists' | 'documents' | 'groups';
 
 const AdminDashboard = () => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     activeTrips: 0,
     tourists: 0,
@@ -130,7 +131,7 @@ const AdminDashboard = () => {
 
   // Navigation handlers
   const handleNewTrip = () => {
-    setActiveView('trips');
+    navigate('/trips');
   };
 
   const handleAddTourists = () => {
@@ -151,20 +152,6 @@ const AdminDashboard = () => {
   // Render views based on active selection
   const renderActiveView = () => {
     switch (activeView) {
-      case 'trips':
-        return (
-          <div>
-            <Button
-              variant="ghost"
-              onClick={handleBackToDashboard}
-              className="mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Înapoi la Dashboard
-            </Button>
-            <EnhancedTripManager />
-          </div>
-        );
       case 'tourists':
         return (
           <div>
