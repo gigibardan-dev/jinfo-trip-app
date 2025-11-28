@@ -120,17 +120,20 @@ export const MessageThread = ({
   }, [messages.length]);
   // Polling for new messages while the thread is open (fallback for unreliable realtime)
   useEffect(() => {
-    if (!conversation?.id) return;
+    if (!conversation?.id) {
+      console.log('[MessageThread] 🚫 No conversation ID, polling NOT started');
+      return;
+    }
 
-    console.log('[MessageThread] Starting polling for conversation', conversation.id);
+    console.log('[MessageThread] ✅ POLLING STARTED for conversation', conversation.id, '- interval: 2000ms');
 
     const interval = setInterval(() => {
-      console.log('[MessageThread] Polling fetchMessages for', conversation.id);
+      console.log('[MessageThread] 🔄 POLLING TICK - fetching messages for', conversation.id);
       fetchMessages();
     }, 2000);
 
     return () => {
-      console.log('[MessageThread] Stopping polling for conversation', conversation.id);
+      console.log('[MessageThread] ⏹️ POLLING STOPPED for conversation', conversation.id);
       clearInterval(interval);
     };
   }, [conversation?.id]);
