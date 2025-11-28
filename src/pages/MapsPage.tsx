@@ -15,7 +15,7 @@ import { ro } from "date-fns/locale";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -339,7 +339,7 @@ export default function MapsPage() {
                         )}
 
                         {/* Map Preview */}
-                        {config?.locations && config.locations.length > 0 && (
+                        {config?.locations && config.locations.length > 0 && !fullscreenTrip && (
                           <div className="relative h-48 rounded-lg overflow-hidden border">
                             <MapContainer
                               center={[
@@ -503,7 +503,7 @@ export default function MapsPage() {
                         )}
 
                         {/* Map Preview */}
-                        {config?.locations && config.locations.length > 0 && (
+                        {config?.locations && config.locations.length > 0 && !fullscreenTrip && (
                           <div className="relative h-48 rounded-lg overflow-hidden border">
                             <MapContainer
                               center={[
@@ -608,11 +608,11 @@ export default function MapsPage() {
       {/* Fullscreen Map Dialog */}
       {fullscreenTrip && fullscreenTrip.offline_map_configs && (
         <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)} modal={true}>
-          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 bg-background border-border">
-            <div className="flex items-center justify-between gap-2 px-6 py-4 border-b shrink-0 bg-card">
+          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 bg-background [&>button]:hidden">
+            <div className="flex items-center justify-between gap-2 px-6 py-4 border-b shrink-0 bg-background">
               <div className="flex items-center gap-2">
-                <Map className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">{fullscreenTrip.nume}</h2>
+                <Map className="w-5 h-5 text-primary" />
+                <DialogTitle className="text-lg font-semibold">{fullscreenTrip.nume}</DialogTitle>
               </div>
               <Button
                 variant="ghost"
@@ -623,7 +623,10 @@ export default function MapsPage() {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <div className="flex-1 overflow-hidden bg-muted">
+            <DialogDescription className="sr-only">
+              Hartă interactivă pentru {fullscreenTrip.nume} cu {fullscreenTrip.offline_map_configs.locations?.length || 0} locații
+            </DialogDescription>
+            <div className="flex-1 overflow-hidden bg-background">
               <MapContainer
                 center={[
                   (fullscreenTrip.offline_map_configs.bounds_north + fullscreenTrip.offline_map_configs.bounds_south) / 2,
