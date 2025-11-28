@@ -88,7 +88,9 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
             currentUserId={user.id}
             onMessagesRead={handleMessagesRead}
             showBackButton={false}
+            refreshKey={threadRefreshKey}
           />
+
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/20">
             <div className="text-center p-4 sm:p-8">
@@ -112,8 +114,10 @@ export const MessagingSystem = ({ userRole }: MessagingSystemProps = {}) => {
               onMessagesRead={handleMessagesRead}
               onBack={handleBackToList}
               showBackButton={true}
+              refreshKey={threadRefreshKey}
             />
           </div>
+
         ) : (
           <div className="h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] border rounded-xl overflow-hidden shadow-xl bg-background">
             <ConversationList
