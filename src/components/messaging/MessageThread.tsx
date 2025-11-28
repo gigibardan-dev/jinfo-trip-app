@@ -116,8 +116,9 @@ export const MessageThread = ({
     if (messagesContainerRef.current && messages.length > 0) {
       // Use scrollTop for immediate, reliable scroll
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      console.log('[MessageThread] 📜 Scrolled to bottom, scrollHeight:', messagesContainerRef.current.scrollHeight);
     }
-  }, [messages.length]);
+  }, [messages]);
 
  
  
