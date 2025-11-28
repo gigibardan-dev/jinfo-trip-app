@@ -159,22 +159,22 @@ const GuideReportsPage = () => {
     <div className="min-h-screen bg-gradient-soft">
       <Navigation userRole="guide" />
       <div className="pt-14 pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Rapoarte Zilnice</h1>
-            <p className="text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Rapoarte Zilnice</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Creează și vizualizează rapoarte zilnice pentru circuiturile tale
             </p>
           </div>
 
           {trips.length > 1 && (
-            <div className="mb-6">
-              <Label htmlFor="trip-select">Selectează circuitul:</Label>
+            <div className="mb-6 sm:mb-8">
+              <Label htmlFor="trip-select" className="text-sm font-medium">Selectează circuitul:</Label>
               <select
                 id="trip-select"
                 value={selectedTripId}
                 onChange={(e) => setSelectedTripId(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+                className="mt-2 block w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
               >
                 {trips.map((trip) => (
                   <option key={trip.id} value={trip.id}>
@@ -185,81 +185,92 @@ const GuideReportsPage = () => {
             </div>
           )}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Raport Nou</h2>
-              {selectedTripId && (
-                <GuideDailyReport tripId={selectedTripId} />
-              )}
+          {/* Raport Nou Section */}
+          <div className="mb-8 sm:mb-12">
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <div className="h-8 w-1 bg-primary rounded-full" />
+              <h2 className="text-xl sm:text-2xl font-semibold">Raport Nou</h2>
             </div>
+            {selectedTripId && (
+              <GuideDailyReport tripId={selectedTripId} onReportSaved={fetchReports} />
+            )}
+          </div>
 
-            <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          {/* Istoric Rapoarte Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <div className="h-8 w-1 bg-primary rounded-full" />
+              <h2 className="text-xl sm:text-2xl font-semibold flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Istoric Rapoarte ({reports.length})
+                Istoric Rapoarte
               </h2>
-              <div className="space-y-4">
-                {reports.length === 0 ? (
-                  <Alert>
-                    <AlertDescription>
-                      Nu există rapoarte pentru acest circuit.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  reports.map((report) => (
-                    <Card key={report.id}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            {format(parseISO(report.report_date), "d MMMM yyyy", { locale: ro })}
-                          </span>
-                          {report.participant_count && (
-                            <Badge variant="secondary">
-                              {report.participant_count} participanți
-                            </Badge>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {report.activities_completed && report.activities_completed.length > 0 && (
-                          <div className="mb-2">
-                            <p className="text-sm font-medium">Activități finalizate:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {report.activities_completed.join(", ")}
-                            </p>
-                          </div>
-                        )}
-                        {report.issues_encountered && (
-                          <div className="mb-2">
-                            <p className="text-sm font-medium">Probleme întâmpinate:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {report.issues_encountered}
-                            </p>
-                          </div>
-                        )}
-                        {report.solutions_applied && (
-                          <div className="mb-2">
-                            <p className="text-sm font-medium">Soluții aplicate:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {report.solutions_applied}
-                            </p>
-                          </div>
-                        )}
-                        {report.notes_for_admin && (
-                          <div>
-                            <p className="text-sm font-medium">Note pentru administrator:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {report.notes_for_admin}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+              <Badge variant="secondary" className="ml-auto">{reports.length}</Badge>
             </div>
+            
+            {reports.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <FileText className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
+                  <p className="text-muted-foreground text-center">
+                    Nu există rapoarte pentru acest circuit.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                {reports.map((report) => (
+                  <Card key={report.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-base">
+                        <span className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          {format(parseISO(report.report_date), "d MMMM yyyy", { locale: ro })}
+                        </span>
+                        {report.participant_count && (
+                          <Badge variant="secondary" className="w-fit">
+                            {report.participant_count} participanți
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {report.activities_completed && report.activities_completed.length > 0 && (
+                        <div>
+                          <p className="text-sm font-semibold mb-1 text-foreground">Activități finalizate</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {report.activities_completed.length} activități completate
+                          </p>
+                        </div>
+                      )}
+                      {report.issues_encountered && (
+                        <div>
+                          <p className="text-sm font-semibold mb-1 text-foreground">Probleme întâmpinate</p>
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {report.issues_encountered}
+                          </p>
+                        </div>
+                      )}
+                      {report.solutions_applied && (
+                        <div>
+                          <p className="text-sm font-semibold mb-1 text-foreground">Soluții aplicate</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {report.solutions_applied}
+                          </p>
+                        </div>
+                      )}
+                      {report.notes_for_admin && (
+                        <div>
+                          <p className="text-sm font-semibold mb-1 text-foreground">Note pentru administrator</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {report.notes_for_admin}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

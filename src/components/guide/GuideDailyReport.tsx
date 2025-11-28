@@ -42,11 +42,13 @@ interface DailyReport {
 interface GuideDailyReportProps {
   tripId: string;
   reportDate?: string;
+  onReportSaved?: () => void;
 }
 
 const GuideDailyReport: React.FC<GuideDailyReportProps> = ({ 
   tripId, 
-  reportDate = new Date().toISOString().split('T')[0] 
+  reportDate = new Date().toISOString().split('T')[0],
+  onReportSaved
 }) => {
   const { user } = useAuth();
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -63,8 +65,6 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newIssue, setNewIssue] = useState('');
-  const [customIssues, setCustomIssues] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -118,13 +118,6 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
 
       if (reportData) {
         setReport(reportData);
-        // Extract custom issues from text
-        if (reportData.issues_encountered) {
-          const lines = reportData.issues_encountered.split('\n').filter(line => line.trim());
-          const activityIds = activities.map(a => a.id);
-          const customLines = lines.filter(line => !activityIds.includes(line));
-          setCustomIssues(customLines);
-        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -147,28 +140,13 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
     }));
   };
 
-  const handleAddCustomIssue = () => {
-    if (newIssue.trim()) {
-      setCustomIssues(prev => [...prev, newIssue.trim()]);
-      setNewIssue('');
-    }
-  };
-
-  const handleRemoveCustomIssue = (index: number) => {
-    setCustomIssues(prev => prev.filter((_, i) => i !== index));
-  };
-
   const handleSaveReport = async () => {
     if (!user) return;
 
     setSaving(true);
     try {
-      // Combine issues
-      const allIssues = [...customIssues].join('\n');
-
       const reportData = {
         ...report,
-        issues_encountered: allIssues || null,
         guide_user_id: user.id,
       };
 
@@ -196,6 +174,10 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
         title: "Succes",
         description: "Raportul a fost salvat cu succes.",
       });
+      
+      if (onReportSaved) {
+        onReportSaved();
+      }
     } catch (error) {
       console.error('Error saving report:', error);
       toast({
@@ -237,56 +219,55 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Raport Zilnic</h1>
-          <p className="text-muted-foreground">
-            {trip?.nume} - {new Date(reportDate).toLocaleDateString('ro-RO', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isToday && (
-            <Badge variant="default">Astăzi</Badge>
-          )}
-          {isPast && (
-            <Badge variant="outline">Trecut</Badge>
-          )}
-          {report.id && (
-            <Badge variant="secondary">Salvat</Badge>
-          )}
-        </div>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold mb-1">{trip?.nume}</h3>
+              <p className="text-sm text-muted-foreground">
+                {new Date(reportDate).toLocaleDateString('ro-RO', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {isToday && <Badge variant="default">Astăzi</Badge>}
+              {isPast && <Badge variant="outline">Trecut</Badge>}
+              {report.id && <Badge variant="secondary">Salvat</Badge>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Activities Checklist */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-muted/30 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CheckCircle className="h-5 w-5 text-primary" />
               Activități Programate
             </CardTitle>
-            <CardDescription>
-              Bifează activitățile completate pentru această zi
+            <CardDescription className="text-xs sm:text-sm">
+              Bifează activitățile completate
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-3 sm:p-6">
             {activities.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nu sunt activități programate pentru această zi.</p>
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nu sunt activități programate.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {activities.map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-start gap-3 p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                   >
                     <Checkbox
                       id={activity.id}
@@ -296,19 +277,19 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
                       }
                       className="mt-1"
                     />
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 min-w-0">
                       <label
                         htmlFor={activity.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        className="text-sm font-medium leading-tight cursor-pointer block"
                       >
                         {activity.title}
                       </label>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {getActivityTypeLabel(activity.activity_type)}
                         </Badge>
                         {(activity.start_time || activity.end_time) && (
-                          <span>
+                          <span className="text-xs text-muted-foreground">
                             {activity.start_time && formatTime(activity.start_time)}
                             {activity.start_time && activity.end_time && " - "}
                             {activity.end_time && formatTime(activity.end_time)}
@@ -323,133 +304,143 @@ const GuideDailyReport: React.FC<GuideDailyReportProps> = ({
           </CardContent>
         </Card>
 
-        {/* Issues and Problems */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
+        {/* Issues and Problems - Larger textarea */}
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-muted/30 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <AlertCircle className="h-5 w-5 text-primary" />
               Probleme Întâmpinate
             </CardTitle>
-            <CardDescription>
-              Documentează orice probleme sau situații neașteptate
+            <CardDescription className="text-xs sm:text-sm">
+              Documentează probleme sau situații neașteptate
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              {customIssues.map((issue, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
-                  <span className="flex-1 text-sm">{issue}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemoveCustomIssue(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Descrie o problemă..."
-                value={newIssue}
-                onChange={(e) => setNewIssue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddCustomIssue()}
-              />
-              <Button onClick={handleAddCustomIssue} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+          <CardContent className="p-3 sm:p-6">
+            <Textarea
+              placeholder="Descrie problemele întâmpinate în timpul zilei (opțional)..."
+              value={report.issues_encountered || ''}
+              onChange={(e) => setReport(prev => ({ ...prev, issues_encountered: e.target.value }))}
+              rows={8}
+              className="resize-none"
+            />
           </CardContent>
         </Card>
       </div>
 
       {/* Additional Information */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Soluții Aplicate</CardTitle>
-            <CardDescription>
-              Descrie soluțiile implementate pentru problemele întâmpinate
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">Soluții Aplicate</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Descrie soluțiile implementate
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <Textarea
-              placeholder="Descrie soluțiile aplicate..."
+              placeholder="Descrie soluțiile aplicate pentru problemele întâmpinate..."
               value={report.solutions_applied || ''}
               onChange={(e) => setReport(prev => ({ ...prev, solutions_applied: e.target.value }))}
-              rows={4}
+              rows={5}
+              className="resize-none"
             />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Notă pentru Admin</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">Notă pentru Admin</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Informații importante pentru administrator
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <Textarea
-              placeholder="Notă pentru administrator..."
+              placeholder="Notă pentru administrator (observații, recomandări)..."
               value={report.notes_for_admin || ''}
               onChange={(e) => setReport(prev => ({ ...prev, notes_for_admin: e.target.value }))}
-              rows={4}
+              rows={5}
+              className="resize-none"
             />
           </CardContent>
         </Card>
       </div>
 
-      {/* Participant Count */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Numărul Participanților
-          </CardTitle>
-          <CardDescription>
-            Numărul de participanți prezenți în această zi
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="participant_count">Participanți prezenți:</Label>
-            <Input
-              id="participant_count"
-              type="number"
-              min="0"
-              value={report.participant_count || ''}
-              onChange={(e) => setReport(prev => ({ 
-                ...prev, 
-                participant_count: e.target.value ? parseInt(e.target.value) : undefined 
-              }))}
-              className="w-32"
-              placeholder="0"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Participant Count & Progress */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Users className="h-5 w-5 text-primary" />
+              Numărul Participanților
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Câți participanți au fost prezenți
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="participant_count" className="text-sm whitespace-nowrap">Participanți:</Label>
+              <Input
+                id="participant_count"
+                type="number"
+                min="0"
+                value={report.participant_count || ''}
+                onChange={(e) => setReport(prev => ({ 
+                  ...prev, 
+                  participant_count: e.target.value ? parseInt(e.target.value) : undefined 
+                }))}
+                className="w-24"
+                placeholder="0"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Progress Summary */}
+        {activities.length > 0 && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                Progres
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Activități completate:</span>
+                  <span className="font-semibold">
+                    {report.activities_completed.length} / {activities.length}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div 
+                    className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(report.activities_completed.length / activities.length) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  {Math.round((report.activities_completed.length / activities.length) * 100)}% finalizat
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Save Button */}
-      <div className="flex justify-end gap-4">
-        <Button onClick={handleSaveReport} disabled={saving} size="lg">
+      <div className="flex justify-end pt-2">
+        <Button 
+          onClick={handleSaveReport} 
+          disabled={saving} 
+          size="lg"
+          className="w-full sm:w-auto"
+        >
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Se salvează..." : report.id ? "Actualizează Raport" : "Salvează Raport"}
         </Button>
       </div>
-
-      {/* Progress Summary */}
-      {activities.length > 0 && (
-        <Alert>
-          <FileText className="h-4 w-4" />
-          <AlertDescription>
-            Progres activități: {report.activities_completed.length} din {activities.length} completate
-            ({Math.round((report.activities_completed.length / activities.length) * 100)}%)
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 };
