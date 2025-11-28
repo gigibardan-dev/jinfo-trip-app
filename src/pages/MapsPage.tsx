@@ -553,14 +553,12 @@ export default function MapsPage() {
       {/* Fullscreen Map Dialog */}
       {fullscreenTrip && fullscreenTrip.offline_map_configs && (
         <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)}>
-          <DialogContent className="max-w-6xl h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Map className="w-5 h-5" />
-                {fullscreenTrip.nume}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 rounded-lg overflow-hidden border">
+          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+            <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0">
+              <Map className="w-5 h-5" />
+              <h2 className="text-lg font-semibold">{fullscreenTrip.nume}</h2>
+            </div>
+            <div className="flex-1 overflow-hidden">
               <MapContainer
                 center={[
                   (fullscreenTrip.offline_map_configs.bounds_north + fullscreenTrip.offline_map_configs.bounds_south) / 2,
