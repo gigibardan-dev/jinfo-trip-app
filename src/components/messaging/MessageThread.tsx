@@ -118,8 +118,25 @@ export const MessageThread = ({
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages.length]);
+  // Polling for new messages while the thread is open (fallback for unreliable realtime)
+  useEffect(() => {
+    if (!conversation?.id) return;
 
+    console.log('[MessageThread] Starting polling for conversation', conversation.id);
 
+    const interval = setInterval(() => {
+      console.log('[MessageThread] Polling fetchMessages for', conversation.id);
+      fetchMessages();
+    }, 2000);
+
+    return () => {
+      console.log('[MessageThread] Stopping polling for conversation', conversation.id);
+      clearInterval(interval);
+    };
+  }, [conversation?.id]);
+ 
+ 
+ 
 
   const fetchMessages = async () => {
     if (!conversation?.id) return;
