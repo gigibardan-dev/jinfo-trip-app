@@ -25,6 +25,8 @@ import GuideReportsPage from "./pages/guide/GuideReportsPage";
 import GuideDocumentsPage from "./pages/guide/GuideDocumentsPage";
 import GuideMessagesPage from "./pages/guide/GuideMessagesPage";
 import ProfilePage from "./pages/ProfilePage";
+import OfflineMapsPage from "./pages/tourist/OfflineMapsPage";
+import MapViewerPage from "./pages/tourist/MapViewerPage";
 import Footer from "./components/shared/Footer";
 
 const queryClient = new QueryClient();
@@ -58,6 +60,8 @@ const App = () => (
           <Route path="/guide-documents" element={<GuideDocumentsPage />} />
           <Route path="/guide-messages" element={<GuideMessagesPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/tourist/maps" element={<OfflineMapsPage />} />
+                <Route path="/tourist/maps/:tripId" element={<MapViewerPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

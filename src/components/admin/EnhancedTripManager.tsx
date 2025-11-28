@@ -7,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Edit, Trash2, Eye, Settings, Route, Map, RefreshCw, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import ItineraryManager from "@/components/ItineraryManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "./RichTextEditor";
 import DOMPurify from 'dompurify';
+import { MapPreviewDialog } from "./MapPreviewDialog";
+import { MapSettingsDialog } from "./MapSettingsDialog";
 
 interface Trip {
   id: string;
@@ -53,6 +55,10 @@ const EnhancedCircuitManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showItinerary, setShowItinerary] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
+  const [mapConfig, setMapConfig] = useState<any>(null);
+  const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+  const [showMapPreview, setShowMapPreview] = useState(false);
+  const [showMapSettings, setShowMapSettings] = useState(false);
   const [formData, setFormData] = useState<TripFormData>({
     nume: "",
     destinatie: "",
@@ -249,7 +255,68 @@ const EnhancedCircuitManager = () => {
       group_id: trip.group_id,
       status: trip.status
     });
+    // Load map config if exists
+    fetchMapConfig(trip.id);
     setShowDialog(true);
+  };
+
+  const fetchMapConfig = async (tripId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('offline_map_configs')
+        .select('*')
+        .eq('trip_id', tripId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setMapConfig(data);
+    } catch (error) {
+      console.error('Error fetching map config:', error);
+      setMapConfig(null);
+    }
+  };
+
+  const handleGenerateMapConfig = async (tripId: string) => {
+    setIsGeneratingMap(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `https://zbepoxajjdxhkwotfelh.supabase.co/functions/v1/auto-geocode-trip`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ trip_id: tripId })
+        }
+      );
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      toast({
+        title: "Hartă configurată cu succes!",
+        description: `Detectate ${result.locations.length} locații. Storage estimat: ${result.config.estimated_size_mb} MB`
+      });
+      
+      setMapConfig(result.config);
+      
+    } catch (error: any) {
+      console.error('Error generating map config:', error);
+      toast({
+        title: "Eroare la generare hartă",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingMap(false);
+    }
   };
 
   const handleDuplicate = async (trip: Trip) => {
@@ -460,10 +527,14 @@ const EnhancedCircuitManager = () => {
               </DialogHeader>
               
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="basic">Informații de Bază</TabsTrigger>
                   <TabsTrigger value="details">Detalii</TabsTrigger>
                   <TabsTrigger value="settings">Setări</TabsTrigger>
+                  <TabsTrigger value="map">
+                    <Map className="w-4 h-4 mr-2" />
+                    Hartă Offline
+                  </TabsTrigger>
                 </TabsList>
                 
                 <form onSubmit={handleSubmit}>
@@ -586,6 +657,134 @@ const EnhancedCircuitManager = () => {
                           <strong>Info:</strong> Nu există grupuri active. 
                           <br />Poți crea circuitul ca schiță și îl vei putea asigna la un grup mai târziu.
                         </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="map" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Map className="w-5 h-5" />
+                          Hartă Offline
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Configurare automată pentru download offline
+                        </p>
+                      </div>
+                      {editingTrip && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGenerateMapConfig(editingTrip.id)}
+                          disabled={isGeneratingMap}
+                        >
+                          {isGeneratingMap ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Generare...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              {mapConfig ? 'Re-generează' : 'Generează Automat'}
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {!editingTrip && (
+                      <div className="bg-muted/30 rounded-lg p-6 text-center">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Salvează mai întâi circuitul pentru a configura harta offline
+                        </p>
+                      </div>
+                    )}
+
+                    {editingTrip && mapConfig && (
+                      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Orașe detectate:</p>
+                            <p className="font-medium">{mapConfig.locations?.length || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Storage estimat:</p>
+                            <p className="font-medium">{mapConfig.estimated_size_mb} MB</p>
+                          </div>
+                        </div>
+
+                        {mapConfig.locations && mapConfig.locations.length > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">Locații:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {mapConfig.locations.map((loc: any, idx: number) => (
+                                <Badge key={idx} variant="secondary">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  {loc.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowMapPreview(true)}
+                            className="flex-1"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowMapSettings(true)}
+                            className="flex-1"
+                          >
+                            <Settings className="w-4 h-4 mr-2" />
+                            Setări
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Hartă configurată și disponibilă pentru download</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {editingTrip && !mapConfig && (
+                      <div className="bg-muted/30 rounded-lg p-4 text-center space-y-2">
+                        <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Hartă offline nu este configurată încă
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGenerateMapConfig(editingTrip.id)}
+                          disabled={isGeneratingMap}
+                        >
+                          {isGeneratingMap ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Generare automată...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Generează Automat
+                            </>
+                          )}
+                        </Button>
                       </div>
                     )}
                   </TabsContent>
@@ -765,6 +964,28 @@ const EnhancedCircuitManager = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Map Preview Dialog */}
+      {mapConfig && (
+        <MapPreviewDialog
+          open={showMapPreview}
+          onOpenChange={setShowMapPreview}
+          mapConfig={mapConfig}
+        />
+      )}
+
+      {/* Map Settings Dialog */}
+      {mapConfig && editingTrip && (
+        <MapSettingsDialog
+          open={showMapSettings}
+          onOpenChange={setShowMapSettings}
+          mapConfig={mapConfig}
+          onConfigUpdated={(config) => {
+            setMapConfig(config);
+            fetchTrips();
+          }}
+        />
+      )}
     </div>
   );
 };
