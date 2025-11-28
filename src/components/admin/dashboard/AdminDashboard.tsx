@@ -469,7 +469,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:px-8 lg:px-16">
       {renderActiveView()}
     </div>
   );
