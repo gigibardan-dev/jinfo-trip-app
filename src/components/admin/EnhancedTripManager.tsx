@@ -769,7 +769,10 @@ const EnhancedCircuitManager = () => {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setShowMapPreview(true)}
+                            onClick={() => {
+                              setShowDialog(false);
+                              setShowMapPreview(true);
+                            }}
                           >
                             <Eye className="w-4 h-4 mr-2" />
                             Preview Hartă
@@ -1087,7 +1090,12 @@ const EnhancedCircuitManager = () => {
       {mapConfig && editingTrip && (
         <MapPreviewDialog
           open={showMapPreview}
-          onOpenChange={setShowMapPreview}
+          onOpenChange={(open) => {
+            setShowMapPreview(open);
+            if (!open) {
+              setShowDialog(true);
+            }
+          }}
           mapConfig={mapConfig}
           tripId={editingTrip.id}
         />
