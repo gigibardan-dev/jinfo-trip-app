@@ -268,30 +268,45 @@ export const SettingsPanel = () => {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 h-auto gap-1 p-1">
-            <TabsTrigger value="notifications" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
-              <Bell className="w-4 h-4 sm:hidden mr-1.5" />
-              Notificări
-            </TabsTrigger>
-            <TabsTrigger value="privacy" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background whitespace-nowrap">
-              <Shield className="w-4 h-4 sm:hidden mr-1.5" />
-              Confidențialitate
-            </TabsTrigger>
-            <TabsTrigger value="app" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
-              <Smartphone className="w-4 h-4 sm:hidden mr-1.5" />
-              Aplicație
-            </TabsTrigger>
-            <TabsTrigger value="account" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
-              <User className="w-4 h-4 sm:hidden mr-1.5" />
-              Cont
-            </TabsTrigger>
-            <TabsTrigger value="data" className="text-xs sm:text-sm px-3 py-2.5 data-[state=active]:bg-background">
-              <Database className="w-4 h-4 sm:hidden mr-1.5" />
-              Date
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="h-auto w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 p-2 bg-muted/50">
+          <TabsTrigger 
+            value="notifications" 
+            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Bell className="w-4 h-4 mr-1.5" />
+            <span className="hidden sm:inline">Notificări</span>
+            <span className="sm:hidden">Notif.</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="privacy" 
+            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Shield className="w-4 h-4 mr-1.5" />
+            <span className="hidden sm:inline">Confidențialitate</span>
+            <span className="sm:hidden">Confid.</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="app" 
+            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Smartphone className="w-4 h-4 mr-1.5" />
+            Aplicație
+          </TabsTrigger>
+          <TabsTrigger 
+            value="account" 
+            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <User className="w-4 h-4 mr-1.5" />
+            Cont
+          </TabsTrigger>
+          <TabsTrigger 
+            value="data" 
+            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm col-span-2 sm:col-span-1"
+          >
+            <Database className="w-4 h-4 mr-1.5" />
+            Date
+          </TabsTrigger>
+        </TabsList>
 
         {/* Notifications Settings */}
         <TabsContent value="notifications" className="space-y-6">
