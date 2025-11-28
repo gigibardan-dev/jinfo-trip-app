@@ -16,12 +16,13 @@
 7. [Sistem de Mesagerie](#sistem-de-mesagerie)
 8. [Sistem de Comunicări](#sistem-de-comunicări)
 9. [Management Documente](#management-documente)
-10. [Sistem de Autentificare Avansat](#sistem-de-autentificare-avansat)
-11. [Edge Functions](#edge-functions)
-12. [Ce Este Implementat vs. În Dezvoltare](#ce-este-implementat-vs-în-dezvoltare)
-13. [Fluxuri de Lucru Complete](#fluxuri-de-lucru-complete)
-14. [Design System](#design-system)
-15. [Securitate](#securitate)
+10. [Sistem Hărți Offline](#sistem-hărți-offline)
+11. [Sistem de Autentificare Avansat](#sistem-de-autentificare-avansat)
+12. [Edge Functions](#edge-functions)
+13. [Ce Este Implementat vs. În Dezvoltare](#ce-este-implementat-vs-în-dezvoltare)
+14. [Fluxuri de Lucru Complete](#fluxuri-de-lucru-complete)
+15. [Design System](#design-system)
+16. [Securitate](#securitate)
 
 ---
 
@@ -43,6 +44,7 @@ Frontend: React 18.3 + TypeScript + Vite
 UI Framework: TailwindCSS + shadcn/ui (35+ componente)
 Backend: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 Offline: Service Workers + IndexedDB
+Maps: React-Leaflet + OpenStreetMap (Nominatim API)
 Routing: React Router DOM v6
 State: React Query (TanStack Query)
 Notificări: Sonner + React Toast
@@ -970,6 +972,315 @@ CREATE TABLE offline_cache_status (
 
 ---
 
+## 🗺️ SISTEM HĂRȚI OFFLINE
+
+### Prezentare Generală
+
+Sistemul de hărți offline permite turiștilor și ghizilor să descarce și să vizualizeze hărți interactive pentru circuitele lor, complet offline, folosind OpenStreetMap și Leaflet.
+
+**Status:** ✅ COMPLET IMPLEMENTAT
+
+**Tehnologii:**
+- **React-Leaflet 4.2.1** - Librăria de vizualizare hărți (compatible cu React 18)
+- **OpenStreetMap** - Tile provider gratuit, fără API keys
+- **Nominatim API** - Geocoding gratuit pentru orașe
+- **IndexedDB** - Storage local pentru tile-uri (5-25 MB per circuit)
+- **Supabase Edge Function** - Auto-detectare orașe și geocoding
+
+**Tabele Database:**
+- `offline_map_configs` - Configurații hărți (bounds, zoom levels, locations JSON)
+- `map_points_of_interest` - POI-uri custom cu categorie, icon, color
+- `offline_map_downloads` - Audit trail downloads (cine, când, cât)
+
+### Funcționalități Admin
+
+**Pagină:** Secțiunea de editare circuit în `/admin/trips`
+
+**Features:**
+- ✅ **Auto-generare configurație hartă**
+  - Buton "Re-generează Config"
+  - Declanșează Edge Function `auto-geocode-trip`
+  - Detectează automat orașe din câmpurile destinație/oraș/țară
+  - Geocodează fiecare oraș via Nominatim API
+  - Calculează bounds cu 10% padding
+  - Estimează tile count și storage MB
+  - Salvează în `offline_map_configs` cu locations array
+  
+- ✅ **Preview hartă interactivă**
+  - Dialog modal `MapPreviewDialog`
+  - Afișează toate locațiile detectate
+  - Markers colorați pentru orașe
+  - Polyline pentru rutăile între orașe
+  - POI markers cu category icons și colors
+  - Zoom in/out funcțional
+  - Mobile-first responsive design
+  
+- ✅ **Setări avansate**
+  - Dialog `MapSettingsDialog`
+  - Ajustare nivele zoom (min/max, default: 10)
+  - Adăugare orașe manual (search via Nominatim)
+  - Ștergere orașe
+  - Recalculare automată storage estimat
+  - Preview actualizat real-time
+  
+- ✅ **Gestionare Points of Interest (POI)**
+  - Component `POIDialog` pentru add/edit POI
+  - 3 metode de adăugare:
+    - Search location via Nominatim (`POIMapPicker`)
+    - Introducere coordonate manual
+    - Click pe hartă pentru picking
+  - 7 categorii POI:
+    - 🏨 Hotel (albastru)
+    - 🍽️ Restaurant (verde)
+    - 🎭 Attraction (roșu)
+    - 🚨 Emergency (portocaliu)
+    - 🚗 Transport (gri)
+    - 🛒 Shop (mov)
+    - 📍 Other (galben)
+  - Fiecare POI include:
+    - Nume, descriere, categorie
+    - Coordonate exacte (lat/lng)
+    - Icon și color customizabile
+    - Contact info opțional (phone, address, website)
+    - Notes pentru admin
+    - Display order pentru sorting
+    - Visibility toggle
+  - POI-urile apar în preview și în hartă offline
+  - Stored în `map_points_of_interest` table
+  - RLS policies pentru admin/guide edit, tourist view
+
+**Dashboard Stats:**
+- Număr orașe detectate
+- Tile count estimat
+- Storage estimat MB
+- Zoom levels configured
+
+### Funcționalități Turiști & Ghizi
+
+**Pagină:** `/maps` - Centralizată pentru discovery și management
+
+**Status:** ✅ IMPLEMENTAT (optimizat 100% mobile-first)
+
+**Features:**
+- ✅ **Browsing circuite disponibile**
+  - Grid responsive de trip cards
+  - Display trip name, dates, destination
+  - Badge "Hartă Disponibilă" sau "Fără hartă"
+  - Separate sections: "Hărți Offline" și "Hărți Online"
+  
+- ✅ **Preview hartă online (NOUĂ FUNCȚIONALITATE)**
+  - Când utilizatorul are internet, poate vedea harta direct în browser
+  - Full interactive map în card-ul trip-ului
+  - Afișează toate POI-urile cu category icons
+  - Markers pentru orașe
+  - Polyline pentru rută
+  - Buton fullscreen pentru vizualizare extinsă
+  - Native zoom controls (+/-)
+  - Permite explorarea înainte de download
+  
+- ✅ **Download hartă pentru offline**
+  - Buton "Salvează Offline" cu progress bar
+  - Download tile-uri în IndexedDB (5-25 MB)
+  - Storage: `mapTiles-{tripId}` în IndexedDB
+  - Metadata salvat în `offline_map_downloads`
+  - Badge "Disponibil offline" după download
+  
+- ✅ **Vizualizare 100% offline**
+  - Hartă full-screen după download
+  - Funcționează cu airplane mode ON
+  - Zoom in/out funcțional offline
+  - Markers pentru orașe cu popup info
+  - Polyline rută între orașe
+  - POI markers cu:
+    - Category-specific icons și colors
+    - Popup cu detalii complete
+    - Buton "Navighează" (Google Maps - necesită online)
+    - Contact info (phone, address, website)
+  - Fallback tile la online doar dacă lipsește din cache
+  
+- ✅ **Management stocare local**
+  - Buton "Șterge" pentru eliberare storage
+  - Clear specific trip sau all trips
+  - Display storage utilizat per trip
+
+**Acces Ghizi:**
+- ✅ Ghizii assigned la circuite au access complet la `/maps`
+- ✅ Pot descărca și vizualiza hărți pentru trip-urile lor
+- ✅ Dashboard ghid include widget "Hărți Offline" cu count
+- ✅ RLS policies permit guide access pentru assigned trips
+
+### Edge Functions pentru Maps
+
+#### 1. `auto-geocode-trip`
+
+**Path:** `supabase/functions/auto-geocode-trip/index.ts`
+
+**Purpose:** Auto-detectare orașe din text și geocoding
+
+**Flow:**
+1. Primește `trip_id` în body
+2. Fetch trip data (destinație, oraș, țară)
+3. Extract orașe din text (regex + split)
+4. Pentru fiecare oraș:
+   - Query Nominatim API cu rate limit 1 req/sec
+   - Obține lat/lng coordinates
+5. Calculează bounds cu 10% padding
+6. Estimează tile count bazat pe zoom levels
+7. Calculează storage MB (~50 KB per tile)
+8. Salvează/actualizează în `offline_map_configs`:
+   - bounds (north/south/east/west)
+   - zoom_min, zoom_max (default 10)
+   - locations JSON array
+   - tile_count
+   - estimated_size_mb
+9. Return config cu locations array
+
+**Rate Limiting:** 1 request/sec la Nominatim (free tier)
+
+#### 2. `geocode-search`
+
+**Path:** `supabase/functions/geocode-search/index.ts`
+
+**Purpose:** Search geocoding pentru POI add/edit
+
+**Flow:**
+1. Primește `query` în body (e.g., "Eiffel Tower Paris")
+2. Query Nominatim API search endpoint
+3. Return listă rezultate cu:
+   - Display name
+   - Lat/lng
+   - Type (city, attraction, etc.)
+   - Bounding box
+4. Rate limit 1 req/sec
+
+### Database Schema pentru Maps
+
+#### `offline_map_configs`
+```sql
+CREATE TABLE offline_map_configs (
+  id UUID PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) UNIQUE,
+  bounds_north FLOAT,
+  bounds_south FLOAT,
+  bounds_east FLOAT,
+  bounds_west FLOAT,
+  zoom_min INT DEFAULT 10,
+  zoom_max INT DEFAULT 16,
+  locations JSONB,  -- Array de {name, lat, lng}
+  tile_count INT,
+  estimated_size_mb FLOAT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+```
+
+**RLS Policies:**
+- Admins: Full access
+- Guides: View pentru assigned trips
+- Tourists: View pentru own group trips
+
+#### `map_points_of_interest`
+```sql
+CREATE TABLE map_points_of_interest (
+  id UUID PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  lat FLOAT NOT NULL,
+  lng FLOAT NOT NULL,
+  category TEXT,  -- hotel, restaurant, attraction, emergency, transport, shop, other
+  icon TEXT,
+  color TEXT,
+  address TEXT,
+  phone TEXT,
+  website TEXT,
+  notes TEXT,  -- Admin-only notes
+  display_order INT DEFAULT 0,
+  is_visible BOOLEAN DEFAULT TRUE,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+```
+
+**RLS Policies:**
+- Admins: Full CRUD
+- Guides: View + Edit pentru assigned trips
+- Tourists: View only pentru own group trips
+
+#### `offline_map_downloads`
+```sql
+CREATE TABLE offline_map_downloads (
+  id UUID PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id),
+  config_id UUID REFERENCES offline_map_configs(id),
+  user_id UUID REFERENCES profiles(id),
+  tiles_downloaded INT,
+  size_mb FLOAT,
+  downloaded_at TIMESTAMPTZ
+);
+```
+
+**Purpose:** Audit trail - cine a descărcat ce și când
+
+### Components pentru Maps
+
+**Admin Components:**
+- `MapPreviewDialog.tsx` - Preview interactiv hartă
+- `MapSettingsDialog.tsx` - Configurare avansată zoom/orașe
+- `POIDialog.tsx` - Add/Edit POI form
+- `POIMapPicker.tsx` - Interactive map pentru picking location
+
+**Pages:**
+- `MapsPage.tsx` - Centralized hub pentru browsing/download (/maps)
+- `MapViewerPage.tsx` - Full-screen offline viewer (deprecated, acum în MapsPage)
+- `OfflineMapsPage.tsx` - Management storage local (deprecated, acum în MapsPage)
+
+**Libs:**
+- `mapStorage.ts` - IndexedDB wrapper pentru tile caching
+
+### Workflow Complet
+
+**Admin Workflow:**
+1. Admin creează circuit în `/admin/trips`
+2. Completează destinație, oraș, țară
+3. Click "Re-generează Config" → Edge Function detectează orașe
+4. Preview hartă → validează locații
+5. (Opțional) Setări avansate → ajustează zoom, adaugă/șterge orașe
+6. (Opțional) Adaugă POI-uri:
+   - Search location sau click pe hartă
+   - Alege categorie, icon, color
+   - Adaugă contact info și notes
+7. Salvează circuit
+
+**Tourist/Guide Workflow:**
+1. Navighează la `/maps`
+2. Browse circuite disponibile
+3. (Online) Preview hartă direct în browser:
+   - Explore POI-uri
+   - Zoom in/out
+   - Fullscreen view
+4. (Opțional) Click "Salvează Offline" → download tiles
+5. După download, badge "Disponibil offline" apare
+6. (Offline) Vezi hartă 100% offline:
+   - Airplane mode ON
+   - Full functionality
+   - POI details și rute
+7. (Opțional) Șterge hartă pentru eliberare storage
+
+### Mobile-First Optimization
+
+**Critical:** Toate map features sunt optimizate 100% pentru mobile:
+- Touch targets mari (48x48px minimum)
+- Swipe gestures pentru zoom
+- Responsive layout
+- Progressive loading
+- Memory-efficient tile caching
+- Performance monitoring
+- Fallback graceful la online
+
+---
+
 ## 🚀 EDGE FUNCTIONS
 
 ### 1. `admin-update-user`
@@ -1067,6 +1378,18 @@ const { data, error } = await supabase.functions.invoke('admin-update-user', {
   - ✅ Profile sync
   - ✅ Error handling
   - ✅ CORS support
+- ✅ **auto-geocode-trip function**
+  - ✅ Auto city detection from trip text
+  - ✅ Nominatim API geocoding
+  - ✅ Rate limiting (1 req/sec)
+  - ✅ Bounds calculation
+  - ✅ Storage estimation
+  - ✅ Locations JSON array
+- ✅ **geocode-search function**
+  - ✅ Location search for POIs
+  - ✅ Nominatim search endpoint
+  - ✅ Rate limiting
+  - ✅ Result formatting
 
 #### Profile & Settings
 - ✅ **Profile Page (`/profile`)**
@@ -1126,6 +1449,32 @@ const { data, error } = await supabase.functions.invoke('admin-update-user', {
   - ✅ Global unread count
   - ✅ Per-conversation badges
 
+#### Offline Maps System
+- ✅ **Auto-geocode trip destinations**
+  - ✅ City detection from trip text
+  - ✅ Nominatim API integration
+  - ✅ Bounds calculation with padding
+  - ✅ Storage estimation
+- ✅ **Admin map configuration**
+  - ✅ MapPreviewDialog cu POI display
+  - ✅ MapSettingsDialog pentru advanced settings
+  - ✅ POI management (7 categories)
+  - ✅ Interactive map picking
+  - ✅ City add/remove manual
+- ✅ **Tourist/Guide map access**
+  - ✅ /maps central hub page
+  - ✅ Online preview direct în browser
+  - ✅ Fullscreen view cu zoom controls
+  - ✅ Download pentru offline (5-25 MB)
+  - ✅ 100% offline functionality
+  - ✅ POI markers cu category icons
+  - ✅ IndexedDB tile caching
+  - ✅ Storage management
+- ✅ **Guide dashboard integration**
+  - ✅ "Hărți Offline" stats widget
+  - ✅ Quick navigation to /maps
+  - ✅ RLS policies pentru assigned trips
+
 ---
 
 ### 🔨 ÎN DEZVOLTARE / BUGS CUNOSCUTE
@@ -1150,24 +1499,24 @@ const { data, error } = await supabase.functions.invoke('admin-update-user', {
 ## 📈 STATISTICI PROIECT
 
 ### Cod
-- **Fișiere TypeScript/TSX:** ~85
-- **Fișiere componente:** ~60
-- **Pagini:** 15+
-- **Hooks custom:** 8
-- **Edge Functions:** 1
-- **Linii de cod:** ~15,000+
+- **Fișiere TypeScript/TSX:** ~100
+- **Fișiere componente:** ~70
+- **Pagini:** 18+
+- **Hooks custom:** 9
+- **Edge Functions:** 3
+- **Linii de cod:** ~18,000+
 
 ### Database
-- **Tabele:** 16
+- **Tabele:** 18
 - **Functions:** 6
-- **RLS Policies:** 50+
+- **RLS Policies:** 60+
 - **Enums:** 8
 - **Storage Buckets:** 2 (documents, avatars)
 
 ### Features
-- **Implementate complet:** 75%
-- **În dezvoltare:** 15%
-- **Planificate:** 10%
+- **Implementate complet:** 85%
+- **În dezvoltare:** 10%
+- **Planificate:** 5%
 
 ### Utilizatori
 - **Roluri:** 3 (admin, guide, tourist)
@@ -1186,7 +1535,7 @@ const { data, error } = await supabase.functions.invoke('admin-update-user', {
 - [ ] Advanced settings panel
 
 ### Q2 2026
-- [ ] Offline maps
+- [x] Offline maps ✅ IMPLEMENTAT
 - [ ] Social login (Google)
 - [ ] Two-factor authentication
 - [ ] Multi-language (RO, EN, FR)
@@ -1283,16 +1632,16 @@ const { data, error } = await supabase.functions.invoke('admin-update-user', {
 ### Arii de Îmbunătățire
 1. **Chat system** - Scroll to bottom bug, real-time updates incomplete
 2. **Push notifications** - Nu sunt implementate încă
-3. **Offline maps** - Planificat dar neimplementat
-4. **Advanced analytics** - Dashboard basic, needs expansion
-5. **Multi-language** - Doar română momentan
+3. **Advanced analytics** - Dashboard basic, needs expansion
+4. **Multi-language** - Doar română momentan
+5. **Expense tracking** - Planificat pentru viitor
 
 ### Status General
-**~75% COMPLET** - Core functionality fully operational. Advanced features în dezvoltare.
+**~85% COMPLET** - Core functionality fully operational. Advanced features în dezvoltare.
 
-**Production Ready:** Da, pentru core features (trips, users, documents, offline)
+**Production Ready:** Da, pentru core features (trips, users, documents, offline, maps)
 
-**Requires Work:** Chat system, notifications, advanced analytics
+**Requires Work:** Chat system scroll bug, push notifications, advanced analytics
 
 ---
 

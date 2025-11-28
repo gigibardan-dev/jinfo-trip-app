@@ -15,6 +15,7 @@
 |-- project_structure.txt
 |-- public
 |   |-- favicon.ico
+|   |-- jinfologo.png
 |   |-- manifest.json
 |   |-- placeholder.svg
 |   |-- robots.txt
@@ -27,6 +28,8 @@
 |   |   |-- DocumentManager.tsx
 |   |   |-- ItineraryManager.tsx
 |   |   |-- Navigation.tsx
+|   |   |-- ThemeProvider.tsx
+|   |   |-- ThemeToggle.tsx
 |   |   |-- TouristDashboard.tsx
 |   |   |-- TouristDocuments.tsx
 |   |   |-- TripManager.tsx
@@ -35,6 +38,11 @@
 |   |   |   |-- EnhancedTripManager.tsx
 |   |   |   |-- GroupManager.tsx
 |   |   |   |-- GuideManager.tsx
+|   |   |   |-- MapPreviewDialog.tsx
+|   |   |   |-- MapSettingsDialog.tsx
+|   |   |   |-- OfflineCacheManager.tsx
+|   |   |   |-- POIDialog.tsx
+|   |   |   |-- POIMapPicker.tsx
 |   |   |   |-- RichTextEditor.tsx
 |   |   |   `-- TouristManager.tsx
 |   |   |-- communications
@@ -44,6 +52,7 @@
 |   |   |   |-- GuideDashboard.tsx
 |   |   |   `-- GuideItineraryManager.tsx
 |   |   |-- messaging
+|   |   |   |-- MessageInput.tsx
 |   |   |   `-- MessagingSystem.tsx
 |   |   |-- offline
 |   |   |   |-- OfflineManager.tsx
@@ -113,9 +122,11 @@
 |   |   |-- useAuth.tsx
 |   |   |-- useNetworkSync.tsx
 |   |   |-- useOfflineDocument.tsx
+|   |   |-- useOfflineDocument.tsx.backup
 |   |   |-- useOfflineDocuments.tsx
 |   |   |-- usePWAInstall.tsx
 |   |   |-- useTypingIndicator.tsx
+|   |   |-- useUnreadMessages.tsx
 |   |   `-- useWebPush.tsx
 |   |-- index.css
 |   |-- integrations
@@ -123,14 +134,19 @@
 |   |       |-- client.ts
 |   |       `-- types.ts
 |   |-- lib
+|   |   |-- mapStorage.ts
 |   |   |-- offlineStorage.ts
+|   |   |-- offlineStorage.ts.backup
 |   |   |-- sanitize.ts
 |   |   `-- utils.ts
 |   |-- main.tsx
 |   |-- pages
 |   |   |-- Auth.tsx
 |   |   |-- Index.tsx
+|   |   |-- MapsPage.tsx
 |   |   |-- NotFound.tsx
+|   |   |-- ProfilePage.tsx
+|   |   |-- ResetPassword.tsx
 |   |   |-- admin
 |   |   |   |-- CommunicationsPage.tsx
 |   |   |   |-- DocumentsPage.tsx
@@ -147,13 +163,22 @@
 |   |   `-- tourist
 |   |       |-- DocumentsPage.tsx
 |   |       |-- ItineraryPage.tsx
-|   |       `-- MessagesPage.tsx
+|   |       |-- MapViewerPage.tsx
+|   |       |-- MessagesPage.tsx
+|   |       `-- OfflineMapsPage.tsx
 |   |-- registerServiceWorker.ts
 |   |-- types
 |   |   `-- index.ts
 |   `-- vite-env.d.ts
 |-- supabase
 |   |-- config.toml
+|   |-- functions
+|   |   |-- admin-update-user
+|   |   |   `-- index.ts
+|   |   |-- auto-geocode-trip
+|   |   |   `-- index.ts
+|   |   `-- geocode-search
+|   |       `-- index.ts
 |   `-- migrations
 |       |-- 20250830162031_84e0766b-99ae-43fd-8b45-66fe4e39c661.sql
 |       |-- 20250830162049_57a00e99-6e16-4599-9598-8626d2597d91.sql
@@ -186,7 +211,8 @@
 |       |-- 20251019071208_c6a8ae47-07ee-4255-8807-4c0020454bb0.sql
 |       |-- 20251103083146_c4c06526-a180-451c-988d-d9f484c1b3af.sql
 |       |-- 20251103083225_8d01a12a-3d66-4cb8-839d-40724a354da2.sql
-|       `-- 20251108110713_7deaed95-6bd6-4a19-9b4f-f20334f1ea99.sql
+|       |-- 20251108110713_7deaed95-6bd6-4a19-9b4f-f20334f1ea99.sql
+|       `-- 20251128091314_621137a9-c160-428d-a546-09ec397b165d.sql
 |-- tailwind.config.ts
 |-- tsconfig.app.json
 |-- tsconfig.json
@@ -194,4 +220,4 @@
 |-- vercel.json
 `-- vite.config.ts
 
-23 directories, 170 files
+25 directories, 196 files
