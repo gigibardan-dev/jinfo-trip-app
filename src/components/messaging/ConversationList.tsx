@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MessageSquare, Users, User, MessageCircle } from "lucide-react";
+import { Search, MessageSquare, Users, User, MessageCircle, Trash2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,9 @@ export const ConversationList = ({
   const [selectedRecipient, setSelectedRecipient] = useState<string>("");
   const [tourists, setTourists] = useState<Tourist[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (currentUserId) {
@@ -444,6 +448,67 @@ export const ConversationList = ({
     return '';
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, conversation: Conversation) => {
+    e.stopPropagation();
+    setConversationToDelete(conversation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!conversationToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      // Delete all messages in the conversation (CASCADE should handle this)
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('conversation_id', conversationToDelete.id);
+
+      if (messagesError) throw messagesError;
+
+      // Delete all participants (CASCADE should handle this)
+      const { error: participantsError } = await supabase
+        .from('conversation_participants')
+        .delete()
+        .eq('conversation_id', conversationToDelete.id);
+
+      if (participantsError) throw participantsError;
+
+      // Delete the conversation itself
+      const { error: conversationError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationToDelete.id);
+
+      if (conversationError) throw conversationError;
+
+      toast({
+        title: "Conversație ștearsă",
+        description: "Conversația și toate mesajele au fost șterse permanent.",
+      });
+
+      // If deleted conversation was selected, clear selection
+      if (selectedConversationId === conversationToDelete.id) {
+        onSelectConversation(null as any);
+      }
+
+      // Refresh conversations list
+      fetchConversations();
+      setDeleteDialogOpen(false);
+      setConversationToDelete(null);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut șterge conversația. Încearcă din nou.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredConversations = conversations.filter(conv => {
     const title = getConversationTitle(conv).toLowerCase();
     const subtitle = getConversationSubtitle(conv).toLowerCase();
@@ -577,67 +642,120 @@ export const ConversationList = ({
                 : null;
 
               return (
-                <button
-                  key={conversation.id}
-                  onClick={() => onSelectConversation(conversation)}
-                  className={cn(
-                    "w-full p-3 sm:p-4 text-left transition-all hover:bg-muted/50",
-                    isSelected && "bg-muted/80 border-l-4 border-primary"
-                  )}
-                >
-                  <div className="flex gap-3 items-start">
-                    <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
-                      <AvatarFallback className={cn(
-                        "bg-gradient-to-br font-semibold text-white",
-                        conversation.conversation_type === 'group'
-                          ? "from-blue-500 to-purple-500"
-                          : "from-green-500 to-teal-500"
-                      )}>
-                        {conversation.conversation_type === 'group' ? (
-                          <Users className="w-5 h-5 sm:w-6 sm:h-6" />
-                        ) : (
-                          <User className="w-5 h-5 sm:w-6 sm:h-6" />
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate text-sm sm:text-base">
-                            {getConversationTitle(conversation)}
-                          </p>
-                          {getConversationSubtitle(conversation) && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {getConversationSubtitle(conversation)}
+                <div key={conversation.id} className="relative group">
+                  <button
+                    onClick={() => onSelectConversation(conversation)}
+                    className={cn(
+                      "w-full p-3 sm:p-4 text-left transition-all hover:bg-muted/50",
+                      isSelected && "bg-muted/80 border-l-4 border-primary"
+                    )}
+                  >
+                    <div className="flex gap-3 items-start">
+                      <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
+                        <AvatarFallback className={cn(
+                          "bg-gradient-to-br font-semibold text-white",
+                          conversation.conversation_type === 'group'
+                            ? "from-blue-500 to-purple-500"
+                            : "from-green-500 to-teal-500"
+                        )}>
+                          {conversation.conversation_type === 'group' ? (
+                            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+                          ) : (
+                            <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate text-sm sm:text-base">
+                              {getConversationTitle(conversation)}
                             </p>
-                          )}
+                            {getConversationSubtitle(conversation) && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {getConversationSubtitle(conversation)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {lastMessageTime && (
+                              <span className="text-xs text-muted-foreground">
+                                {lastMessageTime}
+                              </span>
+                            )}
+                            {unreadCount > 0 && (
+                              <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                                {unreadCount}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {lastMessageTime && (
-                            <span className="text-xs text-muted-foreground">
-                              {lastMessageTime}
-                            </span>
-                          )}
-                          {unreadCount > 0 && (
-                            <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                              {unreadCount}
-                            </Badge>
-                          )}
-                        </div>
+                        {conversation.last_message && (
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
+                            {conversation.last_message.content}
+                          </p>
+                        )}
                       </div>
-                      {conversation.last_message && (
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
-                          {conversation.last_message.content}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                </button>
+                  </button>
+                  
+                  {(isAdmin || isGuide) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDeleteClick(e, conversation)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Șterge conversația"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               );
             })}
           </div>
         )}
       </ScrollArea>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 rounded-full bg-destructive/10">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-xl">Șterge conversația?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3 text-base">
+              <p className="font-semibold text-foreground">
+                Această acțiune este IREVERSIBILĂ și nu poate fi anulată!
+              </p>
+              <p>
+                Conversația "{conversationToDelete ? getConversationTitle(conversationToDelete) : ''}" și toate mesajele sale vor fi șterse permanent din baza de date.
+              </p>
+              <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive font-medium">
+                  ⚠️ Mesajele nu pot fi recuperate după ștergere
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Folosește această funcție doar pentru conversații vechi sau pentru curățarea bazei de date.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConversation}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? "Se șterge..." : "Da, șterge permanent"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
