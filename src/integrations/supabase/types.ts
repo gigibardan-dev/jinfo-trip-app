@@ -578,6 +578,114 @@ export type Database = {
           },
         ]
       }
+      offline_map_configs: {
+        Row: {
+          bounds_east: number | null
+          bounds_north: number | null
+          bounds_south: number | null
+          bounds_west: number | null
+          created_at: string | null
+          estimated_size_mb: number | null
+          id: string
+          locations: Json | null
+          tile_count: number | null
+          trip_id: string
+          updated_at: string | null
+          zoom_max: number | null
+          zoom_min: number | null
+        }
+        Insert: {
+          bounds_east?: number | null
+          bounds_north?: number | null
+          bounds_south?: number | null
+          bounds_west?: number | null
+          created_at?: string | null
+          estimated_size_mb?: number | null
+          id?: string
+          locations?: Json | null
+          tile_count?: number | null
+          trip_id: string
+          updated_at?: string | null
+          zoom_max?: number | null
+          zoom_min?: number | null
+        }
+        Update: {
+          bounds_east?: number | null
+          bounds_north?: number | null
+          bounds_south?: number | null
+          bounds_west?: number | null
+          created_at?: string | null
+          estimated_size_mb?: number | null
+          id?: string
+          locations?: Json | null
+          tile_count?: number | null
+          trip_id?: string
+          updated_at?: string | null
+          zoom_max?: number | null
+          zoom_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_map_configs_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offline_map_downloads: {
+        Row: {
+          config_id: string
+          downloaded_at: string | null
+          id: string
+          size_mb: number | null
+          tiles_downloaded: number | null
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          config_id: string
+          downloaded_at?: string | null
+          id?: string
+          size_mb?: number | null
+          tiles_downloaded?: number | null
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          config_id?: string
+          downloaded_at?: string | null
+          id?: string
+          size_mb?: number | null
+          tiles_downloaded?: number | null
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_map_downloads_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "offline_map_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_map_downloads_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_map_downloads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
