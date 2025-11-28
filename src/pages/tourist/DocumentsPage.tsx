@@ -1,5 +1,5 @@
 import Navigation from "@/components/Navigation";
-import TouristDocuments from "@/components/TouristDocuments";
+import TouristDocuments from "@/components/tourist/documents/TouristDocuments";
 import { useNetworkSync } from "@/hooks/useNetworkSync";
 import { useOfflineDocuments } from "@/hooks/useOfflineDocuments";
 import { Badge } from "@/components/ui/badge";
