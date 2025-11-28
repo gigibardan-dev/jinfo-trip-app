@@ -4,7 +4,7 @@ import { useNetworkSync } from "@/hooks/useNetworkSync";
 import { useOfflineDocuments } from "@/hooks/useOfflineDocuments";
 import { Badge } from "@/components/ui/badge";
 import { WifiOff, Wifi } from "lucide-react";
-import { OfflineSavedDocuments } from "@/components/offline/OfflineSavedDocuments";
+import { OfflineSavedDocuments } from "@/components/tourist/documents/OfflineSavedDocuments";
 import { useState } from "react";
 
 const DocumentsPage = () => {
