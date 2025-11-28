@@ -81,7 +81,7 @@ export default function MapsPage() {
   };
 
   const handleDownloadMap = async (trip: any) => {
-    if (!trip.offline_map_configs || trip.offline_map_configs.length === 0) {
+    if (!trip.offline_map_configs) {
       toast({
         title: "Hartă indisponibilă",
         description: "Această călătorie nu are configurată hartă offline",
@@ -90,7 +90,7 @@ export default function MapsPage() {
       return;
     }
 
-    const config = trip.offline_map_configs[0];
+    const config = trip.offline_map_configs;
     setDownloading(trip.id);
     setDownloadProgress(0);
 
@@ -177,7 +177,7 @@ export default function MapsPage() {
   }
 
   const offlineTrips = trips.filter(t => cachedMaps.has(t.id));
-  const onlineTrips = trips.filter(t => !cachedMaps.has(t.id) && t.offline_map_configs?.[0]);
+  const onlineTrips = trips.filter(t => !cachedMaps.has(t.id) && t.offline_map_configs);
 
   return (
     <div className="min-h-screen bg-gradient-soft">
@@ -239,7 +239,7 @@ export default function MapsPage() {
 
               <div className="grid gap-4">
                 {offlineTrips.map((trip) => {
-                  const config = trip.offline_map_configs?.[0];
+                  const config = trip.offline_map_configs;
                   
                   return (
                     <Card key={trip.id} className="overflow-hidden border-2 hover:border-primary/50 transition-colors">
@@ -333,7 +333,7 @@ export default function MapsPage() {
 
               <div className="grid gap-4">
                 {onlineTrips.map((trip) => {
-                  const config = trip.offline_map_configs?.[0];
+                  const config = trip.offline_map_configs;
                   const isDownloading = downloading === trip.id;
                   
                   return (

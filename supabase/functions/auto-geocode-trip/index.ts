@@ -64,7 +64,7 @@ serve(async (req) => {
 
     // 5. Estimate storage
     const zoomMin = 5
-    const zoomMax = 13
+    const zoomMax = 10
     const tileCount = estimateTileCount(bounds, zoomMin, zoomMax)
     const estimatedSizeMB = (tileCount * 25) / 1024 // ~25KB per tile average
 
@@ -73,19 +73,22 @@ serve(async (req) => {
     // 6. Save or update config
     const { data: config, error: configError } = await supabaseAdmin
       .from('offline_map_configs')
-      .upsert({
-        trip_id: trip_id,
-        bounds_north: bounds.north,
-        bounds_south: bounds.south,
-        bounds_east: bounds.east,
-        bounds_west: bounds.west,
-        zoom_min: zoomMin,
-        zoom_max: zoomMax,
-        locations: locations,
-        tile_count: tileCount,
-        estimated_size_mb: parseFloat(estimatedSizeMB.toFixed(2)),
-        updated_at: new Date().toISOString()
-      })
+      .upsert(
+        {
+          trip_id: trip_id,
+          bounds_north: bounds.north,
+          bounds_south: bounds.south,
+          bounds_east: bounds.east,
+          bounds_west: bounds.west,
+          zoom_min: zoomMin,
+          zoom_max: zoomMax,
+          locations: locations,
+          tile_count: tileCount,
+          estimated_size_mb: parseFloat(estimatedSizeMB.toFixed(2)),
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'trip_id' }
+      )
       .select()
       .single()
 
