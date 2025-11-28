@@ -366,12 +366,36 @@ export const ConversationList = ({
       }
     }
 
-    return 'Conversație';
+    return 'Conversație privată';
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    getConversationTitle(conv).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getConversationSubtitle = (conversation: Conversation) => {
+    if (conversation.conversation_type === 'group') {
+      const participantCount = conversation.participants?.length || 0;
+      return `${participantCount} participant${participantCount !== 1 ? 'i' : ''}`;
+    }
+
+    if (conversation.conversation_type === 'direct') {
+      const otherParticipant = conversation.participants?.find(p => p.user_id !== currentUserId);
+      if (otherParticipant?.profiles) {
+        // Check if other participant is admin
+        if (isAdmin || isGuide) {
+          return `Chat cu ${otherParticipant.profiles.nume} ${otherParticipant.profiles.prenume}`;
+        } else {
+          return 'Conversație cu Administratorul';
+        }
+      }
+    }
+
+    return '';
+  };
+
+  const filteredConversations = conversations.filter(conv => {
+    const title = getConversationTitle(conv).toLowerCase();
+    const subtitle = getConversationSubtitle(conv).toLowerCase();
+    const search = searchTerm.toLowerCase();
+    return title.includes(search) || subtitle.includes(search);
+  });
 
   if (loading) {
     return (
@@ -528,6 +552,11 @@ export const ConversationList = ({
                           <p className="font-semibold truncate text-sm sm:text-base">
                             {getConversationTitle(conversation)}
                           </p>
+                          {getConversationSubtitle(conversation) && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {getConversationSubtitle(conversation)}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           {lastMessageTime && (
