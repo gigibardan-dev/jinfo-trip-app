@@ -55,18 +55,6 @@ export const MessageThread = ({
     }
   }, [conversation?.id]);
 
-  // Periodic refresh as safety net in case realtime misses an event
-  useEffect(() => {
-    if (!conversation?.id) return;
-
-    const interval = setInterval(() => {
-      console.log('[MessageThread] Polling refresh for conversation', conversation.id);
-      fetchMessages();
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [conversation?.id]);
-
   // 🔧 FIX BUG 1 - Mark messages as read when conversation loads or changes
   useEffect(() => {
     if (!conversation?.id || !currentUserId) return;
