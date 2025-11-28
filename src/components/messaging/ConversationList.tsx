@@ -74,9 +74,11 @@ export const ConversationList = ({
     }
   }, [currentUserId, canInitiateChat]);
 
-  // Real-time subscription for new messages
+  // Real-time subscription for new messages / read status
   useEffect(() => {
     if (!currentUserId) return;
+
+    console.log('[ConversationList] Subscribing to realtime conversation-list-updates for user', currentUserId);
 
     const channel = supabase
       .channel('conversation-list-updates')
@@ -87,8 +89,8 @@ export const ConversationList = ({
           schema: 'public', 
           table: 'chat_messages'
         },
-        () => {
-          // Re-fetch conversations to update unread counts and last message
+        (payload) => {
+          console.log('[ConversationList] INSERT on chat_messages', payload);
           fetchConversations();
         }
       )
@@ -99,17 +101,21 @@ export const ConversationList = ({
           schema: 'public', 
           table: 'chat_messages'
         },
-        () => {
-          // Re-fetch to update read status
+        (payload) => {
+          console.log('[ConversationList] UPDATE on chat_messages', payload);
           fetchConversations();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[ConversationList] Realtime channel status', status);
+      });
 
     return () => {
+      console.log('[ConversationList] Removing realtime channel for user', currentUserId);
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
+
 
   const fetchConversations = async () => {
     if (!currentUserId) {
