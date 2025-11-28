@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";

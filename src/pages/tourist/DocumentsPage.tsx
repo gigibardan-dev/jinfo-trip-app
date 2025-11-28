@@ -1,4 +1,4 @@
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import TouristDocuments from "@/components/tourist/documents/TouristDocuments";
 import { useNetworkSync } from "@/hooks/useNetworkSync";
 import { useOfflineDocuments } from "@/hooks/useOfflineDocuments";
