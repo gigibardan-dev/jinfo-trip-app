@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
+import { InstallPWAButton } from "@/components/shared/pwa/InstallPWAButton";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
