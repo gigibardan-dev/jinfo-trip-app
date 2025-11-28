@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Route } from "lucide-react";
-import ItineraryManager from "@/components/ItineraryManager";
-import TripMapConfig from "./TripMapConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import RichTextEditor from "../RichTextEditor";
+import { FormSkeleton } from "@/components/shared/skeletons/FormSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load componente heavy
+const ItineraryManager = lazy(() => import("@/components/ItineraryManager"));
+const TripMapConfig = lazy(() => import("./TripMapConfig"));
+const RichTextEditor = lazy(() => import("../RichTextEditor"));
 
 interface Trip {
   id: string;
@@ -328,11 +332,13 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
             <TabsContent value="details" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="descriere">Descrierea Circuitului</Label>
-                <RichTextEditor
-                  content={formData.descriere}
-                  onChange={(content) => setFormData({ ...formData, descriere: content })}
-                  placeholder="Descrie circuitul, obiectivele turistice, serviciile incluse..."
-                />
+                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                  <RichTextEditor
+                    content={formData.descriere}
+                    onChange={(content) => setFormData({ ...formData, descriere: content })}
+                    placeholder="Descrie circuitul, obiectivele turistice, serviciile incluse..."
+                  />
+                </Suspense>
               </div>
             </TabsContent>
 
@@ -391,16 +397,18 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
 
             <TabsContent value="map" className="space-y-4">
               {trip ? (
-                <TripMapConfig
-                  tripId={trip.id}
-                  tripData={{
-                    id: trip.id,
-                    destinatie: formData.destinatie,
-                    tara: formData.tara
-                  }}
-                  mapConfig={mapConfig}
-                  onConfigUpdated={(config) => setMapConfig(config)}
-                />
+                <Suspense fallback={<FormSkeleton />}>
+                  <TripMapConfig
+                    tripId={trip.id}
+                    tripData={{
+                      id: trip.id,
+                      destinatie: formData.destinatie,
+                      tara: formData.tara
+                    }}
+                    mapConfig={mapConfig}
+                    onConfigUpdated={(config) => setMapConfig(config)}
+                  />
+                </Suspense>
               ) : (
                 <div className="text-center p-6 text-muted-foreground">
                   Salvează mai întâi circuitul pentru a configura harta offline.
