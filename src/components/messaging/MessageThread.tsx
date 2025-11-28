@@ -123,62 +123,68 @@ export const MessageThread = ({
     console.log('[MessageThread] Subscribing to realtime for conversation', conversation.id);
 
     const channel = supabase
-      .channel(`messages:${conversation.id}`)
+      .channel('chat-messages-thread')
       .on(
         'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
+        {
+          event: '*',
+          schema: 'public',
           table: 'chat_messages',
-          filter: `conversation_id=eq.${conversation.id}`
         },
         async (payload: any) => {
-          console.log('[MessageThread] Realtime INSERT received', payload);
-          const newMsg = payload.new as Message;
+          const newMsg = (payload.new || payload.old) as Message | undefined;
+          if (!newMsg || newMsg.conversation_id !== conversation.id) return;
 
-          try {
-            // Fetch sender info
-            const { data: senderData, error: senderError } = await supabase
-              .from('profiles')
-              .select('nume, prenume, email')
-              .eq('id', newMsg.sender_id)
-              .single();
+          console.log('[MessageThread] Realtime change for current conversation', payload);
 
-            if (senderError) {
-              console.error('[MessageThread] Error loading sender for realtime msg', senderError);
-            }
+          // Only handle INSERTs for now (new messages)
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const inserted = payload.new as Message;
 
-            // Add message to list (at the end for chronological order)
-            setMessages(prev => {
-              const exists = prev.some(m => m.id === newMsg.id);
-              if (exists) return prev;
-              return [...prev, { ...newMsg, sender: senderData }];
-            });
+            try {
+              // Fetch sender info
+              const { data: senderData, error: senderError } = await supabase
+                .from('profiles')
+                .select('nume, prenume, email')
+                .eq('id', inserted.sender_id)
+                .single();
 
-            // Auto-mark as read if it's from someone else
-            if (newMsg.sender_id !== currentUserId) {
-              setTimeout(async () => {
-                try {
-                  const { error } = await supabase
-                    .from('chat_messages')
-                    .update({
-                      is_read: true,
-                      read_at: new Date().toISOString()
-                    })
-                    .eq('id', newMsg.id);
+              if (senderError) {
+                console.error('[MessageThread] Error loading sender for realtime msg', senderError);
+              }
 
-                  if (error) {
-                    console.error('[MessageThread] Error auto-marking message as read:', error);
-                  } else {
-                    onMessagesRead?.();
+              // Add message to list (at the end for chronological order)
+              setMessages(prev => {
+                const exists = prev.some(m => m.id === inserted.id);
+                if (exists) return prev;
+                return [...prev, { ...inserted, sender: senderData }];
+              });
+
+              // Auto-mark as read if it's from someone else
+              if (inserted.sender_id !== currentUserId) {
+                setTimeout(async () => {
+                  try {
+                    const { error } = await supabase
+                      .from('chat_messages')
+                      .update({
+                        is_read: true,
+                        read_at: new Date().toISOString()
+                      })
+                      .eq('id', inserted.id);
+
+                    if (error) {
+                      console.error('[MessageThread] Error auto-marking message as read:', error);
+                    } else {
+                      onMessagesRead?.();
+                    }
+                  } catch (error) {
+                    console.error('[MessageThread] Exception auto-marking message as read:', error);
                   }
-                } catch (error) {
-                  console.error('[MessageThread] Exception auto-marking message as read:', error);
-                }
-              }, 500);
+                }, 500);
+              }
+            } catch (error) {
+              console.error('[MessageThread] Error handling realtime message:', error);
             }
-          } catch (error) {
-            console.error('[MessageThread] Error handling realtime message:', error);
           }
         }
       )
