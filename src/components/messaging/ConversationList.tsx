@@ -80,8 +80,6 @@ export const ConversationList = ({
   useEffect(() => {
     if (!currentUserId) return;
 
-    console.log('[ConversationList] Subscribing to realtime conversation-list-updates for user', currentUserId, 'selectedConversationId', selectedConversationId);
-
     const channel = supabase
       .channel('conversation-list-updates')
       .on(
@@ -92,11 +90,9 @@ export const ConversationList = ({
           table: 'chat_messages'
         },
         (payload: any) => {
-          console.log('[ConversationList] INSERT on chat_messages', payload);
           try {
             const convId = payload.new?.conversation_id;
             if (convId && convId === selectedConversationId) {
-              console.log('[ConversationList] New message in currently open conversation', convId);
               onNewMessageInCurrentConversation?.();
             }
           } catch (e) {
@@ -112,17 +108,13 @@ export const ConversationList = ({
           schema: 'public', 
           table: 'chat_messages'
         },
-        (payload: any) => {
-          console.log('[ConversationList] UPDATE on chat_messages', payload);
+        () => {
           fetchConversations();
         }
       )
-      .subscribe((status) => {
-        console.log('[ConversationList] Realtime channel status', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('[ConversationList] Removing realtime channel for user', currentUserId);
       supabase.removeChannel(channel);
     };
   }, [currentUserId, selectedConversationId, onNewMessageInCurrentConversation]);

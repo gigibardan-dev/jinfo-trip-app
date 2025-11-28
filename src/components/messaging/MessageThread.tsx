@@ -53,7 +53,6 @@ export const MessageThread = ({
   // Fetch messages when conversation changes or a refresh is requested
   useEffect(() => {
     if (conversation?.id) {
-      console.log('[MessageThread] useEffect trigger fetchMessages for', conversation.id, 'refreshKey', refreshKey);
       fetchMessages();
     }
   }, [conversation?.id, refreshKey]);
@@ -111,12 +110,10 @@ export const MessageThread = ({
     return () => clearTimeout(timer);
   }, [conversation?.id, currentUserId, onMessagesRead]);
 
-  // 🔧 FIX BUG 2 - Scroll to bottom when messages change
+  // Scroll to bottom when messages change
   useLayoutEffect(() => {
     if (messagesContainerRef.current && messages.length > 0) {
-      // Use scrollTop for immediate, reliable scroll
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-      console.log('[MessageThread] 📜 Scrolled to bottom, scrollHeight:', messagesContainerRef.current.scrollHeight);
     }
   }, [messages]);
 
@@ -127,8 +124,6 @@ export const MessageThread = ({
   const fetchMessages = async () => {
     if (!conversation?.id) return;
 
-    console.log('[MessageThread] fetchMessages start for', conversation.id);
-
     setLoading(true);
     try {
       const { data: messagesData, error } = await supabase
@@ -138,10 +133,9 @@ export const MessageThread = ({
           sender:profiles(nume, prenume, email)
         `)
         .eq('conversation_id', conversation.id)
-        .order('created_at', { ascending: true }); // ASC for chronological order
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
-      console.log('[MessageThread] fetchMessages got', messagesData?.length || 0, 'rows');
       setMessages(messagesData || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -158,8 +152,6 @@ export const MessageThread = ({
   const sendMessage = async (messageText: string) => {
     if (!messageText || !conversation?.id || !currentUserId) return;
 
-    console.log('[MessageThread] sendMessage', { conversationId: conversation.id, currentUserId, messageText });
-
     try {
       const { data, error } = await supabase
         .from('chat_messages')
@@ -175,8 +167,6 @@ export const MessageThread = ({
         .single();
 
       if (error) throw error;
-
-      console.log('[MessageThread] sendMessage inserted row', data?.id);
 
       // Optimistic update - add message immediately to local state
       if (data) {
