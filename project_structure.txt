@@ -2,7 +2,8 @@
 |-- .env
 |-- .gitignore
 |-- COMPONENTS_DOCUMENTATION.md
-|-- RAPORT_PROIECT_TRAVELPRO.md
+|-- RAPORT_PROIECT_JINFOAPP.md
+|-- RAPORT_PROIECT_TRAVELPRO_OLD.md
 |-- README.md
 |-- bun.lockb
 |-- components.json
