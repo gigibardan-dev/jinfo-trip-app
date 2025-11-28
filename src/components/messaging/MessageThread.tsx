@@ -132,14 +132,21 @@ export const MessageThread = ({
           table: 'chat_messages',
         },
         async (payload: any) => {
-          const newMsg = (payload.new || payload.old) as Message | undefined;
-          if (!newMsg || newMsg.conversation_id !== conversation.id) return;
-
-          console.log('[MessageThread] Realtime change for current conversation', payload);
+          console.log('[MessageThread] Realtime payload', payload);
+          const row = (payload.new || payload.old) as Message | undefined;
+          if (!row) {
+            console.log('[MessageThread] No row on payload, skipping');
+            return;
+          }
+          if (row.conversation_id !== conversation.id) {
+            console.log('[MessageThread] Event for other conversation, ignore', row.conversation_id);
+            return;
+          }
 
           // Only handle INSERTs for now (new messages)
           if (payload.eventType === 'INSERT' && payload.new) {
             const inserted = payload.new as Message;
+            console.log('[MessageThread] Handling INSERT for current conversation', inserted.id);
 
             try {
               // Fetch sender info
@@ -156,7 +163,11 @@ export const MessageThread = ({
               // Add message to list (at the end for chronological order)
               setMessages(prev => {
                 const exists = prev.some(m => m.id === inserted.id);
-                if (exists) return prev;
+                if (exists) {
+                  console.log('[MessageThread] Message already in list, skip', inserted.id);
+                  return prev;
+                }
+                console.log('[MessageThread] Appending realtime message', inserted.id);
                 return [...prev, { ...inserted, sender: senderData }];
               });
 
@@ -175,6 +186,7 @@ export const MessageThread = ({
                     if (error) {
                       console.error('[MessageThread] Error auto-marking message as read:', error);
                     } else {
+                      console.log('[MessageThread] Auto-marked message as read', inserted.id);
                       onMessagesRead?.();
                     }
                   } catch (error) {
@@ -188,7 +200,9 @@ export const MessageThread = ({
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[MessageThread] Realtime channel status', status);
+      });
 
     return () => {
       console.log('[MessageThread] Removing realtime channel for conversation', conversation.id);
@@ -199,6 +213,8 @@ export const MessageThread = ({
 
   const fetchMessages = async () => {
     if (!conversation?.id) return;
+
+    console.log('[MessageThread] fetchMessages start for', conversation.id);
 
     setLoading(true);
     try {
@@ -212,6 +228,7 @@ export const MessageThread = ({
         .order('created_at', { ascending: true }); // ASC for chronological order
 
       if (error) throw error;
+      console.log('[MessageThread] fetchMessages got', messagesData?.length || 0, 'rows');
       setMessages(messagesData || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -228,6 +245,8 @@ export const MessageThread = ({
   const sendMessage = async (messageText: string) => {
     if (!messageText || !conversation?.id || !currentUserId) return;
 
+    console.log('[MessageThread] sendMessage', { conversationId: conversation.id, currentUserId, messageText });
+
     try {
       const { data, error } = await supabase
         .from('chat_messages')
@@ -243,6 +262,8 @@ export const MessageThread = ({
         .single();
 
       if (error) throw error;
+
+      console.log('[MessageThread] sendMessage inserted row', data?.id);
 
       // Optimistic update - add message immediately to local state
       if (data) {
