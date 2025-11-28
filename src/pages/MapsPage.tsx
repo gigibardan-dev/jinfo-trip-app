@@ -95,6 +95,13 @@ export default function MapsPage() {
     setDownloadProgress(0);
 
     try {
+      // Fetch POIs for this trip
+      const { data: poisData } = await supabase
+        .from('map_points_of_interest')
+        .select('*')
+        .eq('trip_id', trip.id)
+        .eq('is_visible', true);
+
       const tiles = await downloadTiles(config, (progress) => {
         setDownloadProgress(progress);
       });
@@ -104,6 +111,7 @@ export default function MapsPage() {
         tiles,
         tripName: trip.nume,
         tripDestination: trip.destinatie,
+        pointsOfInterest: poisData || [],
         downloadedAt: new Date().toISOString()
       });
 

@@ -1085,11 +1085,12 @@ const EnhancedCircuitManager = () => {
 
       {/* Map Preview Dialog */}
       {mapConfig && (
-        <MapPreviewDialog
-          open={showMapPreview}
-          onOpenChange={setShowMapPreview}
-          mapConfig={mapConfig}
-        />
+              <MapPreviewDialog
+                open={showMapPreview}
+                onOpenChange={setShowMapPreview}
+                mapConfig={mapConfig}
+                tripId={selectedTrip!.id}
+              />
       )}
 
       {/* Map Settings Dialog */}
