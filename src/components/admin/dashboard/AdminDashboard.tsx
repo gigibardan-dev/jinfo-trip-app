@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CardSkeleton } from "@/components/shared/skeletons/CardSkeleton";
 
 import {
   Users,
@@ -219,7 +221,17 @@ const AdminDashboard = () => {
 
   const renderDashboard = () => {
     if (loading) {
-      return <div className="text-center py-8">Se încarcă datele...</div>;
+      return (
+        <div className="container mx-auto p-6 space-y-6">
+          <Skeleton className="h-10 w-64 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardSkeleton count={4} />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <CardSkeleton count={2} />
+          </div>
+        </div>
+      );
     }
 
     const statsCards = [

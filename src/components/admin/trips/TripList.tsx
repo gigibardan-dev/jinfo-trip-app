@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
+import { Skeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/shared/skeletons/ListSkeleton";
 
 interface Trip {
   id: string;
@@ -141,7 +143,15 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
   };
 
   if (loading) {
-    return <div className="text-center py-8">Se încarcă circuitele...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <ListSkeleton count={6} />
+      </div>
+    );
   }
 
   return (
