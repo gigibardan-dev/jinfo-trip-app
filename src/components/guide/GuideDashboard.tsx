@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, MapPin, Users, FileText, Clock, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, Users, FileText, Clock, AlertCircle, Map } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,11 +34,13 @@ const GuideDashboard = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [todayReports, setTodayReports] = useState<any[]>([]);
+  const [mapsAvailable, setMapsAvailable] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchAssignments();
       fetchTodayReports();
+      fetchMapsAvailable();
     }
   }, [user]);
 
@@ -102,6 +104,31 @@ const GuideDashboard = () => {
       console.error('Error fetching today reports:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMapsAvailable = async () => {
+    try {
+      const { data: assignmentsData } = await supabase
+        .from('guide_assignments')
+        .select('trip_id')
+        .eq('guide_user_id', user?.id)
+        .eq('is_active', true);
+
+      if (!assignmentsData || assignmentsData.length === 0) {
+        setMapsAvailable(0);
+        return;
+      }
+
+      const tripIds = assignmentsData.map(a => a.trip_id);
+      const { data: mapsData } = await supabase
+        .from('offline_map_configs')
+        .select('id')
+        .in('trip_id', tripIds);
+
+      setMapsAvailable(mapsData?.length || 0);
+    } catch (error) {
+      console.error('Error fetching maps:', error);
     }
   };
 
@@ -196,6 +223,28 @@ const GuideDashboard = () => {
           icon={<Clock className="h-4 w-4" />}
         />
       </div>
+
+      {/* Maps Quick Access */}
+      <Card className="border-2 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/maps')}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Map className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Hărți Offline</h3>
+                <p className="text-sm text-muted-foreground">
+                  {mapsAvailable} {mapsAvailable === 1 ? 'hartă disponibilă' : 'hărți disponibile'} pentru circuitele tale
+                </p>
+              </div>
+            </div>
+            <Button size="sm">
+              Deschide Hărți
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
