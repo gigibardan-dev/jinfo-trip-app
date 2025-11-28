@@ -2,8 +2,8 @@
 |-- .env
 |-- .gitignore
 |-- COMPONENTS_DOCUMENTATION.md
+|-- PRE_REORGANIZATION_REPORT.md
 |-- RAPORT_PROIECT_JINFOAPP.md
-|-- RAPORT_PROIECT_TRAVELPRO_OLD.md
 |-- README.md
 |-- bun.lockb
 |-- components.json
@@ -24,16 +24,16 @@
 |   |-- App.css
 |   |-- App.tsx
 |   |-- components
-|   |   |-- AdminDashboard.tsx
 |   |   |-- DocumentManager.tsx
 |   |   |-- ItineraryManager.tsx
-|   |   |-- Navigation.tsx
 |   |   |-- ThemeProvider.tsx
 |   |   |-- ThemeToggle.tsx
-|   |   |-- TouristDashboard.tsx
-|   |   |-- TouristDocuments.tsx
 |   |   |-- TripManager.tsx
 |   |   |-- admin
+|   |   |   |-- communications
+|   |   |   |   `-- CommunicationCenter.tsx
+|   |   |   |-- dashboard
+|   |   |   |   `-- AdminDashboard.tsx
 |   |   |   |-- DocumentUploader.tsx
 |   |   |   |-- EnhancedTripManager.tsx
 |   |   |   |-- GroupManager.tsx
@@ -45,8 +45,6 @@
 |   |   |   |-- POIMapPicker.tsx
 |   |   |   |-- RichTextEditor.tsx
 |   |   |   `-- TouristManager.tsx
-|   |   |-- communications
-|   |   |   `-- CommunicationCenter.tsx
 |   |   |-- guide
 |   |   |   |-- GuideDailyReport.tsx
 |   |   |   |-- GuideDashboard.tsx
@@ -54,18 +52,25 @@
 |   |   |-- messaging
 |   |   |   |-- MessageInput.tsx
 |   |   |   `-- MessagingSystem.tsx
-|   |   |-- offline
-|   |   |   |-- OfflineManager.tsx
-|   |   |   `-- OfflineSavedDocuments.tsx
-|   |   |-- pwa
-|   |   |   `-- InstallPWAButton.tsx
 |   |   |-- settings
 |   |   |   `-- SettingsPanel.tsx
 |   |   |-- shared
+|   |   |   |-- layout
+|   |   |   |   `-- Navigation.tsx
+|   |   |   |-- offline
+|   |   |   |   `-- OfflineManager.tsx
+|   |   |   |-- pwa
+|   |   |   |   `-- InstallPWAButton.tsx
 |   |   |   |-- ActivityCard.tsx
 |   |   |   |-- Footer.tsx
 |   |   |   |-- StatsCard.tsx
 |   |   |   `-- TripCard.tsx
+|   |   |-- tourist
+|   |   |   |-- dashboard
+|   |   |   |   `-- TouristDashboard.tsx
+|   |   |   `-- documents
+|   |   |       |-- OfflineSavedDocuments.tsx
+|   |   |       `-- TouristDocuments.tsx
 |   |   `-- ui
 |   |       |-- accordion.tsx
 |   |       |-- alert-dialog.tsx
@@ -220,4 +225,4 @@
 |-- vercel.json
 `-- vite.config.ts
 
-25 directories, 196 files
+27 directories, 197 files
