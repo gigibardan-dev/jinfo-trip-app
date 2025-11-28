@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plane, Users, Settings, Map, FileText, LogIn } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import AdminDashboard from "@/components/admin/dashboard/AdminDashboard";
-import TouristDashboard from "@/components/TouristDashboard";
+import TouristDashboard from "@/components/tourist/dashboard/TouristDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
