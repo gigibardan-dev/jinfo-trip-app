@@ -27,6 +27,9 @@ export async function registerServiceWorker(): Promise<void> {
 
     console.log('[SW] Registration successful:', registration.scope);
 
+    // Force update check immediately
+    registration.update();
+
     // Handle updates
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;
@@ -37,8 +40,10 @@ export async function registerServiceWorker(): Promise<void> {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           console.log('[SW] New version available! Refresh to update.');
           
-          // Optional: Show update notification to user
-          if (window.confirm('New version available! Refresh to update?')) {
+          // Prompt user to update
+          if (window.confirm('Versiune nouă disponibilă! Refresh pentru a actualiza?')) {
+            // Send SKIP_WAITING message to new worker
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
             window.location.reload();
           }
         }

@@ -1,145 +1,120 @@
-const CACHE_NAME = 'jinfoapp-v1';
-const RUNTIME_CACHE = 'jinfoapp-runtime';
+const CACHE_NAME = 'jinfoapp-v2'; // Increment version pentru force update
+const RUNTIME_CACHE = 'jinfoapp-runtime-v2';
 
-// Assets statice esențiale (cache immediate)
+// Essential assets
 const ESSENTIAL_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/jinfologo.png',
-  '/offline.html',
 ];
 
-// Install event - cache essential assets
+// Install
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
+  console.log('[SW] Installing v2...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching essential assets');
+      console.log('[SW] Caching essential assets');
       return cache.addAll(ESSENTIAL_URLS);
     })
   );
   self.skipWaiting();
 });
 
-// Activate event - cleanup old caches
+// Activate
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+  console.log('[SW] Activating v2...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames
+          .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+          .map((name) => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
       );
     })
   );
   self.clients.claim();
 });
 
-// Fetch event - Smart caching strategy
+// Fetch - IMPORTANT: CACHE EVERYTHING
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip cross-origin requests
-  if (url.origin !== location.origin) {
+  // Skip chrome-extension and non-http
+  if (!url.protocol.startsWith('http')) {
     return;
   }
 
-  // Strategy 1: HTML - Network First
-  if (request.mode === 'navigate') {
+  // === STRATEGY 1: HTML Pages - Network First ===
+  if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful response
-          const responseClone = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          console.log('[SW] Network success for HTML:', url.pathname);
+          const clone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => {
-          // Fallback to cache
+        .catch((error) => {
+          console.log('[SW] Network failed for HTML, trying cache:', url.pathname);
           return caches.match(request).then((cached) => {
-            return cached || caches.match('/offline.html');
+            if (cached) {
+              console.log('[SW] Cache HIT for HTML:', url.pathname);
+              return cached;
+            }
+            console.log('[SW] No cache for HTML:', url.pathname);
+            return caches.match('/index.html');
           });
         })
     );
     return;
   }
 
-  // Strategy 2: JS/CSS Chunks - Cache First, Network Fallback
-  if (
-    request.url.includes('/assets/') ||
-    request.url.includes('.js') ||
-    request.url.includes('.css')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        // Return cached version if exists
-        if (cached) {
-          // Update cache in background
-          fetch(request).then((response) => {
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, response.clone());
-            });
-          }).catch(() => {
-            // Network failed, but we have cache - all good
-          });
-          return cached;
-        }
-
-        // Not in cache - fetch and cache
-        return fetch(request).then((response) => {
-          // Cache the chunk
-          const responseClone = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // Strategy 3: API Calls - Network First, Cache Fallback
-  if (request.url.includes('/rest/v1/') || request.url.includes('/functions/v1/')) {
+  // === STRATEGY 2: Supabase API - Network First, Cache Fallback ===
+  if (url.hostname.includes('supabase.co')) {
+    // IMPORTANT: Cache API responses aggressively
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Verifică că response e OK înainte de cache
-          if (response.ok) {
-            const responseClone = response.clone();
+          // Cache successful responses
+          if (response.ok && request.method === 'GET') {
+            console.log('[SW] Caching API response:', url.pathname);
+            const clone = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
+              cache.put(request, clone);
             });
           }
           return response;
         })
-        .catch(() => {
-          console.log('[SW] Network failed, returning cache for:', request.url);
-          // Fallback to cache
+        .catch((error) => {
+          console.log('[SW] API request failed, checking cache:', url.pathname);
+          
+          // Return cached version
           return caches.match(request).then((cached) => {
             if (cached) {
-              console.log('[SW] Cache hit:', request.url);
+              console.log('[SW] Cache HIT for API:', url.pathname);
               return cached;
             }
-            // No cache available - return error response
-            console.log('[SW] No cache for:', request.url);
+            
+            console.log('[SW] No cache for API:', url.pathname);
+            // Return empty error response
             return new Response(
               JSON.stringify({ 
-                error: 'Offline and no cache available',
-                offline: true 
+                error: 'Offline - no cached data',
+                offline: true,
+                data: null
               }),
               {
                 status: 503,
-                statusText: 'Service Unavailable',
-                headers: { 'Content-Type': 'application/json' }
+                statusText: 'Service Unavailable - Offline',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'X-Offline': 'true'
+                }
               }
             );
           });
@@ -148,48 +123,68 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 4: Images/Documents - Cache First
+  // === STRATEGY 3: JS/CSS/Assets - Cache First ===
   if (
-    request.url.includes('/storage/v1/') ||
+    request.destination === 'script' ||
+    request.destination === 'style' ||
     request.destination === 'image' ||
-    request.url.includes('.png') ||
-    request.url.includes('.jpg') ||
-    request.url.includes('.pdf')
+    request.url.includes('/assets/') ||
+    request.url.match(/\.(js|css|png|jpg|jpeg|svg|woff|woff2)$/)
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        return (
-          cached ||
-          fetch(request).then((response) => {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
+        if (cached) {
+          // Return cache immediately, update in background
+          fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                caches.open(RUNTIME_CACHE).then((cache) => {
+                  cache.put(request, response.clone());
+                });
+              }
+            })
+            .catch(() => {
+              // Ignore network errors for cached assets
             });
-            return response;
-          })
-        );
+          return cached;
+        }
+
+        // Not cached, fetch and cache
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, clone);
+            });
+          }
+          return response;
+        });
       })
     );
     return;
   }
 
-  // Default: Network First
+  // === DEFAULT: Network First ===
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const responseClone = response.clone();
-        caches.open(RUNTIME_CACHE).then((cache) => {
-          cache.put(request, responseClone);
-        });
+        if (response.ok && request.method === 'GET') {
+          const clone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, clone);
+          });
+        }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => {
+        return caches.match(request);
+      })
   );
 });
 
-// Message handler pentru force refresh
+// Message handler
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
