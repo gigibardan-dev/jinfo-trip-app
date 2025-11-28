@@ -207,17 +207,29 @@ export const MessageThread = ({
     if (!messageText || !conversation?.id || !currentUserId) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: conversation.id,
           sender_id: currentUserId,
           content: messageText
-        });
+        })
+        .select(`
+          *,
+          sender:profiles(nume, prenume, email)
+        `)
+        .single();
 
       if (error) throw error;
 
-      // Message will be added via real-time subscription
+      // Optimistic update - add message immediately to local state
+      if (data) {
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === data.id);
+          if (exists) return prev;
+          return [...prev, data];
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
