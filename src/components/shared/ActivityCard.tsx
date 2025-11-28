@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, MapPin, Navigation, FileText } from "lucide-react";
+import { memo } from "react";
 
 interface ActivityCardProps {
   time: string;
@@ -103,3 +104,5 @@ export const ActivityCard = ({
     </Card>
   );
 };
+
+export default memo(ActivityCard);
