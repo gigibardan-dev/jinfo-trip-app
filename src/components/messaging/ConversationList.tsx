@@ -80,7 +80,7 @@ export const ConversationList = ({
   useEffect(() => {
     if (!currentUserId) return;
 
-    console.log('[ConversationList] Subscribing to realtime conversation-list-updates for user', currentUserId);
+    console.log('[ConversationList] Subscribing to realtime conversation-list-updates for user', currentUserId, 'selectedConversationId', selectedConversationId);
 
     const channel = supabase
       .channel('conversation-list-updates')
@@ -125,7 +125,7 @@ export const ConversationList = ({
       console.log('[ConversationList] Removing realtime channel for user', currentUserId);
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
+  }, [currentUserId, selectedConversationId, onNewMessageInCurrentConversation]);
 
 
   const fetchConversations = async () => {
