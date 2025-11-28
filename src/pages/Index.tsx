@@ -7,10 +7,11 @@ import { Plane, Users, Settings, Map, FileText, LogIn } from "lucide-react";
 import Navigation from "@/components/shared/layout/Navigation";
 import AdminDashboard from "@/components/admin/dashboard/AdminDashboard";
 import TouristDashboard from "@/components/tourist/dashboard/TouristDashboard";
+import GuideDashboard from "@/components/guide/GuideDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | "guide" | null>(null);
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -103,6 +104,8 @@ const Index = () => {
     <div className="pt-14 pb-20 px-2">
       {selectedRole === "admin" ? (
         <AdminDashboard />
+      ) : selectedRole === "guide" ? (
+        <GuideDashboard />
       ) : (
         <TouristDashboard />
       )}
