@@ -1,5 +1,5 @@
 import React from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import EnhancedTripManager from "@/components/admin/EnhancedTripManager";
 
 const TripsPage = () => {

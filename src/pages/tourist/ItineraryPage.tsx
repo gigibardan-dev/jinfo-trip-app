@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import { Label } from "@/components/ui/label";
 import { 
   Calendar, 

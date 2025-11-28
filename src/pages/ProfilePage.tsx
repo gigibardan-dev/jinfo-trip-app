@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Phone, Camera, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 
 const ProfilePage = () => {
   const { user, profile, loading, updateProfile } = useAuth();

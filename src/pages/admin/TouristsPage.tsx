@@ -1,5 +1,5 @@
 import React from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import TouristManager from "@/components/admin/TouristManager";
 import GroupManager from "@/components/admin/GroupManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

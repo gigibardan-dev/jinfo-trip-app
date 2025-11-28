@@ -1,5 +1,5 @@
 import React from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import DocumentUploader from "@/components/admin/DocumentUploader";
 import OfflineCacheManager from "@/components/admin/OfflineCacheManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

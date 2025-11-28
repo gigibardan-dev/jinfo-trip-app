@@ -1,5 +1,5 @@
 import React from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import { MessagingSystem } from "@/components/messaging/MessagingSystem";
 import { Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

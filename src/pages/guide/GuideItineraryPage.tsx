@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import GuideItineraryManager from "@/components/guide/GuideItineraryManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";

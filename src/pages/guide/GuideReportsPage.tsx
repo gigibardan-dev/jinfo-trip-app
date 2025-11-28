@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Navigation from "@/components/Navigation";
+import Navigation from "@/components/shared/layout/Navigation";
 import GuideDailyReport from "@/components/guide/GuideDailyReport";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
