@@ -268,45 +268,50 @@ export const SettingsPanel = () => {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="h-auto w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 p-2 bg-muted/50">
-          <TabsTrigger 
-            value="notifications" 
-            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Bell className="w-4 h-4 mr-1.5" />
-            <span className="hidden sm:inline">Notificări</span>
-            <span className="sm:hidden">Notif.</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="privacy" 
-            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Shield className="w-4 h-4 mr-1.5" />
-            <span className="hidden sm:inline">Confidențialitate</span>
-            <span className="sm:hidden">Confid.</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="app" 
-            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Smartphone className="w-4 h-4 mr-1.5" />
-            Aplicație
-          </TabsTrigger>
-          <TabsTrigger 
-            value="account" 
-            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <User className="w-4 h-4 mr-1.5" />
-            Cont
-          </TabsTrigger>
-          <TabsTrigger 
-            value="data" 
-            className="text-xs sm:text-sm px-2 sm:px-3 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm col-span-2 sm:col-span-1"
-          >
-            <Database className="w-4 h-4 mr-1.5" />
-            Date
-          </TabsTrigger>
-        </TabsList>
+        <div className="space-y-2">
+          {/* First row - 2 buttons */}
+          <TabsList className="h-auto w-full grid grid-cols-2 gap-2 p-0 bg-transparent">
+            <TabsTrigger 
+              value="notifications" 
+              className="py-3 px-4 border-2 border-border data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-medium hover:bg-muted/50 transition-all"
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Notificări
+            </TabsTrigger>
+            <TabsTrigger 
+              value="privacy" 
+              className="py-3 px-4 border-2 border-border data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-medium hover:bg-muted/50 transition-all"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Confidențialitate
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Second row - 3 buttons */}
+          <TabsList className="h-auto w-full grid grid-cols-3 gap-2 p-0 bg-transparent">
+            <TabsTrigger 
+              value="app" 
+              className="py-3 px-4 border-2 border-border data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-medium hover:bg-muted/50 transition-all"
+            >
+              <Smartphone className="w-4 h-4 mr-2" />
+              Aplicație
+            </TabsTrigger>
+            <TabsTrigger 
+              value="account" 
+              className="py-3 px-4 border-2 border-border data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-medium hover:bg-muted/50 transition-all"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Cont
+            </TabsTrigger>
+            <TabsTrigger 
+              value="data" 
+              className="py-3 px-4 border-2 border-border data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-medium hover:bg-muted/50 transition-all"
+            >
+              <Database className="w-4 h-4 mr-2" />
+              Date
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Notifications Settings */}
         <TabsContent value="notifications" className="space-y-6">
