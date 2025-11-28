@@ -110,38 +110,38 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Preview Hartă Offline</DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex-1 rounded-lg overflow-hidden border">
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 bg-background">
+        <div className="flex items-center justify-between gap-2 px-6 py-4 border-b bg-card">
+          <div className="flex items-center gap-2">
+            <span className="text-lg" aria-hidden="true">🗺️</span>
+            <DialogTitle className="text-base font-semibold">Preview Hartă Offline</DialogTitle>
+          </div>
+        </div>
+
+        <div className="flex-1 rounded-none overflow-hidden">
           <MapContainer
             center={center}
             zoom={mapConfig.zoom_min + 2}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: "100%", width: "100%" }}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
-            
+
             {/* Bounds rectangle */}
             <Rectangle
               bounds={bounds}
-              pathOptions={{ 
-                color: 'blue', 
-                weight: 2, 
-                fillOpacity: 0.1 
+              pathOptions={{
+                color: "blue",
+                weight: 2,
+                fillOpacity: 0.1,
               }}
             />
-            
+
             {/* City markers */}
             {mapConfig.locations.map((location: any, idx: number) => (
-              <Marker 
-                key={`city-${idx}`}
-                position={[location.lat, location.lng]}
-              >
+              <Marker key={`city-${idx}`} position={[location.lat, location.lng]}>
                 <Popup>
                   <div className="text-sm">
                     <p className="font-semibold">{location.name}</p>
@@ -160,26 +160,41 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
                 <Marker
                   key={`poi-${poi.id}`}
                   position={[Number(poi.lat), Number(poi.lng)]}
-                  icon={createPOIIcon(poi.category, poi.color || 'blue')}
+                  icon={createPOIIcon(poi.category, poi.color || "blue")}
                 >
                   <Popup>
                     <div className="space-y-2 min-w-[200px]">
                       <div className="flex items-start gap-2">
-                        <div className={`p-1.5 rounded-lg`} style={{ backgroundColor: categoryColors[poi.color || 'blue'] + '20' }}>
-                          <Icon className="w-4 h-4" style={{ color: categoryColors[poi.color || 'blue'] }} />
+                        <div
+                          className={`p-1.5 rounded-lg`}
+                          style={{
+                            backgroundColor:
+                              categoryColors[poi.color || "blue"] + "20",
+                          }}
+                        >
+                          <Icon
+                            className="w-4 h-4"
+                            style={{
+                              color: categoryColors[poi.color || "blue"],
+                            }}
+                          />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-sm">{poi.name}</h3>
                           {poi.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{poi.description}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {poi.description}
+                            </p>
                           )}
                         </div>
                       </div>
-                      
+
                       {(poi.phone || poi.website || poi.address) && (
                         <div className="space-y-1 pt-2 border-t">
                           {poi.address && (
-                            <p className="text-xs text-muted-foreground">{poi.address}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {poi.address}
+                            </p>
                           )}
                           {poi.phone && (
                             <div className="flex items-center gap-1.5 text-xs">
@@ -190,7 +205,12 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
                           {poi.website && (
                             <div className="flex items-center gap-1.5 text-xs">
                               <Globe className="w-3 h-3" />
-                              <a href={poi.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              <a
+                                href={poi.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
                                 Website
                               </a>
                             </div>
@@ -204,8 +224,8 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
             })}
           </MapContainer>
         </div>
-        
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+
+        <div className="flex items-center justify-between px-6 py-3 text-sm text-muted-foreground border-t bg-background">
           <span>Zona albastră reprezintă aria care va fi disponibilă offline</span>
           <span className="font-medium">{pois.length} POI-uri marcate</span>
         </div>
