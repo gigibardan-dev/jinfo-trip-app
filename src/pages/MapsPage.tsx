@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Download, Check, Trash2, Eye, MapPin, Calendar, Navigation2, Wifi, WifiOff, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { Map, Download, Check, Trash2, Eye, MapPin, Calendar, Navigation2, Wifi, WifiOff, Maximize2, ZoomIn, ZoomOut, X } from "lucide-react";
 import { downloadTiles, saveMapToIndexedDB, deleteMapFromIndexedDB, getAllCachedMaps } from "@/lib/mapStorage";
 import { formatDistanceToNow } from "date-fns";
 import { ro } from "date-fns/locale";
@@ -348,11 +348,11 @@ export default function MapsPage() {
                               ]}
                               zoom={config.zoom_min + 2}
                               style={{ height: '100%', width: '100%' }}
-                              zoomControl={false}
-                              dragging={false}
-                              scrollWheelZoom={false}
-                              doubleClickZoom={false}
-                              touchZoom={false}
+                              zoomControl={true}
+                              dragging={true}
+                              scrollWheelZoom={true}
+                              doubleClickZoom={true}
+                              touchZoom={true}
                             >
                               <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -385,7 +385,10 @@ export default function MapsPage() {
                               size="sm"
                               variant="secondary"
                               className="absolute top-2 right-2 z-[1000] shadow-lg hover:scale-110 transition-transform"
-                              onClick={() => setFullscreenTrip(trip)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFullscreenTrip(trip);
+                              }}
                             >
                               <Maximize2 className="w-4 h-4" />
                             </Button>
@@ -509,11 +512,11 @@ export default function MapsPage() {
                               ]}
                               zoom={config.zoom_min + 2}
                               style={{ height: '100%', width: '100%' }}
-                              zoomControl={false}
-                              dragging={false}
-                              scrollWheelZoom={false}
-                              doubleClickZoom={false}
-                              touchZoom={false}
+                              zoomControl={true}
+                              dragging={true}
+                              scrollWheelZoom={true}
+                              doubleClickZoom={true}
+                              touchZoom={true}
                             >
                               <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -546,7 +549,10 @@ export default function MapsPage() {
                               size="sm"
                               variant="secondary"
                               className="absolute top-2 right-2 z-[1000] shadow-lg hover:scale-110 transition-transform"
-                              onClick={() => setFullscreenTrip(trip)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFullscreenTrip(trip);
+                              }}
                             >
                               <Maximize2 className="w-4 h-4" />
                             </Button>
@@ -601,13 +607,23 @@ export default function MapsPage() {
 
       {/* Fullscreen Map Dialog */}
       {fullscreenTrip && fullscreenTrip.offline_map_configs && (
-        <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)}>
-          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 bg-background">
-            <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0 bg-background">
-              <Map className="w-5 h-5" />
-              <h2 className="text-lg font-semibold">{fullscreenTrip.nume}</h2>
+        <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)} modal={true}>
+          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 bg-background border-border">
+            <div className="flex items-center justify-between gap-2 px-6 py-4 border-b shrink-0 bg-card">
+              <div className="flex items-center gap-2">
+                <Map className="w-5 h-5" />
+                <h2 className="text-lg font-semibold">{fullscreenTrip.nume}</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setFullscreenTrip(null)}
+                className="shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="flex-1 overflow-hidden bg-background">
+            <div className="flex-1 overflow-hidden bg-muted">
               <MapContainer
                 center={[
                   (fullscreenTrip.offline_map_configs.bounds_north + fullscreenTrip.offline_map_configs.bounds_south) / 2,
