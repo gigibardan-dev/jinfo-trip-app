@@ -8,10 +8,22 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Map, Download, Check, Trash2, Eye, MapPin, Calendar, Navigation2, Wifi, WifiOff } from "lucide-react";
+import { Map, Download, Check, Trash2, Eye, MapPin, Calendar, Navigation2, Wifi, WifiOff, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { downloadTiles, saveMapToIndexedDB, deleteMapFromIndexedDB, getAllCachedMaps } from "@/lib/mapStorage";
 import { formatDistanceToNow } from "date-fns";
 import { ro } from "date-fns/locale";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// Fix Leaflet default marker icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 export default function MapsPage() {
   const { user, profile } = useAuth();
@@ -23,6 +35,7 @@ export default function MapsPage() {
   const [cachedMaps, setCachedMaps] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [fullscreenTrip, setFullscreenTrip] = useState<any>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -304,6 +317,46 @@ export default function MapsPage() {
                           </div>
                         )}
 
+                        {/* Map Preview */}
+                        {config?.locations && config.locations.length > 0 && (
+                          <div className="relative h-48 rounded-lg overflow-hidden border">
+                            <MapContainer
+                              center={[
+                                (config.bounds_north + config.bounds_south) / 2,
+                                (config.bounds_east + config.bounds_west) / 2
+                              ]}
+                              zoom={config.zoom_min + 2}
+                              style={{ height: '100%', width: '100%' }}
+                              zoomControl={false}
+                              dragging={false}
+                              scrollWheelZoom={false}
+                            >
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; OpenStreetMap'
+                              />
+                              {config.locations.slice(0, 4).map((location: any, idx: number) => (
+                                <Marker key={idx} position={[location.lat, location.lng]} />
+                              ))}
+                              {config.locations.length > 1 && (
+                                <Polyline
+                                  positions={config.locations.map((loc: any) => [loc.lat, loc.lng])}
+                                  color="blue"
+                                  weight={2}
+                                />
+                              )}
+                            </MapContainer>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2 z-[1000] shadow-lg"
+                              onClick={() => setFullscreenTrip(trip)}
+                            >
+                              <Maximize2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+
                         {/* Actions */}
                         <div className="flex gap-2 pt-2">
                           <Button
@@ -411,6 +464,46 @@ export default function MapsPage() {
                           </div>
                         )}
 
+                        {/* Map Preview */}
+                        {config?.locations && config.locations.length > 0 && (
+                          <div className="relative h-48 rounded-lg overflow-hidden border">
+                            <MapContainer
+                              center={[
+                                (config.bounds_north + config.bounds_south) / 2,
+                                (config.bounds_east + config.bounds_west) / 2
+                              ]}
+                              zoom={config.zoom_min + 2}
+                              style={{ height: '100%', width: '100%' }}
+                              zoomControl={false}
+                              dragging={false}
+                              scrollWheelZoom={false}
+                            >
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; OpenStreetMap'
+                              />
+                              {config.locations.slice(0, 4).map((location: any, idx: number) => (
+                                <Marker key={idx} position={[location.lat, location.lng]} />
+                              ))}
+                              {config.locations.length > 1 && (
+                                <Polyline
+                                  positions={config.locations.map((loc: any) => [loc.lat, loc.lng])}
+                                  color="blue"
+                                  weight={2}
+                                />
+                              )}
+                            </MapContainer>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-2 right-2 z-[1000] shadow-lg"
+                              onClick={() => setFullscreenTrip(trip)}
+                            >
+                              <Maximize2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+
                         {/* Actions */}
                         <Button
                           className="w-full"
@@ -456,6 +549,53 @@ export default function MapsPage() {
           )}
         </div>
       </div>
+
+      {/* Fullscreen Map Dialog */}
+      {fullscreenTrip && fullscreenTrip.offline_map_configs && (
+        <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)}>
+          <DialogContent className="max-w-6xl h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Map className="w-5 h-5" />
+                {fullscreenTrip.nume}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 rounded-lg overflow-hidden border">
+              <MapContainer
+                center={[
+                  (fullscreenTrip.offline_map_configs.bounds_north + fullscreenTrip.offline_map_configs.bounds_south) / 2,
+                  (fullscreenTrip.offline_map_configs.bounds_east + fullscreenTrip.offline_map_configs.bounds_west) / 2
+                ]}
+                zoom={fullscreenTrip.offline_map_configs.zoom_min + 3}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                />
+                {fullscreenTrip.offline_map_configs.locations?.map((location: any, idx: number) => (
+                  <Marker key={idx} position={[location.lat, location.lng]}>
+                    <Popup>
+                      <div className="text-sm">
+                        <p className="font-semibold">{location.name}</p>
+                        <p className="text-xs text-muted-foreground">{location.display_name}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+                {fullscreenTrip.offline_map_configs.locations?.length > 1 && (
+                  <Polyline
+                    positions={fullscreenTrip.offline_map_configs.locations.map((loc: any) => [loc.lat, loc.lng])}
+                    color="blue"
+                    weight={3}
+                    opacity={0.7}
+                  />
+                )}
+              </MapContainer>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
