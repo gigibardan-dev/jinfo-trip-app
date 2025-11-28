@@ -18,7 +18,7 @@ interface Conversation {
   group_id?: string;
   created_at: string;
   updated_at: string;
-  participants?: any[];
+  conversation_participants?: any[];
   last_message?: any;
   unread_count?: number;
 }
@@ -127,21 +127,41 @@ export const ConversationList = ({
     }
 
     try {
+      // First get conversations where user is participant
+      const { data: myParticipations, error: partError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', currentUserId);
+
+      if (partError) throw partError;
+
+      if (!myParticipations || myParticipations.length === 0) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+
+      const conversationIds = myParticipations.map(p => p.conversation_id);
+
+      // Get full conversation data with participants
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
           *,
           conversation_participants(
             user_id,
-            profiles(nume, prenume, email)
+            profiles(id, nume, prenume, email, role)
           )
         `)
+        .in('id', conversationIds)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
-      const conversationsWithUnread = await Promise.all(
+      // Get last messages for each conversation
+      const conversationsWithDetails = await Promise.all(
         (conversationsData || []).map(async (conv) => {
+          // Get unread count
           const { count } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
@@ -149,14 +169,24 @@ export const ConversationList = ({
             .eq('is_read', false)
             .neq('sender_id', currentUserId);
 
+          // Get last message
+          const { data: lastMsg } = await supabase
+            .from('chat_messages')
+            .select('content, created_at')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           return {
             ...conv,
-            unread_count: count || 0
+            unread_count: count || 0,
+            last_message: lastMsg
           };
         })
       );
 
-      setConversations(conversationsWithUnread);
+      setConversations(conversationsWithDetails);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -360,10 +390,11 @@ export const ConversationList = ({
     if (conversation.title) return conversation.title;
 
     if (conversation.conversation_type === 'direct') {
-      const otherParticipant = conversation.participants?.find(p => p.user_id !== currentUserId);
+      const otherParticipant = conversation.conversation_participants?.find((p: any) => p.user_id !== currentUserId);
       if (otherParticipant?.profiles) {
         return `${otherParticipant.profiles.nume} ${otherParticipant.profiles.prenume}`;
       }
+      return 'Conversație privată';
     }
 
     return 'Conversație privată';
@@ -371,18 +402,41 @@ export const ConversationList = ({
 
   const getConversationSubtitle = (conversation: Conversation) => {
     if (conversation.conversation_type === 'group') {
-      const participantCount = conversation.participants?.length || 0;
-      return `${participantCount} participant${participantCount !== 1 ? 'i' : ''}`;
+      const participants = conversation.conversation_participants || [];
+      const participantCount = participants.length;
+      
+      // Count tourists and guide
+      const tourists = participants.filter((p: any) => p.profiles?.role === 'tourist').length;
+      const guides = participants.filter((p: any) => p.profiles?.role === 'guide').length;
+      
+      if (tourists > 0 && guides > 0) {
+        return `${tourists} turist${tourists !== 1 ? 'i' : ''} + ${guides} ghid${guides !== 1 ? 'i' : ''}`;
+      } else {
+        return `${participantCount} participant${participantCount !== 1 ? 'i' : ''}`;
+      }
     }
 
     if (conversation.conversation_type === 'direct') {
-      const otherParticipant = conversation.participants?.find(p => p.user_id !== currentUserId);
+      const otherParticipant = conversation.conversation_participants?.find((p: any) => p.user_id !== currentUserId);
       if (otherParticipant?.profiles) {
-        // Check if other participant is admin
+        const otherRole = otherParticipant.profiles.role;
+        
+        // For admin/guide viewing
         if (isAdmin || isGuide) {
-          return `Chat cu ${otherParticipant.profiles.nume} ${otherParticipant.profiles.prenume}`;
+          if (otherRole === 'admin') {
+            return 'Chat cu Administrator';
+          } else if (otherRole === 'guide') {
+            return 'Chat cu Ghid';
+          } else if (otherRole === 'tourist') {
+            return 'Chat cu Turist';
+          }
         } else {
-          return 'Conversație cu Administratorul';
+          // For tourist viewing
+          if (otherRole === 'admin') {
+            return 'Conversație cu Administratorul';
+          } else if (otherRole === 'guide') {
+            return 'Conversație cu Ghidul';
+          }
         }
       }
     }
