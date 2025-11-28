@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,20 +129,24 @@ export default function POIDialog({ open, onOpenChange, tripId, existingPOI, onS
     
     setSearching(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
-      );
-      const data = await response.json();
-      setSearchResults(data);
+      const { data, error } = await supabase.functions.invoke('geocode-search', {
+        body: { query: searchQuery }
+      });
+
+      if (error) throw error;
       
-      if (data.length === 0) {
+      setSearchResults(data || []);
+      
+      if (!data || data.length === 0) {
         toast.error("Nu s-au găsit rezultate", {
           description: "Încearcă o căutare diferită sau folosește coordonate manual"
         });
       }
     } catch (error) {
       console.error("Search error:", error);
-      toast.error("Eroare la căutare");
+      toast.error("Eroare la căutare", {
+        description: "Încearcă din nou sau folosește coordonate manual"
+      });
     } finally {
       setSearching(false);
     }
@@ -239,6 +243,11 @@ export default function POIDialog({ open, onOpenChange, tripId, existingPOI, onS
               <MapPin className="h-5 w-5" />
               {existingPOI ? "Editează Punct de Interes" : "Adaugă Punct de Interes"}
             </DialogTitle>
+            <DialogDescription>
+              {existingPOI 
+                ? "Modifică detaliile punctului de interes pentru acest circuit." 
+                : "Adaugă un nou punct de interes pe harta circuitului. Poți căuta locația, introduce coordonate manual sau selecta pe hartă."}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
