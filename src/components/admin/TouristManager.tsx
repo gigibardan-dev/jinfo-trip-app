@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/shared/skeletons/ListSkeleton";
 import { 
   Users, 
   Plus, 
@@ -473,7 +475,15 @@ const TouristManager = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Se încarcă turiștii...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <ListSkeleton count={6} showAvatar={true} />
+      </div>
+    );
   }
 
   return (
