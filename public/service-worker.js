@@ -1,35 +1,25 @@
-const CACHE_NAME = 'travelpro-v1';
-const RUNTIME_CACHE = 'travelpro-runtime-v1';
+const CACHE_NAME = 'jinfoapp-v1';
+const RUNTIME_CACHE = 'jinfoapp-runtime';
 
-// App Shell - Core files and main routes to precache
-const APP_SHELL = [
+// Assets statice esențiale (cache immediate)
+const ESSENTIAL_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/documents',
-  '/itinerary',
-  '/messages',
-  '/trips',
-  '/guides',
-  '/settings',
-  '/guide-dashboard',
-  '/guide-itinerary',
-  '/guide-reports',
-  '/guide-documents',
-  '/guide-messages'
+  '/jinfologo.png',
+  '/offline.html',
 ];
 
-// Install event - precache app shell
+// Install event - cache essential assets
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] Precaching app shell');
-        return cache.addAll(APP_SHELL);
-      })
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[Service Worker] Caching essential assets');
+      return cache.addAll(ESSENTIAL_URLS);
+    })
   );
+  self.skipWaiting();
 });
 
 // Activate event - cleanup old caches
@@ -45,132 +35,140 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
   );
+  self.clients.claim();
 });
 
-// Fetch event - implement caching strategies
+// Fetch event - Smart caching strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
+  // Skip cross-origin requests
+  if (url.origin !== location.origin) {
     return;
   }
 
-  // Network First for Supabase API calls
-  if (url.origin.includes('supabase') || url.pathname.startsWith('/api')) {
-    event.respondWith(
-      networkFirstStrategy(request)
-    );
-    return;
-  }
-
-  // Cache First for static assets (JS, CSS, images, fonts)
-  if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'image' ||
-    request.destination === 'font' ||
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot)$/)
-  ) {
-    event.respondWith(
-      cacheFirstStrategy(request)
-    );
-    return;
-  }
-
-  // Network First with cache fallback for navigation requests
+  // Strategy 1: HTML - Network First
   if (request.mode === 'navigate') {
     event.respondWith(
-      networkFirstStrategy(request)
-        .catch(() => {
-          return caches.match('/index.html');
+      fetch(request)
+        .then((response) => {
+          // Cache successful response
+          const responseClone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+          return response;
         })
+        .catch(() => {
+          // Fallback to cache
+          return caches.match(request).then((cached) => {
+            return cached || caches.match('/offline.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // Strategy 2: JS/CSS Chunks - Cache First, Network Fallback
+  if (
+    request.url.includes('/assets/') ||
+    request.url.includes('.js') ||
+    request.url.includes('.css')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        // Return cached version if exists
+        if (cached) {
+          // Update cache in background
+          fetch(request).then((response) => {
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, response.clone());
+            });
+          }).catch(() => {
+            // Network failed, but we have cache - all good
+          });
+          return cached;
+        }
+
+        // Not in cache - fetch and cache
+        return fetch(request).then((response) => {
+          // Cache the chunk
+          const responseClone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Strategy 3: API Calls - Network First
+  if (request.url.includes('/rest/v1/') || request.url.includes('/functions/v1/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache API response
+          const responseClone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseClone);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  // Strategy 4: Images/Documents - Cache First
+  if (
+    request.url.includes('/storage/v1/') ||
+    request.destination === 'image' ||
+    request.url.includes('.png') ||
+    request.url.includes('.jpg') ||
+    request.url.includes('.pdf')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        return (
+          cached ||
+          fetch(request).then((response) => {
+            const responseClone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+            return response;
+          })
+        );
+      })
     );
     return;
   }
 
   // Default: Network First
   event.respondWith(
-    networkFirstStrategy(request)
+    fetch(request)
+      .then((response) => {
+        const responseClone = response.clone();
+        caches.open(RUNTIME_CACHE).then((cache) => {
+          cache.put(request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });
 
-// Cache First Strategy
-async function cacheFirstStrategy(request) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    console.log('[Service Worker] Cache hit:', request.url);
-    return cachedResponse;
+// Message handler pentru force refresh
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
-
-  console.log('[Service Worker] Cache miss, fetching:', request.url);
-  try {
-    const networkResponse = await fetch(request);
-    
-    // Cache successful responses
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.error('[Service Worker] Fetch failed:', error);
-    throw error;
-  }
-}
-
-// Network First Strategy
-async function networkFirstStrategy(request) {
-  try {
-    const networkResponse = await fetch(request);
-    
-    // Cache successful responses
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.log('[Service Worker] Network failed, trying cache:', request.url);
-    const cachedResponse = await caches.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    throw error;
-  }
-}
-
-// Background sync for offline actions (future enhancement)
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background sync:', event.tag);
-  
-  if (event.tag === 'sync-reports' || event.tag === 'sync-forms') {
-    event.waitUntil(
-      // Future: sync offline data from IndexedDB
-      Promise.resolve()
-    );
-  }
-});
-
-// Push notifications (future enhancement)
-self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push notification received');
-  
-  const options = {
-    body: event.data ? event.data.text() : 'New notification',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico'
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification('TravelPro', options)
-  );
 });
