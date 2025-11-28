@@ -76,20 +76,13 @@ export const ConversationList = ({
   useEffect(() => {
     if (!currentUserId) return;
 
-    if (!isOnline) {
-      console.log('[ConversationList] Offline - skipping fetch');
-      setLoading(false);
-      return;
+    // Lăsăm fetch să se întâmple - Service Worker returnează cache
+    fetchConversations();
+    if (canInitiateChat) {
+      fetchTourists();
+      fetchGroups();
     }
-
-    if (currentUserId) {
-      fetchConversations();
-      if (canInitiateChat) {
-        fetchTourists();
-        fetchGroups();
-      }
-    }
-  }, [currentUserId, canInitiateChat, isOnline]);
+  }, [currentUserId, canInitiateChat]);
 
   // Real-time subscription for new messages / read status
   useEffect(() => {
@@ -202,13 +195,13 @@ export const ConversationList = ({
       );
 
       setConversations(conversationsWithDetails);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching conversations:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-au putut încărca conversațiile",
-        variant: "destructive",
-      });
+      
+      // Check dacă e offline error
+      if (error?.offline || error?.message?.includes('offline')) {
+        console.log('[ConversationList] Offline mode - no cached conversations');
+      }
     } finally {
       setLoading(false);
     }

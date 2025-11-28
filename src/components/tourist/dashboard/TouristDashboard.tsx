@@ -77,45 +77,35 @@ const TouristDashboard = () => {
   useEffect(() => {
     if (!profile?.id) return;
 
-    // Load cached data immediately dacă offline
-    const cached = localStorage.getItem('cached_trip_data');
-    if (cached && !isOnline) {
-      try {
-        const { data } = JSON.parse(cached);
-        console.log('[TouristDashboard] Using cached data (offline)');
-        setCurrentTrip(data.currentTrip || null);
-        setUserGroups(data.userGroups || []);
-        setGroupMemberCount(data.groupMemberCount || 0);
-        setTodayActivities(data.todayActivities || []);
-        setDocumentStats(data.documentStats || { total: 0, cached: 0 });
-        setAssignedGuide(data.assignedGuide || null);
-        setNewDocumentsCount(data.newDocumentsCount || 0);
-        setLoading(false);
-        return;
-      } catch (error) {
-        console.error('[TouristDashboard] Error loading cached data:', error);
-      }
-    }
-
-    // NU face API call dacă suntem offline
-    if (!isOnline) {
-      console.log('[TouristDashboard] Offline - skipping API calls');
-      setLoading(false);
-      return;
-    }
-
-    // Dacă online, fetch fresh data
+    // Lăsăm fetch să se întâmple - Service Worker va returna cache dacă offline
     if (user && profile?.role === 'tourist') {
       fetchUserData();
     }
-  }, [user, profile, isOnline]);
+  }, [user, profile]);
 
   const fetchUserData = async () => {
     let activeTrip: any = null;
     let groupsInfo: any[] = [];
     
     try {
-      // 1. Găsește grupurile utilizatorului
+      // Încearcă să încarci din cache local imediat
+      const cached = localStorage.getItem('cached_trip_data');
+      if (cached) {
+        try {
+          const { data } = JSON.parse(cached);
+          setCurrentTrip(data.currentTrip || null);
+          setUserGroups(data.userGroups || []);
+          setGroupMemberCount(data.groupMemberCount || 0);
+          setTodayActivities(data.todayActivities || []);
+          setDocumentStats(data.documentStats || { total: 0, cached: 0 });
+          setAssignedGuide(data.assignedGuide || null);
+          setNewDocumentsCount(data.newDocumentsCount || 0);
+        } catch (cacheError) {
+          console.error('[TouristDashboard] Error parsing cache:', cacheError);
+        }
+      }
+
+      // 1. Găsește grupurile utilizatorului (Service Worker returnează cache dacă offline)
       const { data: memberGroups, error: groupsError } = await supabase
         .from('group_members')
         .select(`
@@ -211,31 +201,12 @@ const TouristDashboard = () => {
         timestamp: new Date().toISOString()
       }));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user data:', error);
       
-      // Dacă failează, încearcă să încarci din cache
-      const cached = localStorage.getItem('cached_trip_data');
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          console.log('[TouristDashboard] Loading from cache:', timestamp);
-          setCurrentTrip(data.currentTrip || null);
-          setUserGroups(data.userGroups || []);
-          setGroupMemberCount(data.groupMemberCount || 0);
-          setTodayActivities(data.todayActivities || []);
-          setDocumentStats(data.documentStats || { total: 0, cached: 0 });
-          setAssignedGuide(data.assignedGuide || null);
-          setNewDocumentsCount(data.newDocumentsCount || 0);
-        } catch (cacheError) {
-          console.error('[TouristDashboard] Error loading cache:', cacheError);
-        }
-      } else {
-        toast({
-          title: "Eroare",
-          description: "Nu s-au putut încărca informațiile călătoriei.",
-          variant: "destructive",
-        });
+      // Check dacă e offline error
+      if (error?.offline || error?.message?.includes('offline')) {
+        console.log('[TouristDashboard] Offline mode - using cached data');
       }
     } finally {
       setLoading(false);
