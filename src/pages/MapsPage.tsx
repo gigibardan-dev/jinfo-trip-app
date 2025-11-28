@@ -36,6 +36,7 @@ export default function MapsPage() {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [fullscreenTrip, setFullscreenTrip] = useState<any>(null);
+  const [tripPOIs, setTripPOIs] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -81,6 +82,26 @@ export default function MapsPage() {
         .order('start_date', { ascending: false });
 
       setTrips(tripsData || []);
+
+      // Fetch POIs for all trips
+      if (tripsData && tripsData.length > 0) {
+        const tripIds = tripsData.map(t => t.id);
+        const { data: poisData } = await supabase
+          .from('map_points_of_interest')
+          .select('*')
+          .in('trip_id', tripIds)
+          .eq('is_visible', true);
+
+        // Group POIs by trip_id
+        const poisByTrip: Record<string, any[]> = {};
+        poisData?.forEach(poi => {
+          if (!poisByTrip[poi.trip_id]) {
+            poisByTrip[poi.trip_id] = [];
+          }
+          poisByTrip[poi.trip_id].push(poi);
+        });
+        setTripPOIs(poisByTrip);
+      }
     } catch (error) {
       console.error('Error fetching trips:', error);
     } finally {
@@ -330,26 +351,40 @@ export default function MapsPage() {
                               zoomControl={false}
                               dragging={false}
                               scrollWheelZoom={false}
+                              doubleClickZoom={false}
+                              touchZoom={false}
                             >
                               <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 attribution='&copy; OpenStreetMap'
                               />
-                              {config.locations.slice(0, 4).map((location: any, idx: number) => (
-                                <Marker key={idx} position={[location.lat, location.lng]} />
+                              {config.locations.map((location: any, idx: number) => (
+                                <Marker key={`loc-${idx}`} position={[location.lat, location.lng]} />
+                              ))}
+                              {tripPOIs[trip.id]?.map((poi: any, idx: number) => (
+                                <Marker 
+                                  key={`poi-${idx}`} 
+                                  position={[poi.lat, poi.lng]}
+                                  icon={L.divIcon({
+                                    className: 'custom-poi-icon',
+                                    html: `<div style="background-color: ${poi.color || '#3b82f6'}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                                    iconSize: [12, 12],
+                                  })}
+                                />
                               ))}
                               {config.locations.length > 1 && (
                                 <Polyline
                                   positions={config.locations.map((loc: any) => [loc.lat, loc.lng])}
-                                  color="blue"
+                                  color="#3b82f6"
                                   weight={2}
+                                  opacity={0.6}
                                 />
                               )}
                             </MapContainer>
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="absolute top-2 right-2 z-[1000] shadow-lg"
+                              className="absolute top-2 right-2 z-[1000] shadow-lg hover:scale-110 transition-transform"
                               onClick={() => setFullscreenTrip(trip)}
                             >
                               <Maximize2 className="w-4 h-4" />
@@ -477,26 +512,40 @@ export default function MapsPage() {
                               zoomControl={false}
                               dragging={false}
                               scrollWheelZoom={false}
+                              doubleClickZoom={false}
+                              touchZoom={false}
                             >
                               <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 attribution='&copy; OpenStreetMap'
                               />
-                              {config.locations.slice(0, 4).map((location: any, idx: number) => (
-                                <Marker key={idx} position={[location.lat, location.lng]} />
+                              {config.locations.map((location: any, idx: number) => (
+                                <Marker key={`loc-${idx}`} position={[location.lat, location.lng]} />
+                              ))}
+                              {tripPOIs[trip.id]?.map((poi: any, idx: number) => (
+                                <Marker 
+                                  key={`poi-${idx}`} 
+                                  position={[poi.lat, poi.lng]}
+                                  icon={L.divIcon({
+                                    className: 'custom-poi-icon',
+                                    html: `<div style="background-color: ${poi.color || '#3b82f6'}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                                    iconSize: [12, 12],
+                                  })}
+                                />
                               ))}
                               {config.locations.length > 1 && (
                                 <Polyline
                                   positions={config.locations.map((loc: any) => [loc.lat, loc.lng])}
-                                  color="blue"
+                                  color="#3b82f6"
                                   weight={2}
+                                  opacity={0.6}
                                 />
                               )}
                             </MapContainer>
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="absolute top-2 right-2 z-[1000] shadow-lg"
+                              className="absolute top-2 right-2 z-[1000] shadow-lg hover:scale-110 transition-transform"
                               onClick={() => setFullscreenTrip(trip)}
                             >
                               <Maximize2 className="w-4 h-4" />
@@ -553,12 +602,12 @@ export default function MapsPage() {
       {/* Fullscreen Map Dialog */}
       {fullscreenTrip && fullscreenTrip.offline_map_configs && (
         <Dialog open={!!fullscreenTrip} onOpenChange={() => setFullscreenTrip(null)}>
-          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
-            <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0">
+          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 bg-background">
+            <div className="flex items-center gap-2 px-6 py-4 border-b shrink-0 bg-background">
               <Map className="w-5 h-5" />
               <h2 className="text-lg font-semibold">{fullscreenTrip.nume}</h2>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden bg-background">
               <MapContainer
                 center={[
                   (fullscreenTrip.offline_map_configs.bounds_north + fullscreenTrip.offline_map_configs.bounds_south) / 2,
@@ -572,7 +621,7 @@ export default function MapsPage() {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
                 {fullscreenTrip.offline_map_configs.locations?.map((location: any, idx: number) => (
-                  <Marker key={idx} position={[location.lat, location.lng]}>
+                  <Marker key={`loc-${idx}`} position={[location.lat, location.lng]}>
                     <Popup>
                       <div className="text-sm">
                         <p className="font-semibold">{location.name}</p>
@@ -581,10 +630,31 @@ export default function MapsPage() {
                     </Popup>
                   </Marker>
                 ))}
+                {tripPOIs[fullscreenTrip.id]?.map((poi: any, idx: number) => (
+                  <Marker 
+                    key={`poi-${idx}`} 
+                    position={[poi.lat, poi.lng]}
+                    icon={L.divIcon({
+                      className: 'custom-poi-icon',
+                      html: `<div style="background-color: ${poi.color || '#3b82f6'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>`,
+                      iconSize: [16, 16],
+                    })}
+                  >
+                    <Popup>
+                      <div className="text-sm">
+                        <p className="font-semibold">{poi.name}</p>
+                        {poi.description && (
+                          <p className="text-xs text-muted-foreground mt-1">{poi.description}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1 capitalize">{poi.category}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
                 {fullscreenTrip.offline_map_configs.locations?.length > 1 && (
                   <Polyline
                     positions={fullscreenTrip.offline_map_configs.locations.map((loc: any) => [loc.lat, loc.lng])}
-                    color="blue"
+                    color="#3b82f6"
                     weight={3}
                     opacity={0.7}
                   />
