@@ -23,6 +23,8 @@ import {
 import { format, parseISO } from "date-fns";
 import { ro } from "date-fns/locale";
 import { toast } from "sonner";
+import { useNetworkSync } from "@/hooks/useNetworkSync";
+import { WifiOff } from "lucide-react";
 
 interface Trip {
   id: string;
@@ -74,12 +76,38 @@ const ItineraryPage = () => {
   const [itineraryDays, setItineraryDays] = useState<ItineraryDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isOnline } = useNetworkSync();
 
   useEffect(() => {
+    if (!profile?.id) return;
+
+    // Load cached data dacă offline
+    const cached = localStorage.getItem('cached_itinerary_data');
+    if (cached && !isOnline) {
+      try {
+        const { data } = JSON.parse(cached);
+        console.log('[ItineraryPage] Using cached data (offline)');
+        setTrips(data.trips || []);
+        setSelectedTrip(data.selectedTrip || null);
+        setItineraryDays(data.itineraryDays || []);
+        setSelectedDay(data.selectedDay || null);
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error('[ItineraryPage] Error loading cached data:', error);
+      }
+    }
+
+    if (!isOnline) {
+      console.log('[ItineraryPage] Offline - skipping API calls');
+      setLoading(false);
+      return;
+    }
+
     if (user && profile) {
       fetchUserTrips();
     }
-  }, [user, profile]);
+  }, [user, profile, isOnline]);
 
   useEffect(() => {
     if (selectedTrip) {
@@ -118,9 +146,30 @@ const ItineraryPage = () => {
       if (data && data.length > 0) {
         setSelectedTrip(data[0]);
       }
+
+      // Cache trips data
+      localStorage.setItem('cached_itinerary_trips', JSON.stringify({
+        data: data || [],
+        timestamp: new Date().toISOString()
+      }));
     } catch (error) {
       console.error("Error fetching trips:", error);
-      toast.error("Eroare la încărcarea circuitelor");
+      
+      // Load from cache if fetch fails
+      const cached = localStorage.getItem('cached_itinerary_trips');
+      if (cached) {
+        try {
+          const { data } = JSON.parse(cached);
+          setTrips(data || []);
+          if (data && data.length > 0) {
+            setSelectedTrip(data[0]);
+          }
+        } catch (cacheError) {
+          console.error('[ItineraryPage] Error loading cache:', cacheError);
+        }
+      } else {
+        toast.error("Eroare la încărcarea circuitelor");
+      }
     }
   };
 
@@ -158,9 +207,33 @@ const ItineraryPage = () => {
       if (daysWithActivities.length > 0 && !selectedDay) {
         setSelectedDay(daysWithActivities[0].id);
       }
+
+      // Cache itinerary data
+      localStorage.setItem('cached_itinerary_data', JSON.stringify({
+        data: {
+          trips,
+          selectedTrip,
+          itineraryDays: daysWithActivities,
+          selectedDay: daysWithActivities.length > 0 ? daysWithActivities[0].id : null
+        },
+        timestamp: new Date().toISOString()
+      }));
     } catch (error) {
       console.error("Error fetching itinerary:", error);
-      toast.error("Eroare la încărcarea itinerarului");
+      
+      // Load from cache if fetch fails
+      const cached = localStorage.getItem('cached_itinerary_data');
+      if (cached) {
+        try {
+          const { data } = JSON.parse(cached);
+          setItineraryDays(data.itineraryDays || []);
+          setSelectedDay(data.selectedDay || null);
+        } catch (cacheError) {
+          console.error('[ItineraryPage] Error loading cache:', cacheError);
+        }
+      } else {
+        toast.error("Eroare la încărcarea itinerarului");
+      }
     } finally {
       setLoading(false);
     }
@@ -264,7 +337,15 @@ const ItineraryPage = () => {
           <p className="text-muted-foreground">Vizualizează itinerariul detaliat al circuitului tău</p>
         </div>
 
-        {trips.length === 0 ? (
+        {!isOnline && trips.length === 0 ? (
+          <Alert>
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              Itinerarul necesită conexiune la internet. 
+              Reconectează-te pentru a vedea programul călătoriei.
+            </AlertDescription>
+          </Alert>
+        ) : trips.length === 0 ? (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>

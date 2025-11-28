@@ -11,6 +11,8 @@ import { Search, MessageSquare, Users, User, MessageCircle, Trash2, AlertTriangl
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useNetworkSync } from "@/hooks/useNetworkSync";
+import { WifiOff } from "lucide-react";
 
 interface Conversation {
   id: string;
@@ -69,8 +71,17 @@ export const ConversationList = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { isOnline } = useNetworkSync();
 
   useEffect(() => {
+    if (!currentUserId) return;
+
+    if (!isOnline) {
+      console.log('[ConversationList] Offline - skipping fetch');
+      setLoading(false);
+      return;
+    }
+
     if (currentUserId) {
       fetchConversations();
       if (canInitiateChat) {
@@ -78,7 +89,7 @@ export const ConversationList = ({
         fetchGroups();
       }
     }
-  }, [currentUserId, canInitiateChat]);
+  }, [currentUserId, canInitiateChat, isOnline]);
 
   // Real-time subscription for new messages / read status
   useEffect(() => {
@@ -619,7 +630,16 @@ export const ConversationList = ({
       </div>
 
       <ScrollArea className="flex-1">
-        {filteredConversations.length === 0 ? (
+        {!isOnline && filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+            <WifiOff className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
+            <h3 className="font-semibold mb-2 text-sm sm:text-base">Mod Offline</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Mesajele necesită conexiune la internet. 
+              Reconectează-te pentru a vedea conversațiile.
+            </p>
+          </div>
+        ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <MessageCircle className="w-12 sm:w-16 h-12 sm:h-16 text-muted-foreground mb-4" />
             <h3 className="font-semibold mb-2 text-sm sm:text-base">Nicio conversație</h3>
