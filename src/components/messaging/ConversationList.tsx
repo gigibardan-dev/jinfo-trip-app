@@ -651,23 +651,33 @@ export const ConversationList = ({
                     )}
                   >
                     <div className="flex gap-3 items-start">
-                      <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
-                        <AvatarFallback className={cn(
-                          "bg-gradient-to-br font-semibold text-white",
-                          conversation.conversation_type === 'group'
-                            ? "from-blue-500 to-purple-500"
-                            : "from-green-500 to-teal-500"
-                        )}>
-                          {conversation.conversation_type === 'group' ? (
-                            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
-                          ) : (
-                            <User className="w-5 h-5 sm:w-6 sm:h-6" />
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="w-10 h-10 sm:w-11 sm:h-11">
+                          <AvatarFallback className={cn(
+                            "bg-gradient-to-br font-semibold text-white",
+                            conversation.conversation_type === 'group'
+                              ? "from-blue-500 to-purple-500"
+                              : "from-green-500 to-teal-500"
+                          )}>
+                            {conversation.conversation_type === 'group' ? (
+                              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+                            ) : (
+                              <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        {unreadCount > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 bg-destructive text-destructive-foreground font-semibold shadow-md border-2 border-background animate-pulse"
+                          >
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-[280px]">
                             <p className="font-semibold truncate text-sm sm:text-base">
                               {getConversationTitle(conversation)}
                             </p>
@@ -677,21 +687,11 @@ export const ConversationList = ({
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {lastMessageTime && (
-                              <span className="text-xs text-muted-foreground">
-                                {lastMessageTime}
-                              </span>
-                            )}
-                            {unreadCount > 0 && (
-                              <Badge 
-                                variant="destructive" 
-                                className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 bg-destructive text-destructive-foreground font-semibold shadow-sm animate-pulse"
-                              >
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                              </Badge>
-                            )}
-                          </div>
+                          {lastMessageTime && (
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {lastMessageTime}
+                            </span>
+                          )}
                         </div>
                         {conversation.last_message && (
                           <p className="text-xs sm:text-sm text-muted-foreground truncate leading-relaxed">
