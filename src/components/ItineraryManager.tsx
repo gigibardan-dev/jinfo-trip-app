@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   Calendar, 
   Clock, 
@@ -24,7 +25,9 @@ import {
   Car,
   GripVertical,
   AlertTriangle,
-  Utensils
+  Utensils,
+  Sparkles,
+  Target
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +83,17 @@ interface ActivityFormData {
   tips_and_notes: string;
 }
 
+interface Stamp {
+  id: string;
+  trip_id: string;
+  name: string;
+  description: string | null;
+  stamp_icon: string;
+  rarity: 'common' | 'rare' | 'legendary';
+  points_value: number;
+  created_at: string;
+}
+
 const activityTemplates = [
   { title: "Mic dejun", type: "meal", icon: Coffee, time: "08:00" },
   { title: "Check-in hotel", type: "accommodation", icon: Hotel, time: "15:00" },
@@ -106,6 +120,8 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
   const [selectedDayId, setSelectedDayId] = useState<string>("");
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ItineraryActivity | null>(null);
+  const [stamps, setStamps] = useState<Stamp[]>([]);
+  const [stampToDelete, setStampToDelete] = useState<Stamp | null>(null);
   const [activityFormData, setActivityFormData] = useState<ActivityFormData>({
     title: "",
     description: "",
@@ -133,6 +149,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
   const initializeItinerary = async () => {
     await createDaysIfNeeded();
     await fetchItinerary();
+    await fetchStamps();
   };
 
   const createDaysIfNeeded = async () => {
@@ -224,6 +241,75 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStamps = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('poi_stamps')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('rarity', { ascending: false })
+        .order('points_value', { ascending: false });
+
+      if (error) throw error;
+      setStamps(data || []);
+    } catch (error) {
+      console.error('Error fetching stamps:', error);
+    }
+  };
+
+  const handleDeleteStamp = async () => {
+    if (!stampToDelete) return;
+
+    try {
+      // Delete from poi_stamps (cascade will delete from tourist_collected_stamps)
+      const { error } = await supabase
+        .from('poi_stamps')
+        .delete()
+        .eq('id', stampToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succes",
+        description: `Stamp-ul "${stampToDelete.name}" a fost șters.`,
+      });
+
+      // Refresh stamps
+      fetchStamps();
+    } catch (error) {
+      console.error('Error deleting stamp:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut șterge stamp-ul.",
+        variant: "destructive",
+      });
+    } finally {
+      setStampToDelete(null);
+    }
+  };
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary':
+        return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white';
+      case 'rare':
+        return 'bg-gradient-to-r from-purple-500 to-violet-600 text-white';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getRarityLabel = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary':
+        return 'Legendar';
+      case 'rare':
+        return 'Rar';
+      default:
+        return 'Comun';
     }
   };
 
@@ -877,6 +963,133 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
           )}
         </div>
       </div>
+
+      {/* ADMIN: Stamps Management Section */}
+      {profile?.role === 'admin' && (
+        <Card className="mt-8">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              <CardTitle>🎯 Travel Stamps - Auto-generate</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Aceste stamps-uri s-au creat automat din activitățile tale
+            </p>
+          </CardHeader>
+          <CardContent>
+            {stamps.length > 0 ? (
+              <div className="space-y-4">
+                {/* Stats Summary */}
+                <div className="grid grid-cols-4 gap-3 pb-4 border-b">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{stamps.length}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-amber-600">
+                      {stamps.filter(s => s.rarity === 'legendary').length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Legendar</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {stamps.filter(s => s.rarity === 'rare').length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Rar</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-muted-foreground">
+                      {stamps.filter(s => s.rarity === 'common').length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Comun</div>
+                  </div>
+                </div>
+
+                {/* Stamps Grid */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {stamps.map((stamp) => (
+                    <Card key={stamp.id} className="relative hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        {/* Delete Button */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setStampToDelete(stamp)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+
+                        <div className="space-y-3">
+                          {/* Emoji Icon */}
+                          <div className="text-5xl text-center">{stamp.stamp_icon}</div>
+                          
+                          {/* Name */}
+                          <h4 className="font-semibold text-center line-clamp-2 min-h-[3rem]">
+                            {stamp.name}
+                          </h4>
+                          
+                          {/* Description */}
+                          {stamp.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 text-center">
+                              {stamp.description}
+                            </p>
+                          )}
+                          
+                          {/* Badges */}
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <Badge className={getRarityColor(stamp.rarity)}>
+                              {getRarityLabel(stamp.rarity)}
+                            </Badge>
+                            <Badge variant="outline">
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              {stamp.points_value} puncte
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Target className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Nu există stamps generate încă</h3>
+                <p className="text-muted-foreground">
+                  Adaugă activități în itinerariu pentru a crea stamps automat.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete Stamp Confirmation Dialog */}
+      <AlertDialog open={!!stampToDelete} onOpenChange={(open) => !open && setStampToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Șterge Stamp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să ștergi <strong>"{stampToDelete?.name}"</strong>?
+              <br />
+              <br />
+              Acest stamp va fi șters permanent și turiștii nu îl vor mai putea colecta.
+              Stamp-urile deja colectate de turiști vor fi de asemenea șterse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteStamp}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Șterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {days.length === 0 && (
         <div className="text-center py-12">

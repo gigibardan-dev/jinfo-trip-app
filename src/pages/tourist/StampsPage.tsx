@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Trophy, Sparkles, MapPin } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { CheckCircle2, Trophy, Sparkles, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import Navigation from "@/components/shared/layout/Navigation";
 
 interface Stamp {
@@ -38,6 +39,7 @@ const StampsPage = () => {
   const [collectedStamps, setCollectedStamps] = useState<CollectedStamp[]>([]);
   const [loading, setLoading] = useState(true);
   const [collectingStampId, setCollectingStampId] = useState<string | null>(null);
+  const [stampToDelete, setStampToDelete] = useState<CollectedStamp | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
 
@@ -169,6 +171,38 @@ const StampsPage = () => {
       }
     } finally {
       setCollectingStampId(null);
+    }
+  };
+
+  const handleDeleteCollectedStamp = async () => {
+    if (!stampToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('tourist_collected_stamps')
+        .delete()
+        .eq('id', stampToDelete.id)
+        .eq('tourist_id', profile!.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "🗑️ Stamp șters din colecție",
+        description: `${stampToDelete.poi_stamps.stamp_icon} ${stampToDelete.poi_stamps.name} a fost șters.`,
+      });
+
+      // Refresh stamps
+      fetchStamps();
+
+    } catch (error) {
+      console.error('[StampsPage] Error deleting collected stamp:', error);
+      toast({
+        title: "Eroare",
+        description: "Nu s-a putut șterge stamp-ul.",
+        variant: "destructive",
+      });
+    } finally {
+      setStampToDelete(null);
     }
   };
 
@@ -366,12 +400,22 @@ const StampsPage = () => {
               {collectedStamps.map((collected) => {
                 const stamp = collected.poi_stamps;
                 return (
-                  <Card key={collected.id} className="bg-muted/30">
+                  <Card key={collected.id} className="bg-muted/30 relative hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
+                      {/* Delete Button */}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute top-1 right-1 h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setStampToDelete(collected)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+
                       <div className="flex items-center gap-3">
                         <div className="text-3xl opacity-90">{stamp.stamp_icon}</div>
                         
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 pr-8">
                           <div className="flex items-center gap-2 mb-1">
                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                             <h5 className="font-medium text-sm truncate">{stamp.name}</h5>
@@ -415,6 +459,38 @@ const StampsPage = () => {
           </Card>
         )}
       </div>
+
+      {/* Delete Collected Stamp Confirmation Dialog */}
+      <AlertDialog open={!!stampToDelete} onOpenChange={(open) => !open && setStampToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-amber-100 p-3">
+                <AlertTriangle className="h-8 w-8 text-amber-600" />
+              </div>
+            </div>
+            <AlertDialogTitle className="text-center">
+              Șterge Stamp Colectat?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Vrei să ștergi <strong>"{stampToDelete?.poi_stamps.name}"</strong> din colecția ta?
+              <br />
+              <br />
+              Îl poți re-colecta oricând mai târziu dacă este disponibil.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0">Nu, păstrează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCollectedStamp}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 m-0"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Da, șterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
