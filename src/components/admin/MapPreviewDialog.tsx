@@ -98,14 +98,40 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
     return null;
   }
 
+  // Filter out locations with invalid coordinates
+  const validLocations = mapConfig.locations.filter((loc: any) => {
+    const lat = Number(loc.lat);
+    const lng = Number(loc.lng);
+    return !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng);
+  });
+
+  if (validLocations.length === 0) {
+    return null;
+  }
+
+  // Validate bounds values
+  const boundsNorth = Number(mapConfig.bounds_north);
+  const boundsSouth = Number(mapConfig.bounds_south);
+  const boundsEast = Number(mapConfig.bounds_east);
+  const boundsWest = Number(mapConfig.bounds_west);
+
+  const areBoundsValid = !isNaN(boundsNorth) && !isNaN(boundsSouth) && 
+                         !isNaN(boundsEast) && !isNaN(boundsWest) &&
+                         isFinite(boundsNorth) && isFinite(boundsSouth) &&
+                         isFinite(boundsEast) && isFinite(boundsWest);
+
+  if (!areBoundsValid) {
+    return null;
+  }
+
   const center: [number, number] = [
-    (mapConfig.bounds_north + mapConfig.bounds_south) / 2,
-    (mapConfig.bounds_east + mapConfig.bounds_west) / 2
+    (boundsNorth + boundsSouth) / 2,
+    (boundsEast + boundsWest) / 2
   ];
 
   const bounds: [[number, number], [number, number]] = [
-    [mapConfig.bounds_south, mapConfig.bounds_west],
-    [mapConfig.bounds_north, mapConfig.bounds_east]
+    [boundsSouth, boundsWest],
+    [boundsNorth, boundsEast]
   ];
 
   return (
@@ -140,13 +166,13 @@ export function MapPreviewDialog({ open, onOpenChange, mapConfig, tripId }: MapP
             />
 
             {/* City markers */}
-            {mapConfig.locations.map((location: any, idx: number) => (
-              <Marker key={`city-${idx}`} position={[location.lat, location.lng]}>
+            {validLocations.map((location: any, idx: number) => (
+              <Marker key={`city-${idx}`} position={[Number(location.lat), Number(location.lng)]}>
                 <Popup>
                   <div className="text-sm">
                     <p className="font-semibold">{location.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                      {Number(location.lat).toFixed(4)}, {Number(location.lng).toFixed(4)}
                     </p>
                   </div>
                 </Popup>
