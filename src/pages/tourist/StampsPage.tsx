@@ -61,9 +61,10 @@ const StampsPage = () => {
       if (groupError) throw groupError;
 
       if (!groupData) {
-        console.log('[StampsPage] No group found');
+        console.log('[StampsPage] No group found for tourist');
         setAvailableStamps([]);
         setCollectedStamps([]);
+        setLoading(false);
         return;
       }
 
@@ -78,9 +79,10 @@ const StampsPage = () => {
       if (tripError) throw tripError;
 
       if (!tripData) {
-        console.log('[StampsPage] No active trip found');
+        console.log('[StampsPage] No active trip found for group');
         setAvailableStamps([]);
         setCollectedStamps([]);
+        setLoading(false);
         return;
       }
 
@@ -117,7 +119,7 @@ const StampsPage = () => {
       console.error('[StampsPage] Error fetching stamps:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-au putut încărca stamps-urile.",
+        description: "Nu s-au putut încărca stamps-urile. Încearcă din nou.",
         variant: "destructive",
       });
     } finally {

@@ -760,7 +760,7 @@ const TouristDashboard = () => {
 
           {/* Stamps Collection Widget */}
           {stampsStats.total > 0 && (
-            <Link to="/stamps">
+            <Link to="/checkin">
               <Card className="shadow-soft border-0 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-amber-500/10 to-background">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
