@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MessageInput } from "./MessageInput";
-import { MessageSkeleton } from "@/components/shared/skeletons/MessageSkeleton";
 
 interface Message {
   id: string;
@@ -201,7 +200,14 @@ export const MessageThread = ({
   };
 
   if (loading) {
-    return <MessageSkeleton count={8} />;
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Se încarcă mesajele...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -9,8 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { useNavigate } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CardSkeleton } from "@/components/shared/skeletons/CardSkeleton";
 
 interface Trip {
   id: string;
@@ -183,14 +181,8 @@ const GuideDashboard = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-10 w-64 mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <CardSkeleton count={3} />
-        </div>
-        <div className="mt-6">
-          <CardSkeleton count={2} />
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }

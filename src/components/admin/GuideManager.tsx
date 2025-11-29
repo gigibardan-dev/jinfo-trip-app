@@ -23,8 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ListSkeleton } from "@/components/shared/skeletons/ListSkeleton";
 
 interface Guide {
   id: string;
@@ -647,12 +645,8 @@ const GuideManager = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <ListSkeleton count={6} showAvatar={true} />
+      <div className="flex items-center justify-center py-12">
+        <div className="text-lg text-muted-foreground">Se încarcă...</div>
       </div>
     );
   }
