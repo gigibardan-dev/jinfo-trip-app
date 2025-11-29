@@ -684,8 +684,11 @@ export const ConversationList = ({
                               </span>
                             )}
                             {unreadCount > 0 && (
-                              <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5">
-                                {unreadCount}
+                              <Badge 
+                                variant="destructive" 
+                                className="ml-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 bg-destructive text-destructive-foreground font-semibold shadow-sm animate-pulse"
+                              >
+                                {unreadCount > 9 ? '9+' : unreadCount}
                               </Badge>
                             )}
                           </div>
