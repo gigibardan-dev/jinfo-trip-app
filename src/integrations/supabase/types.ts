@@ -757,6 +757,66 @@ export type Database = {
           },
         ]
       }
+      poi_stamps: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          itinerary_day_id: string | null
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          points_value: number
+          rarity: Database["public"]["Enums"]["stamp_rarity"]
+          stamp_icon: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          itinerary_day_id?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          points_value?: number
+          rarity?: Database["public"]["Enums"]["stamp_rarity"]
+          stamp_icon?: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          itinerary_day_id?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          points_value?: number
+          rarity?: Database["public"]["Enums"]["stamp_rarity"]
+          stamp_icon?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poi_stamps_itinerary_day_id_fkey"
+            columns: ["itinerary_day_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poi_stamps_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -798,6 +858,103 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tourist_badges: {
+        Row: {
+          badge_icon: string
+          badge_name: string
+          badge_type: string
+          earned_at: string
+          id: string
+          metadata: Json | null
+          tourist_id: string
+          trip_id: string | null
+        }
+        Insert: {
+          badge_icon?: string
+          badge_name: string
+          badge_type: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          tourist_id: string
+          trip_id?: string | null
+        }
+        Update: {
+          badge_icon?: string
+          badge_name?: string
+          badge_type?: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          tourist_id?: string
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tourist_badges_tourist_id_fkey"
+            columns: ["tourist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tourist_badges_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tourist_collected_stamps: {
+        Row: {
+          collected_at: string
+          collection_method: Database["public"]["Enums"]["collection_method"]
+          id: string
+          stamp_id: string
+          tourist_id: string
+          trip_id: string
+        }
+        Insert: {
+          collected_at?: string
+          collection_method?: Database["public"]["Enums"]["collection_method"]
+          id?: string
+          stamp_id: string
+          tourist_id: string
+          trip_id: string
+        }
+        Update: {
+          collected_at?: string
+          collection_method?: Database["public"]["Enums"]["collection_method"]
+          id?: string
+          stamp_id?: string
+          tourist_id?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tourist_collected_stamps_stamp_id_fkey"
+            columns: ["stamp_id"]
+            isOneToOne: false
+            referencedRelation: "poi_stamps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tourist_collected_stamps_tourist_id_fkey"
+            columns: ["tourist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tourist_collected_stamps_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tourist_groups: {
         Row: {
@@ -981,6 +1138,7 @@ export type Database = {
         | "accommodation"
         | "free_time"
         | "custom"
+      collection_method: "manual" | "auto" | "guide_activated"
       conversation_type: "direct" | "group" | "broadcast"
       document_category:
         | "identity"
@@ -992,6 +1150,7 @@ export type Database = {
       group_role: "primary" | "member" | "guide"
       message_type: "info" | "urgent" | "reminder" | "update"
       resource_type: "documents" | "itinerary" | "maps" | "images"
+      stamp_rarity: "common" | "rare" | "legendary"
       target_type: "broadcast" | "group" | "individual"
       trip_status: "draft" | "confirmed" | "active" | "completed" | "cancelled"
       user_role: "admin" | "tourist" | "guide"
@@ -1131,6 +1290,7 @@ export const Constants = {
         "free_time",
         "custom",
       ],
+      collection_method: ["manual", "auto", "guide_activated"],
       conversation_type: ["direct", "group", "broadcast"],
       document_category: [
         "identity",
@@ -1143,6 +1303,7 @@ export const Constants = {
       group_role: ["primary", "member", "guide"],
       message_type: ["info", "urgent", "reminder", "update"],
       resource_type: ["documents", "itinerary", "maps", "images"],
+      stamp_rarity: ["common", "rare", "legendary"],
       target_type: ["broadcast", "group", "individual"],
       trip_status: ["draft", "confirmed", "active", "completed", "cancelled"],
       user_role: ["admin", "tourist", "guide"],

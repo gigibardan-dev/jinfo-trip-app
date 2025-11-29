@@ -14,7 +14,8 @@ import {
   Users,
   AlertCircle,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Trophy
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +67,7 @@ const TouristDashboard = () => {
   const [assignedGuide, setAssignedGuide] = useState<GuideInfo | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [newDocumentsCount, setNewDocumentsCount] = useState(0);
+  const [stampsStats, setStampsStats] = useState<{ total: number; collected: number }>({ total: 0, collected: 0 });
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -92,6 +94,7 @@ const TouristDashboard = () => {
         if (data.documentStats) setDocumentStats(data.documentStats);
         if (data.assignedGuide) setAssignedGuide(data.assignedGuide);
         if (data.newDocumentsCount !== undefined) setNewDocumentsCount(data.newDocumentsCount);
+        if (data.stampsStats) setStampsStats(data.stampsStats);
         
         // IMPORTANT: We do NOT skip the fetch!
         // Cache only provides instant UI, fetch ALWAYS runs for fresh data
@@ -110,6 +113,7 @@ const TouristDashboard = () => {
       let freshDocumentStats = { total: 0, cached: 0 };
       let freshNewDocumentsCount = 0;
       let freshAssignedGuide: GuideInfo | null = null;
+      let freshStampsStats = { total: 0, collected: 0 };
 
       // Fetch ALL data in PARALLEL with Promise.allSettled
       const results = await Promise.allSettled([
@@ -262,6 +266,26 @@ const TouristDashboard = () => {
                   }
                 }
               }
+              
+              // Fetch 9: Stamps stats
+              const { data: allStamps, error: stampsError } = await supabase
+                .from('poi_stamps')
+                .select('id')
+                .eq('trip_id', activeTrip.id);
+              
+              const { data: collectedStampsData, error: collectedError } = await supabase
+                .from('tourist_collected_stamps')
+                .select('id')
+                .eq('tourist_id', profile!.id)
+                .eq('trip_id', activeTrip.id);
+              
+              if (!stampsError && !collectedError) {
+                freshStampsStats = {
+                  total: allStamps?.length || 0,
+                  collected: collectedStampsData?.length || 0
+                };
+                setStampsStats(freshStampsStats);
+              }
             }
 
             const groupsInfo = memberGroups.map(mg => ({
@@ -279,7 +303,8 @@ const TouristDashboard = () => {
               groupMemberCount: freshGroupMemberCount,
               documentStats: freshDocumentStats,
               assignedGuide: freshAssignedGuide,
-              newDocumentsCount: freshNewDocumentsCount
+              newDocumentsCount: freshNewDocumentsCount,
+              stampsStats: freshStampsStats
             };
 
             localStorage.setItem('cached_trip_data', JSON.stringify({
@@ -732,6 +757,31 @@ const TouristDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Stamps Collection Widget */}
+          {stampsStats.total > 0 && (
+            <Link to="/stamps">
+              <Card className="shadow-soft border-0 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-amber-500/10 to-background">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-600" />
+                    Colecția Ta
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Stamps colectate</span>
+                      <span className="font-semibold text-lg">{stampsStats.collected}/{stampsStats.total}</span>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Vezi Colecția 🏆
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {/* Documents Status */}
           <Card className="shadow-soft border-0">

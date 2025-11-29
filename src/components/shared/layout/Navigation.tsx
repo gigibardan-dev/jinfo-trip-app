@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal, Shield, ScrollText } from "lucide-react";
+import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal, Shield, ScrollText, Trophy } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { InstallPWAButton } from "@/components/shared/pwa/InstallPWAButton";
@@ -48,6 +48,8 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
       setActiveTab("itinerary");
     } else if (path.includes("reports")) {
       setActiveTab("reports");
+    } else if (path.includes("stamps")) {
+      setActiveTab("stamps");
     } else if (path.includes("messages")) {
       setActiveTab("messages");
     }
@@ -57,6 +59,7 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
   const touristNavItems = [
     { id: "dashboard", label: "Acasă", icon: Home, path: "/" },
     { id: "itinerary", label: "Itinerariu", icon: Plane, path: "/itinerary" },
+    { id: "stamps", label: "Stamps", icon: Trophy, path: "/stamps" },
     { id: "documents", label: "Documente", icon: FileText, path: "/documents" },
     { id: "messages", label: "Mesaje", icon: MessageSquare, path: "/messages" },
   ];
