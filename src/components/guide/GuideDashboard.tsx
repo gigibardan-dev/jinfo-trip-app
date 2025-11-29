@@ -45,91 +45,129 @@ const GuideDashboard = () => {
   }, [user]);
 
   const fetchAssignments = async () => {
+    // Load cached guide dashboard instantly
+    const cached = localStorage.getItem('cached_guide_dashboard');
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        console.log('[GuideDashboard] Loading from cache instantly:', timestamp);
+        
+        setAssignments(data.assignments || []);
+        setTodayReports(data.todayReports || []);
+        setMapsAvailable(data.mapsAvailable || 0);
+        
+        const cacheAge = Date.now() - new Date(timestamp).getTime();
+        const isFresh = cacheAge < 5 * 60 * 1000;
+        
+        if (isFresh) {
+          setLoading(false);
+          console.log('[GuideDashboard] Using fresh cache, skipping fetch');
+          return;
+        }
+      } catch (error) {
+        console.error('[GuideDashboard] Cache error:', error);
+      }
+    }
+
     try {
-      // First fetch assignments
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('guide_assignments')
-        .select('*')
-        .eq('guide_user_id', user?.id)
-        .eq('is_active', true)
-        .order('assigned_at', { ascending: false });
+      const today = new Date().toISOString().split('T')[0];
 
-      if (assignmentsError) throw assignmentsError;
+      // Fetch ALL data in PARALLEL
+      const results = await Promise.allSettled([
+        // Fetch 1: Guide assignments
+        supabase
+          .from('guide_assignments')
+          .select('*')
+          .eq('guide_user_id', user?.id)
+          .eq('is_active', true)
+          .order('assigned_at', { ascending: false }),
+        
+        // Fetch 2: Today's reports
+        supabase
+          .from('daily_reports')
+          .select('*')
+          .eq('guide_user_id', user?.id)
+          .eq('report_date', today),
+      ]);
 
-      if (!assignmentsData || assignmentsData.length === 0) {
-        setAssignments([]);
-        return;
+      const [assignmentsResult, reportsResult] = results;
+
+      if (assignmentsResult.status === 'fulfilled' && !assignmentsResult.value.error) {
+        const assignmentsData = assignmentsResult.value.data;
+
+        if (assignmentsData && assignmentsData.length > 0) {
+          const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
+
+          // Fetch trips and maps in parallel
+          const tripResults = await Promise.allSettled([
+            // Fetch 3: Trip details
+            supabase
+              .from('trips')
+              .select('id, nume, destinatie, start_date, end_date, status, created_by_admin_id')
+              .in('id', tripIds),
+            
+            // Fetch 4: Available maps
+            supabase
+              .from('offline_map_configs')
+              .select('id')
+              .in('trip_id', tripIds),
+          ]);
+
+          const [tripsResult, mapsResult] = tripResults;
+
+          let tripsData = [];
+          if (tripsResult.status === 'fulfilled' && !tripsResult.value.error) {
+            tripsData = tripsResult.value.data || [];
+          }
+
+          const assignmentsWithTrips = assignmentsData.map(assignment => ({
+            ...assignment,
+            trips: tripsData.find(trip => trip.id === assignment.trip_id) || null
+          }));
+
+          setAssignments(assignmentsWithTrips);
+
+          if (mapsResult.status === 'fulfilled' && !mapsResult.value.error) {
+            setMapsAvailable(mapsResult.value.data?.length || 0);
+          }
+        } else {
+          setAssignments([]);
+        }
       }
 
-      // Get unique trip IDs
-      const tripIds = [...new Set(assignmentsData.map(a => a.trip_id))];
+      if (reportsResult.status === 'fulfilled' && !reportsResult.value.error) {
+        setTodayReports(reportsResult.value.data || []);
+      }
 
-      // Fetch trip details
-      const { data: tripsData, error: tripsError } = await supabase
-        .from('trips')
-        .select('id, nume, destinatie, start_date, end_date, status, created_by_admin_id')
-        .in('id', tripIds);
-
-      if (tripsError) throw tripsError;
-
-      // Combine assignments with trip data
-      const assignmentsWithTrips = assignmentsData.map(assignment => ({
-        ...assignment,
-        trips: tripsData?.find(trip => trip.id === assignment.trip_id) || null
+      // Update cache
+      localStorage.setItem('cached_guide_dashboard', JSON.stringify({
+        data: {
+          assignments: assignments,
+          todayReports: todayReports,
+          mapsAvailable: mapsAvailable,
+        },
+        timestamp: new Date().toISOString()
       }));
 
-      setAssignments(assignmentsWithTrips);
     } catch (error) {
       console.error('Error fetching assignments:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-au putut încărca circuitele atribuite.",
-        variant: "destructive",
-      });
+      if (!cached) {
+        toast({
+          title: "Eroare",
+          description: "Nu s-au putut încărca circuitele atribuite.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const fetchTodayReports = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .select('*')
-        .eq('guide_user_id', user?.id)
-        .eq('report_date', today);
-
-      if (error) throw error;
-      setTodayReports(data || []);
-    } catch (error) {
-      console.error('Error fetching today reports:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Now handled in fetchAssignments with parallel fetch
+    setLoading(false);
   };
 
   const fetchMapsAvailable = async () => {
-    try {
-      const { data: assignmentsData } = await supabase
-        .from('guide_assignments')
-        .select('trip_id')
-        .eq('guide_user_id', user?.id)
-        .eq('is_active', true);
-
-      if (!assignmentsData || assignmentsData.length === 0) {
-        setMapsAvailable(0);
-        return;
-      }
-
-      const tripIds = assignmentsData.map(a => a.trip_id);
-      const { data: mapsData } = await supabase
-        .from('offline_map_configs')
-        .select('id')
-        .in('trip_id', tripIds);
-
-      setMapsAvailable(mapsData?.length || 0);
-    } catch (error) {
-      console.error('Error fetching maps:', error);
-    }
+    // Now handled in fetchAssignments with parallel fetch
   };
 
   const getActiveTrips = () => {

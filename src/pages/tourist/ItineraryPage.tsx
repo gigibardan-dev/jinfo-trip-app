@@ -88,44 +88,107 @@ const ItineraryPage = () => {
   }, [selectedTrip]);
 
   const fetchUserTrips = async () => {
-    try {
-      // Get user's groups first
-      const { data: memberGroups, error: groupsError } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user!.id);
-
-      if (groupsError) throw groupsError;
-
-      if (!memberGroups || memberGroups.length === 0) {
-        setLoading(false);
-        return;
+    // Load cached trips instantly
+    const cached = localStorage.getItem('cached_user_trips');
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        console.log('[ItineraryPage] Loading trips from cache instantly:', timestamp);
+        
+        setTrips(data || []);
+        if (data && data.length > 0) {
+          setSelectedTrip(data[0]);
+        }
+        
+        const cacheAge = Date.now() - new Date(timestamp).getTime();
+        const isFresh = cacheAge < 5 * 60 * 1000;
+        
+        if (isFresh) {
+          console.log('[ItineraryPage] Using fresh cache, skipping fetch');
+          return;
+        }
+      } catch (error) {
+        console.error('[ItineraryPage] Cache error:', error);
       }
+    }
 
-      const groupIds = memberGroups.map(g => g.group_id);
+    try {
+      // Parallel fetching
+      const results = await Promise.allSettled([
+        supabase
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', user!.id),
+      ]);
 
-      // Get trips for user's groups only
-      const { data, error } = await supabase
-        .from("trips")
-        .select("id, nume, destinatie, start_date, end_date")
-        .in("group_id", groupIds)
-        .eq("status", "active")
-        .order("start_date", { ascending: true });
+      const [groupsResult] = results;
 
-      if (error) throw error;
-      setTrips(data || []);
-      
-      if (data && data.length > 0) {
-        setSelectedTrip(data[0]);
+      if (groupsResult.status === 'fulfilled' && !groupsResult.value.error) {
+        const memberGroups = groupsResult.value.data;
+
+        if (!memberGroups || memberGroups.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const groupIds = memberGroups.map(g => g.group_id);
+
+        const { data, error } = await supabase
+          .from("trips")
+          .select("id, nume, destinatie, start_date, end_date")
+          .in("group_id", groupIds)
+          .eq("status", "active")
+          .order("start_date", { ascending: true });
+
+        if (error) throw error;
+        setTrips(data || []);
+        
+        if (data && data.length > 0) {
+          setSelectedTrip(data[0]);
+        }
+
+        // Update cache
+        localStorage.setItem('cached_user_trips', JSON.stringify({
+          data: data || [],
+          timestamp: new Date().toISOString()
+        }));
       }
     } catch (error) {
       console.error("Error fetching trips:", error);
-      toast.error("Eroare la încărcarea circuitelor");
+      if (!cached) {
+        toast.error("Eroare la încărcarea circuitelor");
+      }
     }
   };
 
   const fetchItinerary = async () => {
     if (!selectedTrip) return;
+    
+    // Load cached itinerary instantly
+    const cacheKey = `cached_itinerary_${selectedTrip.id}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        console.log('[ItineraryPage] Loading itinerary from cache instantly:', timestamp);
+        
+        setItineraryDays(data);
+        if (!selectedDay || selectedDay === "all") {
+          setSelectedDay("all");
+        }
+        
+        const cacheAge = Date.now() - new Date(timestamp).getTime();
+        const isFresh = cacheAge < 5 * 60 * 1000;
+        
+        if (isFresh) {
+          setLoading(false);
+          console.log('[ItineraryPage] Using fresh cache, skipping fetch');
+          return;
+        }
+      } catch (error) {
+        console.error('[ItineraryPage] Cache error:', error);
+      }
+    }
     
     setLoading(true);
     try {
@@ -137,6 +200,7 @@ const ItineraryPage = () => {
 
       if (daysError) throw daysError;
 
+      // Fetch all activities in parallel
       const daysWithActivities = await Promise.all(
         (daysData || []).map(async (day) => {
           const { data: activitiesData, error: activitiesError } = await supabase
@@ -155,13 +219,20 @@ const ItineraryPage = () => {
       );
 
       setItineraryDays(daysWithActivities);
-      // Default to "all" view
       if (!selectedDay || selectedDay === "all") {
         setSelectedDay("all");
       }
+
+      // Update cache
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data: daysWithActivities,
+        timestamp: new Date().toISOString()
+      }));
     } catch (error) {
       console.error("Error fetching itinerary:", error);
-      toast.error("Eroare la încărcarea itinerarului");
+      if (!cached) {
+        toast.error("Eroare la încărcarea itinerarului");
+      }
     } finally {
       setLoading(false);
     }

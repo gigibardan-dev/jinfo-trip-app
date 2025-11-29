@@ -45,85 +45,122 @@ const AdminDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    // Load cached admin stats instantly
+    const cached = localStorage.getItem('cached_admin_stats');
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        console.log('[AdminDashboard] Loading from cache instantly:', timestamp);
+        
+        setStats(data.stats);
+        setRecentTrips(data.recentTrips);
+        setExpiringDocuments(data.expiringDocuments);
+        
+        const cacheAge = Date.now() - new Date(timestamp).getTime();
+        const isFresh = cacheAge < 5 * 60 * 1000;
+        
+        if (isFresh) {
+          setLoading(false);
+          console.log('[AdminDashboard] Using fresh cache, skipping fetch');
+          return;
+        }
+      } catch (error) {
+        console.error('[AdminDashboard] Cache error:', error);
+      }
+    }
+
+    setLoading(true);
+
     try {
-      // Fetch active trips count
-      const { data: activeTripsData, error: tripsError } = await supabase
-        .from('trips')
-        .select('id', { count: 'exact' })
-        .in('status', ['active', 'confirmed']);
-      
-      if (tripsError) throw tripsError;
-
-      // Fetch tourists count
-      const { data: touristsData, error: touristsError } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact' })
-        .eq('role', 'tourist')
-        .eq('is_active', true);
-      
-      if (touristsError) throw touristsError;
-
-      // Fetch documents count
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('documents')
-        .select('id', { count: 'exact' });
-      
-      if (documentsError) throw documentsError;
-
-      // Fetch guides count
-      const { data: guidesData, error: guidesError } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact' })
-        .eq('role', 'guide')
-        .eq('is_active', true);
-      
-      if (guidesError) throw guidesError;
-
-      setStats({
-        activeTrips: activeTripsData?.length || 0,
-        tourists: touristsData?.length || 0,
-        documents: documentsData?.length || 0,
-        guides: guidesData?.length || 0
-      });
-
-      // Fetch recent trips with group info
-      const { data: tripsData, error: recentTripsError } = await supabase
-        .from('trips')
-        .select(`
-          *,
-          tourist_groups (
-            nume_grup
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (recentTripsError) throw recentTripsError;
-      setRecentTrips(tripsData || []);
-
-      // Fetch expiring documents (within 30 days)
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      
-      const { data: expiringDocs, error: expiringError } = await supabase
-        .from('documents')
-        .select('id, nume, expiry_date, trip_id')
-        .not('expiry_date', 'is', null)
-        .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
-        .gte('expiry_date', new Date().toISOString().split('T')[0])
-        .order('expiry_date', { ascending: true })
-        .limit(5);
-      
-      if (expiringError) throw expiringError;
-      setExpiringDocuments(expiringDocs || []);
+
+      // Fetch ALL data in PARALLEL
+      const results = await Promise.allSettled([
+        // Fetch 1: Active trips
+        supabase
+          .from('trips')
+          .select('id', { count: 'exact' })
+          .in('status', ['active', 'confirmed']),
+        
+        // Fetch 2: Tourists
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact' })
+          .eq('role', 'tourist')
+          .eq('is_active', true),
+        
+        // Fetch 3: Documents
+        supabase
+          .from('documents')
+          .select('id', { count: 'exact' }),
+        
+        // Fetch 4: Guides
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact' })
+          .eq('role', 'guide')
+          .eq('is_active', true),
+        
+        // Fetch 5: Recent trips
+        supabase
+          .from('trips')
+          .select(`
+            *,
+            tourist_groups (
+              nume_grup
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        
+        // Fetch 6: Expiring documents
+        supabase
+          .from('documents')
+          .select('id, nume, expiry_date, trip_id')
+          .not('expiry_date', 'is', null)
+          .lte('expiry_date', thirtyDaysFromNow.toISOString().split('T')[0])
+          .gte('expiry_date', new Date().toISOString().split('T')[0])
+          .order('expiry_date', { ascending: true })
+          .limit(5),
+      ]);
+
+      const [tripsResult, touristsResult, documentsResult, guidesResult, recentTripsResult, expiringDocsResult] = results;
+
+      // Process results
+      const statsData = {
+        activeTrips: tripsResult.status === 'fulfilled' && !tripsResult.value.error ? tripsResult.value.data?.length || 0 : 0,
+        tourists: touristsResult.status === 'fulfilled' && !touristsResult.value.error ? touristsResult.value.data?.length || 0 : 0,
+        documents: documentsResult.status === 'fulfilled' && !documentsResult.value.error ? documentsResult.value.data?.length || 0 : 0,
+        guides: guidesResult.status === 'fulfilled' && !guidesResult.value.error ? guidesResult.value.data?.length || 0 : 0,
+      };
+
+      const recentTripsData = recentTripsResult.status === 'fulfilled' && !recentTripsResult.value.error ? recentTripsResult.value.data || [] : [];
+      const expiringDocsData = expiringDocsResult.status === 'fulfilled' && !expiringDocsResult.value.error ? expiringDocsResult.value.data || [] : [];
+
+      setStats(statsData);
+      setRecentTrips(recentTripsData);
+      setExpiringDocuments(expiringDocsData);
+
+      // Update cache
+      localStorage.setItem('cached_admin_stats', JSON.stringify({
+        data: {
+          stats: statsData,
+          recentTrips: recentTripsData,
+          expiringDocuments: expiringDocsData,
+        },
+        timestamp: new Date().toISOString()
+      }));
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-au putut încărca datele dashboard-ului.",
-        variant: "destructive",
-      });
+      if (!cached) {
+        toast({
+          title: "Eroare",
+          description: "Nu s-au putut încărca datele dashboard-ului.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
