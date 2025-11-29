@@ -45,13 +45,50 @@ const StampsPage = () => {
 
   useEffect(() => {
     if (profile?.id) {
+      // Load from cache first for instant display
+      loadFromCache();
+      // Then fetch fresh data
       fetchStamps();
     }
   }, [profile?.id]);
 
+  const loadFromCache = () => {
+    try {
+      const cachedStamps = localStorage.getItem('cached_stamps_data');
+      const cachedCollected = localStorage.getItem('cached_collected_stamps_data');
+      
+      if (cachedStamps) {
+        const parsed = JSON.parse(cachedStamps);
+        const cacheAge = Date.now() - parsed.timestamp;
+        
+        // Use cache if less than 5 minutes old
+        if (cacheAge < 5 * 60 * 1000) {
+          setAvailableStamps(parsed.stamps || []);
+          console.log('[StampsPage] Loaded stamps from cache:', parsed.stamps?.length || 0);
+        }
+      }
+
+      if (cachedCollected) {
+        const parsed = JSON.parse(cachedCollected);
+        const cacheAge = Date.now() - parsed.timestamp;
+        
+        if (cacheAge < 5 * 60 * 1000) {
+          setCollectedStamps(parsed.collected || []);
+          console.log('[StampsPage] Loaded collected stamps from cache:', parsed.collected?.length || 0);
+        }
+      }
+    } catch (error) {
+      console.error('[StampsPage] Error loading from cache:', error);
+    }
+  };
+
   const fetchStamps = async () => {
     try {
-      setLoading(true);
+      // Don't show loading spinner if we have cache
+      const hasCache = localStorage.getItem('cached_stamps_data') || localStorage.getItem('cached_collected_stamps_data');
+      if (!hasCache) {
+        setLoading(true);
+      }
 
       // Fetch trip-ul activ al turistului
       const { data: groupData, error: groupError } = await supabase
@@ -117,13 +154,34 @@ const StampsPage = () => {
       setAvailableStamps(stamps || []);
       setCollectedStamps(collected || []);
 
+      // Cache the fresh data
+      try {
+        localStorage.setItem('cached_stamps_data', JSON.stringify({
+          stamps: stamps || [],
+          timestamp: Date.now()
+        }));
+        localStorage.setItem('cached_collected_stamps_data', JSON.stringify({
+          collected: collected || [],
+          timestamp: Date.now()
+        }));
+        console.log('[StampsPage] Cached fresh stamps data');
+      } catch (cacheError) {
+        console.error('[StampsPage] Error caching stamps:', cacheError);
+      }
+
     } catch (error) {
       console.error('[StampsPage] Error fetching stamps:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-au putut încărca stamps-urile. Încearcă din nou.",
-        variant: "destructive",
-      });
+      
+      // Check if we have cached data to fall back to
+      const cachedStamps = localStorage.getItem('cached_stamps_data');
+      const cachedCollected = localStorage.getItem('cached_collected_stamps_data');
+      
+      if (!cachedStamps && !cachedCollected) {
+        toast({
+          title: "Mod Offline",
+          description: "Vizualizezi ultima versiune salvată a stamps-urilor.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -275,9 +333,23 @@ const StampsPage = () => {
     );
   }
 
+  // Check if offline
+  const isOffline = !navigator.onLine;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="bg-amber-100 border-b border-amber-200 py-2 px-4">
+          <div className="container mx-auto max-w-4xl">
+            <p className="text-sm text-amber-800 text-center">
+              📱 <strong>Mod Offline</strong> - Vizualizezi ultima versiune salvată
+            </p>
+          </div>
+        </div>
+      )}
       
       <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl space-y-6">
         {/* Header cu Progress */}
