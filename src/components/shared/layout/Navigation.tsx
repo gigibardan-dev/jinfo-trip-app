@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Home, Plane, FileText, MessageSquare, Users, Compass, ClipboardList, Settings, LogOut, ChevronDown, MoreHorizontal, Shield, ScrollText } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { InstallPWAButton } from "@/components/shared/pwa/InstallPWAButton";
@@ -164,6 +164,15 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                       Setări
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/privacy-policy")}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Confidențialitate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/terms")}>
+                    <ScrollText className="w-4 h-4 mr-2" />
+                    Termeni și Condiții
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
