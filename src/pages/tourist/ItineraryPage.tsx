@@ -72,7 +72,7 @@ const ItineraryPage = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [itineraryDays, setItineraryDays] = useState<ItineraryDay[]>([]);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -155,8 +155,9 @@ const ItineraryPage = () => {
       );
 
       setItineraryDays(daysWithActivities);
-      if (daysWithActivities.length > 0 && !selectedDay) {
-        setSelectedDay(daysWithActivities[0].id);
+      // Default to "all" view
+      if (!selectedDay || selectedDay === "all") {
+        setSelectedDay("all");
       }
     } catch (error) {
       console.error("Error fetching itinerary:", error);
@@ -321,63 +322,133 @@ const ItineraryPage = () => {
                 </AlertDescription>
               </Alert>
             ) : (
-              <Tabs value={selectedDay || ""} onValueChange={setSelectedDay}>
+              <div>
+                {/* Mobile-friendly day selector with horizontal scroll */}
                 <div className="mb-6">
                   <Label className="mb-3 block text-sm font-medium">Selectează ziua:</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {itineraryDays.map((day) => (
+                  <div className="relative">
+                    <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+                      {/* "All Days" option */}
                       <button
-                        key={day.id}
-                        onClick={() => setSelectedDay(day.id)}
-                        className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                          selectedDay === day.id
+                        onClick={() => setSelectedDay("all")}
+                        className={`flex-shrink-0 px-4 py-3 rounded-lg border-2 transition-all snap-start ${
+                          selectedDay === "all"
                             ? 'border-primary bg-primary text-primary-foreground shadow-md'
                             : 'border-muted bg-background hover:border-primary/50 hover:shadow-sm'
                         }`}
                       >
-                        <div className="text-sm font-semibold">Ziua {day.day_number}</div>
+                        <div className="text-sm font-semibold whitespace-nowrap">Toate Zilele</div>
                         <div className="text-xs opacity-80">
-                          {format(parseISO(day.date), "d MMM", { locale: ro })}
+                          {itineraryDays.length} {itineraryDays.length === 1 ? 'zi' : 'zile'}
                         </div>
                       </button>
-                    ))}
+                      
+                      {/* Individual days */}
+                      {itineraryDays.map((day) => (
+                        <button
+                          key={day.id}
+                          onClick={() => setSelectedDay(day.id)}
+                          className={`flex-shrink-0 px-4 py-3 rounded-lg border-2 transition-all snap-start ${
+                            selectedDay === day.id
+                              ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                              : 'border-muted bg-background hover:border-primary/50 hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold whitespace-nowrap">Ziua {day.day_number}</div>
+                          <div className="text-xs opacity-80 whitespace-nowrap">
+                            {format(parseISO(day.date), "d MMM", { locale: ro })}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {itineraryDays.map((day) => (
-                  <TabsContent key={day.id} value={day.id} className="mt-6">
-                    <Card className="mb-4">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5" />
-                          {day.title}
-                        </CardTitle>
-                        <p className="text-muted-foreground">
-                          {format(parseISO(day.date), "EEEE, d MMMM yyyy", { locale: ro })}
-                        </p>
-                        {day.overview && (
-                          <p className="text-sm text-muted-foreground mt-2">{day.overview}</p>
-                        )}
-                      </CardHeader>
-                    </Card>
+                {/* Content area */}
+                {selectedDay === "all" ? (
+                  // Show all days in sequence
+                  <div className="space-y-8">
+                    {itineraryDays.map((day, index) => (
+                      <div key={day.id} className="scroll-mt-20" id={`day-${day.day_number}`}>
+                        <Card className="mb-4">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Calendar className="h-5 w-5" />
+                              <span>Ziua {day.day_number}: {day.title}</span>
+                            </CardTitle>
+                            <p className="text-muted-foreground">
+                              {format(parseISO(day.date), "EEEE, d MMMM yyyy", { locale: ro })}
+                            </p>
+                            {day.overview && (
+                              <p className="text-sm text-muted-foreground mt-2">{day.overview}</p>
+                            )}
+                          </CardHeader>
+                        </Card>
 
-                    <div className="space-y-4">
-                      {day.activities.length === 0 ? (
-                        <Alert>
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription>
-                            Nu sunt planificate activități pentru această zi.
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        day.activities.map((activity) => (
-                          <ActivityCard key={activity.id} activity={activity} />
-                        ))
-                      )}
-                    </div>
-                  </TabsContent>
-                ))}
-              </Tabs>
+                        <div className="space-y-4">
+                          {day.activities.length === 0 ? (
+                            <Alert>
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                Nu sunt planificate activități pentru această zi.
+                              </AlertDescription>
+                            </Alert>
+                          ) : (
+                            day.activities.map((activity) => (
+                              <ActivityCard key={activity.id} activity={activity} />
+                            ))
+                          )}
+                        </div>
+
+                        {/* Separator between days (except last one) */}
+                        {index < itineraryDays.length - 1 && (
+                          <div className="mt-8 border-t border-border/50"></div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Show selected day only
+                  (() => {
+                    const day = itineraryDays.find(d => d.id === selectedDay);
+                    if (!day) return null;
+                    
+                    return (
+                      <div>
+                        <Card className="mb-4">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Calendar className="h-5 w-5" />
+                              {day.title}
+                            </CardTitle>
+                            <p className="text-muted-foreground">
+                              {format(parseISO(day.date), "EEEE, d MMMM yyyy", { locale: ro })}
+                            </p>
+                            {day.overview && (
+                              <p className="text-sm text-muted-foreground mt-2">{day.overview}</p>
+                            )}
+                          </CardHeader>
+                        </Card>
+
+                        <div className="space-y-4">
+                          {day.activities.length === 0 ? (
+                            <Alert>
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                Nu sunt planificate activități pentru această zi.
+                              </AlertDescription>
+                            </Alert>
+                          ) : (
+                            day.activities.map((activity) => (
+                              <ActivityCard key={activity.id} activity={activity} />
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
             )}
           </>
         )}
