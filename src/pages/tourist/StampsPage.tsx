@@ -34,9 +34,20 @@ interface CollectedStamp {
   poi_stamps: Stamp;
 }
 
+interface LeaderboardEntry {
+  id: string;
+  nume: string;
+  prenume: string;
+  avatar_url: string | null;
+  stamps_collected: number;
+  total_points: number;
+}
+
 const StampsPage = () => {
   const [availableStamps, setAvailableStamps] = useState<Stamp[]>([]);
   const [collectedStamps, setCollectedStamps] = useState<CollectedStamp[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [groupName, setGroupName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [collectingStampId, setCollectingStampId] = useState<string | null>(null);
   const [stampToDelete, setStampToDelete] = useState<CollectedStamp | null>(null);
@@ -49,6 +60,7 @@ const StampsPage = () => {
       loadFromCache();
       // Then fetch fresh data
       fetchStamps();
+      fetchLeaderboard();
     }
   }, [profile?.id]);
 
@@ -56,6 +68,7 @@ const StampsPage = () => {
     try {
       const cachedStamps = localStorage.getItem('cached_stamps_data');
       const cachedCollected = localStorage.getItem('cached_collected_stamps_data');
+      const cachedLeaderboard = localStorage.getItem('cached_leaderboard_data');
       
       if (cachedStamps) {
         const parsed = JSON.parse(cachedStamps);
@@ -75,6 +88,17 @@ const StampsPage = () => {
         if (cacheAge < 5 * 60 * 1000) {
           setCollectedStamps(parsed.collected || []);
           console.log('[StampsPage] Loaded collected stamps from cache:', parsed.collected?.length || 0);
+        }
+      }
+
+      if (cachedLeaderboard) {
+        const parsed = JSON.parse(cachedLeaderboard);
+        const cacheAge = Date.now() - parsed.timestamp;
+        
+        if (cacheAge < 5 * 60 * 1000) {
+          setLeaderboard(parsed.leaderboard || []);
+          setGroupName(parsed.groupName || "");
+          console.log('[StampsPage] Loaded leaderboard from cache:', parsed.leaderboard?.length || 0);
         }
       }
     } catch (error) {
@@ -209,8 +233,9 @@ const StampsPage = () => {
         duration: 5000,
       });
 
-      // Refresh stamps
+      // Refresh stamps and leaderboard
       fetchStamps();
+      fetchLeaderboard();
 
     } catch (error: any) {
       console.error('[StampsPage] Error collecting stamp:', error);
@@ -249,8 +274,9 @@ const StampsPage = () => {
         description: `${stampToDelete.poi_stamps.stamp_icon} ${stampToDelete.poi_stamps.name} a fost șters.`,
       });
 
-      // Refresh stamps
+      // Refresh stamps and leaderboard
       fetchStamps();
+      fetchLeaderboard();
 
     } catch (error) {
       console.error('[StampsPage] Error deleting collected stamp:', error);
@@ -261,6 +287,99 @@ const StampsPage = () => {
       });
     } finally {
       setStampToDelete(null);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      // Fetch trip-ul activ al turistului
+      const { data: groupData, error: groupError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', profile!.id)
+        .maybeSingle();
+
+      if (groupError) throw groupError;
+      if (!groupData) return;
+
+      // Fetch trip-ul pentru grup
+      const { data: tripData, error: tripError } = await supabase
+        .from('trips')
+        .select('id, nume, destinatie, status, group_id, tourist_groups(nume_grup)')
+        .eq('group_id', groupData.group_id)
+        .in('status', ['confirmed', 'active'])
+        .maybeSingle();
+
+      if (tripError) throw tripError;
+      if (!tripData) return;
+
+      // @ts-ignore - nested relation
+      const fetchedGroupName = tripData.tourist_groups?.nume_grup || "Grupul tău";
+      setGroupName(fetchedGroupName);
+
+      // Fetch toți turiștii din grup
+      const { data: groupMembers, error: membersError } = await supabase
+        .from('group_members')
+        .select('user_id, profiles(id, nume, prenume, avatar_url, role)')
+        .eq('group_id', groupData.group_id);
+
+      if (membersError) throw membersError;
+      if (!groupMembers) return;
+
+      // Filter doar turiștii (exclude guide/admin)
+      const tourists = groupMembers
+        .filter((m: any) => m.profiles?.role === 'tourist')
+        .map((m: any) => m.profiles);
+
+      // Pentru fiecare turist, fetch stamps colectate și puncte
+      const leaderboardData: LeaderboardEntry[] = await Promise.all(
+        tourists.map(async (tourist: any) => {
+          const { data: collectedStampsData } = await supabase
+            .from('tourist_collected_stamps')
+            .select('id, stamp_id, poi_stamps(points_value)')
+            .eq('tourist_id', tourist.id)
+            .eq('trip_id', tripData.id);
+
+          const stampsCollected = collectedStampsData?.length || 0;
+          const totalPoints = collectedStampsData?.reduce(
+            (sum: number, cs: any) => sum + (cs.poi_stamps?.points_value || 0),
+            0
+          ) || 0;
+
+          return {
+            id: tourist.id,
+            nume: tourist.nume,
+            prenume: tourist.prenume,
+            avatar_url: tourist.avatar_url,
+            stamps_collected: stampsCollected,
+            total_points: totalPoints,
+          };
+        })
+      );
+
+      // Sortează descrescător după stamps, apoi după points
+      const sortedLeaderboard = leaderboardData.sort((a, b) => {
+        if (b.stamps_collected !== a.stamps_collected) {
+          return b.stamps_collected - a.stamps_collected;
+        }
+        return b.total_points - a.total_points;
+      });
+
+      setLeaderboard(sortedLeaderboard);
+
+      // Cache leaderboard data
+      try {
+        localStorage.setItem('cached_leaderboard_data', JSON.stringify({
+          leaderboard: sortedLeaderboard,
+          groupName: fetchedGroupName,
+          timestamp: Date.now()
+        }));
+        console.log('[StampsPage] Cached leaderboard data');
+      } catch (cacheError) {
+        console.error('[StampsPage] Error caching leaderboard:', cacheError);
+      }
+    } catch (error) {
+      console.error('[StampsPage] Error fetching leaderboard:', error);
     }
   };
 
@@ -297,6 +416,28 @@ const StampsPage = () => {
   const legendaryCollected = collectedStamps.filter(cs => cs.poi_stamps.rarity === 'legendary').length;
   const rareCollected = collectedStamps.filter(cs => cs.poi_stamps.rarity === 'rare').length;
   const commonCollected = collectedStamps.filter(cs => cs.poi_stamps.rarity === 'common').length;
+
+  // Leaderboard helpers
+  const getMedalIcon = (rank: number) => {
+    if (rank === 1) return '👑';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return null;
+  };
+
+  const getInitials = (nume: string, prenume: string) => {
+    return `${prenume.charAt(0)}${nume.charAt(0)}`.toUpperCase();
+  };
+
+  const getMotivationalMessage = (rank: number, totalUsers: number) => {
+    if (rank === 1) return "🏆 Felicitări! Ești pe primul loc!";
+    if (rank <= 3) return "Aproape de vârf! Colectează mai multe stamps!";
+    if (rank === totalUsers && totalUsers > 1) return "Începutul unei aventuri! Fiecare stamp contează!";
+    return "Continuă să colectezi! Top 3 e aproape!";
+  };
+
+  const currentUserRank = leaderboard.findIndex(entry => entry.id === profile?.id) + 1;
+  const showCurrentUserSeparately = currentUserRank > 10;
 
   if (loading) {
     return (
@@ -378,6 +519,154 @@ const StampsPage = () => {
             </div>
           </CardHeader>
         </Card>
+
+        {/* Leaderboard Section */}
+        {leaderboard.length > 0 && (
+          <Card className="bg-gradient-to-br from-violet-500/10 via-background to-background border-2 border-violet-500/20">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-amber-500" />
+                Leaderboard - {groupName}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Vezi cine a colectat cele mai multe stamps!
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {leaderboard.slice(0, 10).map((entry, index) => {
+                const rank = index + 1;
+                const isCurrentUser = entry.id === profile?.id;
+                const medalIcon = getMedalIcon(rank);
+                
+                return (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                      isCurrentUser
+                        ? 'bg-primary/10 border-l-4 border-primary shadow-sm'
+                        : 'bg-muted/30 hover:bg-muted/50'
+                    }`}
+                  >
+                    {/* Rank/Medal */}
+                    <div className="flex-shrink-0 w-8 text-center">
+                      {medalIcon ? (
+                        <span className="text-2xl">{medalIcon}</span>
+                      ) : (
+                        <span className="text-lg font-bold text-muted-foreground">{rank}</span>
+                      )}
+                    </div>
+
+                    {/* Avatar/Initials */}
+                    <div className="flex-shrink-0">
+                      {entry.avatar_url ? (
+                        <img
+                          src={entry.avatar_url}
+                          alt={`${entry.prenume} ${entry.nume}`}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                          {getInitials(entry.nume, entry.prenume)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate ${isCurrentUser ? 'font-bold' : ''}`}>
+                        {entry.prenume} {entry.nume}
+                        {isCurrentUser && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            Tu
+                          </Badge>
+                        )}
+                      </p>
+                      {isCurrentUser && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {getMotivationalMessage(rank, leaderboard.length)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex-shrink-0 text-right">
+                      <p className="font-semibold text-sm">
+                        {entry.stamps_collected}/{totalStamps} stamps
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {entry.total_points} pts
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Current user if outside top 10 */}
+              {showCurrentUserSeparately && (
+                <>
+                  <div className="text-center py-2 text-muted-foreground">...</div>
+                  {(() => {
+                    const currentUserEntry = leaderboard[currentUserRank - 1];
+                    return (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border-l-4 border-primary shadow-sm">
+                        <div className="flex-shrink-0 w-8 text-center">
+                          <span className="text-lg font-bold text-muted-foreground">
+                            {currentUserRank}
+                          </span>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {currentUserEntry.avatar_url ? (
+                            <img
+                              src={currentUserEntry.avatar_url}
+                              alt={`${currentUserEntry.prenume} ${currentUserEntry.nume}`}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                              {getInitials(currentUserEntry.nume, currentUserEntry.prenume)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate">
+                            {currentUserEntry.prenume} {currentUserEntry.nume}
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              Tu
+                            </Badge>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {getMotivationalMessage(currentUserRank, leaderboard.length)}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <p className="font-semibold text-sm">
+                            {currentUserEntry.stamps_collected}/{totalStamps} stamps
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {currentUserEntry.total_points} pts
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty state for single tourist */}
+        {leaderboard.length === 0 && !loading && (
+          <Card className="bg-gradient-to-br from-violet-500/10 via-background to-background border-2 border-violet-500/20">
+            <CardContent className="py-12 text-center">
+              <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">Leaderboard</h3>
+              <p className="text-muted-foreground">
+                Ești singurul turist în acest grup. Colectează stamps și devino lider!
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Summary */}
         {totalCollected > 0 && (
