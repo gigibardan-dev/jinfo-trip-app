@@ -48,8 +48,8 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
       setActiveTab("itinerary");
     } else if (path.includes("reports")) {
       setActiveTab("reports");
-    } else if (path.includes("stamps")) {
-      setActiveTab("stamps");
+    } else if (path.includes("checkin")) {
+      setActiveTab("checkin");
     } else if (path.includes("messages")) {
       setActiveTab("messages");
     }
@@ -59,7 +59,6 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
   const touristNavItems = [
     { id: "dashboard", label: "Acasă", icon: Home, path: "/" },
     { id: "itinerary", label: "Itinerariu", icon: Plane, path: "/itinerary" },
-    { id: "stamps", label: "Stamps", icon: Trophy, path: "/stamps" },
     { id: "documents", label: "Documente", icon: FileText, path: "/documents" },
     { id: "messages", label: "Mesaje", icon: MessageSquare, path: "/messages" },
   ];
@@ -162,6 +161,12 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     Profil
                   </DropdownMenuItem>
+                  {userRole === "tourist" && (
+                    <DropdownMenuItem onClick={() => navigate("/checkin")}>
+                      <Trophy className="w-4 h-4 mr-2" />
+                      Check-in Stamps
+                    </DropdownMenuItem>
+                  )}
                   {userRole !== "admin" && (
                     <DropdownMenuItem onClick={() => navigate("/settings")}>
                       Setări

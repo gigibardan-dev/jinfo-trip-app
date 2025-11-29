@@ -158,7 +158,7 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/stamps" 
+                  path="/checkin" 
                   element={
                     <ProtectedRoute allowedRoles={['tourist']}>
                       <StampsPage />
