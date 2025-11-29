@@ -31,6 +31,7 @@ import MapViewerPage from "./pages/tourist/MapViewerPage";
 import MapsPage from "./pages/MapsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
+import StampsPage from "./pages/tourist/StampsPage";
 import Footer from "./components/shared/Footer";
 import { CookieConsent } from "@/components/shared/gdpr/CookieConsent";
 
@@ -153,6 +154,14 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={['tourist']}>
                       <ItineraryPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/stamps" 
+                  element={
+                    <ProtectedRoute allowedRoles={['tourist']}>
+                      <StampsPage />
                     </ProtectedRoute>
                   } 
                 />

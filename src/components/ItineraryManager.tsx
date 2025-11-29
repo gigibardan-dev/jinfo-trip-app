@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { format, addDays, parseISO } from "date-fns";
 import { ro } from "date-fns/locale";
+import { autoGenerateStamps } from "@/lib/stampGenerator";
 
 interface ItineraryManagerProps {
   tripId: string;
@@ -345,6 +346,13 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
       setEditingActivity(null);
       resetActivityForm();
       fetchItinerary();
+      
+      // Auto-generate stamps after saving activity
+      console.log('[ItineraryManager] Triggering stamp auto-generation');
+      const stampResult = await autoGenerateStamps(tripId);
+      if (stampResult.success && stampResult.stampsCreated > 0) {
+        console.log(`[ItineraryManager] Generated ${stampResult.stampsCreated} new stamps`);
+      }
     } catch (error) {
       console.error('Error saving activity:', error);
       toast({
