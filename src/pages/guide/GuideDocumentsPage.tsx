@@ -145,10 +145,16 @@ const GuideDocumentsPage = () => {
           )}
 
           <Tabs defaultValue="received" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="received">Documente Primite</TabsTrigger>
-              <TabsTrigger value="offline">Salvate Offline</TabsTrigger>
-              <TabsTrigger value="upload">Upload Documente</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 h-auto p-2 bg-transparent">
+              <TabsTrigger value="received" className="border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/10">
+                Documente Primite
+              </TabsTrigger>
+              <TabsTrigger value="offline" className="border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/10">
+                Salvate Offline
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/10">
+                Upload Documente
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="received">
