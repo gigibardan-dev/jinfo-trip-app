@@ -296,13 +296,13 @@ const ItineraryPage = () => {
             )}
 
             {selectedTrip && (
-              <Card className="mb-6">
+              <Card className="mb-6 bg-gradient-to-br from-primary to-accent border-none shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-primary-foreground">
                     <Calendar className="h-5 w-5" />
                     {selectedTrip.nume}
                   </CardTitle>
-                  <p className="text-muted-foreground">
+                  <p className="text-primary-foreground/90">
                     {selectedTrip.destinatie} • {format(parseISO(selectedTrip.start_date), "d MMMM", { locale: ro })} - 
                     {format(parseISO(selectedTrip.end_date), "d MMMM yyyy", { locale: ro })}
                   </p>
