@@ -77,96 +77,220 @@ const TouristDashboard = () => {
   }, [user, profile]);
 
   const fetchUserData = async () => {
-    try {
-      // 1. Găsește grupurile utilizatorului
-      const { data: memberGroups, error: groupsError } = await supabase
-        .from('group_members')
-        .select(`
-          group_id,
-          tourist_groups (
-            id,
-            nume_grup
-          )
-        `)
-        .eq('user_id', user!.id);
-
-      if (groupsError) throw groupsError;
-
-      // 2. Găsește circuitele active pentru acele grupuri
-      if (memberGroups && memberGroups.length > 0) {
-        const groupIds = memberGroups.map(g => g.group_id);
+    // STEP 1: Load cached data INSTANTLY (before any fetch)
+    const cached = localStorage.getItem('cached_trip_data');
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        console.log('[TouristDashboard] Loading from cache instantly:', timestamp);
         
-        const { data: trips, error: tripsError } = await supabase
-          .from('trips')
+        // Set data IMMEDIATELY - user sees dashboard instantly
+        if (data.currentTrip) setCurrentTrip(data.currentTrip);
+        if (data.userGroups) setUserGroups(data.userGroups);
+        if (data.todayActivities) setTodayActivities(data.todayActivities);
+        if (data.groupMemberCount !== undefined) setGroupMemberCount(data.groupMemberCount);
+        if (data.documentStats) setDocumentStats(data.documentStats);
+        if (data.assignedGuide) setAssignedGuide(data.assignedGuide);
+        if (data.newDocumentsCount !== undefined) setNewDocumentsCount(data.newDocumentsCount);
+        
+        // Don't show loading if cache is fresh (< 5 min)
+        const cacheAge = Date.now() - new Date(timestamp).getTime();
+        const isFresh = cacheAge < 5 * 60 * 1000; // 5 minutes
+        
+        if (isFresh) {
+          setLoading(false);
+          console.log('[TouristDashboard] Using fresh cache, skipping loading state');
+          return; // Skip fetch if cache is fresh
+        }
+      } catch (error) {
+        console.error('[TouristDashboard] Cache error:', error);
+      }
+    }
+
+    // STEP 2: Fetch fresh data in parallel
+    setLoading(true);
+    
+    try {
+      // Fetch ALL data in PARALLEL with Promise.allSettled
+      const results = await Promise.allSettled([
+        // Fetch 1: Group members
+        supabase
+          .from('group_members')
           .select(`
-            *,
+            group_id,
             tourist_groups (
+              id,
               nume_grup
             )
           `)
-          .in('group_id', groupIds)
-          .in('status', ['active', 'confirmed'])
-          .order('start_date', { ascending: true });
+          .eq('user_id', user!.id),
+      ]);
 
-        if (tripsError) throw tripsError;
+      const [groupResult] = results;
 
-        // 3. Setează circuitul curent (primul activ sau confirmat)
-        const activeTrip = trips?.find(trip => trip.status === 'active') || trips?.[0];
-        setCurrentTrip(activeTrip || null);
-
-        // 4. Setează informații despre grupuri și număr membrii
-        if (activeTrip) {
-          const { count, error: countError } = await supabase
-            .from('group_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('group_id', activeTrip.group_id);
+      if (groupResult.status === 'fulfilled' && !groupResult.value.error) {
+        const memberGroups = groupResult.value.data;
+        
+        if (memberGroups && memberGroups.length > 0) {
+          const groupIds = memberGroups.map(g => g.group_id);
           
-          if (!countError && count !== null) {
-            setGroupMemberCount(count);
-          }
+          // Fetch trips and related data in parallel
+          const tripResults = await Promise.allSettled([
+            // Fetch 2: Trips
+            supabase
+              .from('trips')
+              .select(`
+                *,
+                tourist_groups (
+                  nume_grup
+                )
+              `)
+              .in('group_id', groupIds)
+              .in('status', ['active', 'confirmed'])
+              .order('start_date', { ascending: true }),
+          ]);
 
-          // 5. Fetch today's activities
-          const today = new Date().toISOString().split('T')[0];
-          const { data: itineraryDays, error: daysError } = await supabase
-            .from('itinerary_days')
-            .select('id')
-            .eq('trip_id', activeTrip.id)
-            .eq('date', today);
+          const [tripsResult] = tripResults;
 
-          if (!daysError && itineraryDays && itineraryDays.length > 0) {
-            const { data: activities, error: activitiesError } = await supabase
-              .from('itinerary_activities')
-              .select('*')
-              .eq('day_id', itineraryDays[0].id)
-              .order('display_order');
+          if (tripsResult.status === 'fulfilled' && !tripsResult.value.error) {
+            const trips = tripsResult.value.data;
+            const activeTrip = trips?.find(trip => trip.status === 'active') || trips?.[0];
+            setCurrentTrip(activeTrip || null);
 
-            if (!activitiesError) {
-              setTodayActivities(activities || []);
+            if (activeTrip) {
+              const today = new Date().toISOString().split('T')[0];
+              
+              // Fetch all trip-related data in parallel
+              const tripDataResults = await Promise.allSettled([
+                // Fetch 3: Group member count
+                supabase
+                  .from('group_members')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('group_id', activeTrip.group_id),
+                
+                // Fetch 4: Today's itinerary days
+                supabase
+                  .from('itinerary_days')
+                  .select('id')
+                  .eq('trip_id', activeTrip.id)
+                  .eq('date', today),
+                
+                // Fetch 5: Total documents
+                supabase
+                  .from('documents')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('trip_id', activeTrip.id),
+                
+                // Fetch 6: Cached documents
+                supabase
+                  .from('offline_cache_status')
+                  .select('resource_id', { count: 'exact', head: true })
+                  .eq('user_id', user!.id)
+                  .eq('resource_type', 'documents')
+                  .eq('trip_id', activeTrip.id),
+                
+                // Fetch 7: New documents (last 7 days)
+                (async () => {
+                  const sevenDaysAgo = new Date();
+                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                  return supabase
+                    .from('documents')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('trip_id', activeTrip.id)
+                    .gte('upload_date', sevenDaysAgo.toISOString());
+                })(),
+                
+                // Fetch 8: Guide assignments
+                supabase
+                  .from('guide_assignments')
+                  .select('guide_user_id')
+                  .eq('trip_id', activeTrip.id)
+                  .eq('is_active', true)
+                  .limit(1),
+              ]);
+
+              const [countResult, daysResult, docsResult, cachedDocsResult, newDocsResult, guideAssignResult] = tripDataResults;
+
+              // Process group member count
+              if (countResult.status === 'fulfilled' && !countResult.value.error) {
+                const count = countResult.value.count;
+                if (count !== null) setGroupMemberCount(count);
+              }
+
+              // Process today's activities
+              if (daysResult.status === 'fulfilled' && !daysResult.value.error) {
+                const itineraryDays = daysResult.value.data;
+                if (itineraryDays && itineraryDays.length > 0) {
+                  const { data: activities } = await supabase
+                    .from('itinerary_activities')
+                    .select('*')
+                    .eq('day_id', itineraryDays[0].id)
+                    .order('display_order');
+                  
+                  setTodayActivities(activities || []);
+                }
+              }
+
+              // Process document stats
+              const totalCount = docsResult.status === 'fulfilled' && !docsResult.value.error ? docsResult.value.count || 0 : 0;
+              const cachedCount = cachedDocsResult.status === 'fulfilled' && !cachedDocsResult.value.error ? cachedDocsResult.value.count || 0 : 0;
+              const newCount = newDocsResult.status === 'fulfilled' && !newDocsResult.value.error ? newDocsResult.value.count || 0 : 0;
+              
+              setDocumentStats({ total: totalCount, cached: cachedCount });
+              setNewDocumentsCount(newCount);
+
+              // Process guide info
+              if (guideAssignResult.status === 'fulfilled' && !guideAssignResult.value.error) {
+                const assignments = guideAssignResult.value.data;
+                if (assignments && assignments.length > 0) {
+                  const guideUserId = assignments[0].guide_user_id;
+                  const { data: guideProfile } = await supabase
+                    .from('profiles')
+                    .select('id, nume, prenume, telefon, email')
+                    .eq('id', guideUserId)
+                    .single();
+                  
+                  if (guideProfile) setAssignedGuide(guideProfile);
+                }
+              }
             }
+
+            const groupsInfo = memberGroups.map(mg => ({
+              id: mg.group_id,
+              nume_grup: mg.tourist_groups.nume_grup,
+              member_count: 0
+            }));
+            setUserGroups(groupsInfo);
+
+            // STEP 3: Update cache with fresh data
+            const freshData = {
+              currentTrip: activeTrip || null,
+              userGroups: groupsInfo,
+              todayActivities: todayActivities,
+              groupMemberCount: groupMemberCount,
+              documentStats: documentStats,
+              assignedGuide: assignedGuide,
+              newDocumentsCount: newDocumentsCount
+            };
+
+            localStorage.setItem('cached_trip_data', JSON.stringify({
+              data: freshData,
+              timestamp: new Date().toISOString()
+            }));
           }
-
-          // 6. Fetch document statistics
-          await fetchDocumentStats(activeTrip.id);
-
-          // 7. Fetch assigned guide
-          await fetchAssignedGuide(activeTrip.id);
         }
-
-        const groupsInfo = memberGroups.map(mg => ({
-          id: mg.group_id,
-          nume_grup: mg.tourist_groups.nume_grup,
-          member_count: 0
-        }));
-        setUserGroups(groupsInfo);
       }
 
     } catch (error) {
       console.error('Error fetching user data:', error);
-      toast({
-        title: "Eroare",
-        description: "Nu s-au putut încărca informațiile călătoriei.",
-        variant: "destructive",
-      });
+      // Only show error if we don't have cache
+      if (!cached) {
+        toast({
+          title: "Eroare",
+          description: "Nu s-au putut încărca informațiile călătoriei.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
