@@ -45,29 +45,26 @@ const AdminDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
-    // Load cached admin stats instantly
+    // STEP 1: Load cached admin stats instantly (for immediate UI)
     const cached = localStorage.getItem('cached_admin_stats');
     if (cached) {
       try {
         const { data, timestamp } = JSON.parse(cached);
         console.log('[AdminDashboard] Loading from cache instantly:', timestamp);
         
+        // Set data IMMEDIATELY - admin sees dashboard instantly
         setStats(data.stats);
         setRecentTrips(data.recentTrips);
         setExpiringDocuments(data.expiringDocuments);
         
-        const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const isFresh = cacheAge < 5 * 60 * 1000;
-        
-        if (isFresh) {
-          setLoading(false);
-          console.log('[AdminDashboard] Using fresh cache, skipping fetch');
-          return;
-        }
+        // IMPORTANT: We do NOT skip the fetch!
+        // Cache only provides instant UI, fetch ALWAYS runs for fresh data
       } catch (error) {
         console.error('[AdminDashboard] Cache error:', error);
       }
     }
+
+    // STEP 2: ALWAYS fetch fresh data (even if we have cache)
 
     setLoading(true);
 

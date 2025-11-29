@@ -88,29 +88,27 @@ const ItineraryPage = () => {
   }, [selectedTrip]);
 
   const fetchUserTrips = async () => {
-    // Load cached trips instantly
+    // STEP 1: Load cached trips instantly (for immediate UI)
     const cached = localStorage.getItem('cached_user_trips');
     if (cached) {
       try {
         const { data, timestamp } = JSON.parse(cached);
         console.log('[ItineraryPage] Loading trips from cache instantly:', timestamp);
         
+        // Set data IMMEDIATELY - user sees trips instantly
         setTrips(data || []);
         if (data && data.length > 0) {
           setSelectedTrip(data[0]);
         }
         
-        const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const isFresh = cacheAge < 5 * 60 * 1000;
-        
-        if (isFresh) {
-          console.log('[ItineraryPage] Using fresh cache, skipping fetch');
-          return;
-        }
+        // IMPORTANT: We do NOT skip the fetch!
+        // Cache only provides instant UI, fetch ALWAYS runs for fresh data
       } catch (error) {
         console.error('[ItineraryPage] Cache error:', error);
       }
     }
+
+    // STEP 2: ALWAYS fetch fresh data (even if we have cache)
 
     try {
       // Parallel fetching
@@ -164,7 +162,7 @@ const ItineraryPage = () => {
   const fetchItinerary = async () => {
     if (!selectedTrip) return;
     
-    // Load cached itinerary instantly
+    // STEP 1: Load cached itinerary instantly (for immediate UI)
     const cacheKey = `cached_itinerary_${selectedTrip.id}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -172,23 +170,20 @@ const ItineraryPage = () => {
         const { data, timestamp } = JSON.parse(cached);
         console.log('[ItineraryPage] Loading itinerary from cache instantly:', timestamp);
         
+        // Set data IMMEDIATELY - user sees itinerary instantly
         setItineraryDays(data);
         if (!selectedDay || selectedDay === "all") {
           setSelectedDay("all");
         }
         
-        const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const isFresh = cacheAge < 5 * 60 * 1000;
-        
-        if (isFresh) {
-          setLoading(false);
-          console.log('[ItineraryPage] Using fresh cache, skipping fetch');
-          return;
-        }
+        // IMPORTANT: We do NOT skip the fetch!
+        // Cache only provides instant UI, fetch ALWAYS runs for fresh data
       } catch (error) {
         console.error('[ItineraryPage] Cache error:', error);
       }
     }
+    
+    // STEP 2: ALWAYS fetch fresh data (even if we have cache)
     
     setLoading(true);
     try {
