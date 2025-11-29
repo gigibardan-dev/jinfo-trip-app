@@ -29,7 +29,10 @@ import ProfilePage from "./pages/ProfilePage";
 import OfflineMapsPage from "./pages/tourist/OfflineMapsPage";
 import MapViewerPage from "./pages/tourist/MapViewerPage";
 import MapsPage from "./pages/MapsPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
 import Footer from "./components/shared/Footer";
+import { CookieConsent } from "@/components/shared/gdpr/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +51,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<Terms />} />
                 
                 {/* ADMIN ONLY ROUTES */}
                 <Route 
@@ -199,6 +204,9 @@ const App = () => (
               </Routes>
             </div>
             <Footer />
+            
+            {/* GDPR Cookie Consent Banner */}
+            <CookieConsent />
           </BrowserRouter>
         </div>
       </TooltipProvider>
