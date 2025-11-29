@@ -35,6 +35,7 @@ const GuideDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [todayReports, setTodayReports] = useState<any[]>([]);
   const [mapsAvailable, setMapsAvailable] = useState(0);
+  const [todayActivities, setTodayActivities] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -130,6 +131,33 @@ const GuideDashboard = () => {
           if (mapsResult.status === 'fulfilled' && !mapsResult.value.error) {
             setMapsAvailable(mapsResult.value.data?.length || 0);
           }
+
+          // Fetch today's activities for ACTIVE trip only
+          const activeTrip = tripsData.find(trip => {
+            const today = new Date();
+            const startDate = new Date(trip.start_date);
+            const endDate = new Date(trip.end_date);
+            return today >= startDate && today <= endDate;
+          });
+
+          if (activeTrip) {
+            const todayDate = new Date().toISOString().split('T')[0];
+            const { data: itineraryDays } = await supabase
+              .from('itinerary_days')
+              .select('id')
+              .eq('trip_id', activeTrip.id)
+              .eq('date', todayDate);
+
+            if (itineraryDays && itineraryDays.length > 0) {
+              const { data: activities } = await supabase
+                .from('itinerary_activities')
+                .select('*')
+                .eq('day_id', itineraryDays[0].id)
+                .order('display_order');
+
+              setTodayActivities(activities || []);
+            }
+          }
         } else {
           setAssignments([]);
         }
@@ -217,6 +245,43 @@ const GuideDashboard = () => {
     return todayReports.find(report => report.trip_id === tripId);
   };
 
+  const calculateTripProgress = (trip: Trip) => {
+    const start = new Date(trip.start_date).getTime();
+    const end = new Date(trip.end_date).getTime();
+    const now = new Date().getTime();
+    
+    if (now < start) return 0;
+    if (now > end) return 100;
+    
+    return Math.round(((now - start) / (end - start)) * 100);
+  };
+
+  const getTripDay = (trip: Trip) => {
+    const start = new Date(trip.start_date);
+    const end = new Date(trip.end_date);
+    const now = new Date();
+    
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const currentDay = Math.min(
+      Math.max(1, Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))),
+      totalDays
+    );
+    
+    return { current: currentDay, total: totalDays };
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "meal": return "🍽️";
+      case "attraction": return "🏛️";
+      case "transport": return "🚢";
+      case "accommodation": return "🏨";
+      case "free_time": return "🎯";
+      case "custom": return "📍";
+      default: return "📍";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -283,6 +348,127 @@ const GuideDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Active Trip Info Section */}
+      {activeTrips.length > 0 && (() => {
+        const activeTrip = activeTrips[0].trips;
+        const tripDay = getTripDay(activeTrip);
+        const progress = calculateTripProgress(activeTrip);
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Today's Schedule */}
+            <div className="lg:col-span-2">
+              <Card className="shadow-soft border-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    Programul de Azi
+                  </CardTitle>
+                  <CardDescription>{activeTrip.nume}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {todayActivities.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Nu există activități programate pentru astăzi</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {todayActivities.map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="border rounded-lg p-4 px-2.5 sm:px-4 transition-all hover:shadow-soft"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="text-2xl">{getActivityIcon(activity.activity_type)}</div>
+                            
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <h3 className="font-semibold">{activity.title}</h3>
+                              </div>
+                              
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                {activity.start_time && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {activity.start_time.substring(0, 5)}
+                                  </div>
+                                )}
+                                {activity.location_name && (
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {activity.location_name}
+                                  </div>
+                                )}
+                              </div>
+
+                              {activity.description && (
+                                <p className="text-sm text-muted-foreground mt-2">
+                                  {activity.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Trip Progress */}
+            <div>
+              <Card className="shadow-soft border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg">Progres Călătorie</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Ziua {tripDay.current} din {tripDay.total}</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-ocean rounded-full transition-all duration-500" 
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t">
+                      <div className="text-sm text-muted-foreground mb-1">Status</div>
+                      <Badge className={
+                        activeTrip.status === 'active' ? 'bg-success text-success-foreground' :
+                        activeTrip.status === 'confirmed' ? 'bg-primary text-primary-foreground' :
+                        'bg-muted text-muted-foreground'
+                      }>
+                        {activeTrip.status === 'active' ? 'În desfășurare' :
+                         activeTrip.status === 'confirmed' ? 'Confirmat' : activeTrip.status}
+                      </Badge>
+                    </div>
+
+                    <div className="pt-2 border-t">
+                      <div className="text-sm text-muted-foreground mb-1">Destinație</div>
+                      <div className="font-medium">{activeTrip.destinatie}</div>
+                    </div>
+
+                    <div className="pt-2 border-t">
+                      <div className="text-sm text-muted-foreground mb-1">Perioada</div>
+                      <div className="text-sm">
+                        {formatDate(activeTrip.start_date)} - {formatDate(activeTrip.end_date)}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        );
+      })()}
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
