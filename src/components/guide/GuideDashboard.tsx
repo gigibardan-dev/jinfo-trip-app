@@ -46,32 +46,34 @@ const GuideDashboard = () => {
   }, [user]);
 
   const fetchAssignments = async () => {
-    // Load cached guide dashboard instantly
+    // STEP 1: Load cached guide dashboard instantly (for immediate UI)
     const cached = localStorage.getItem('cached_guide_dashboard');
     if (cached) {
       try {
         const { data, timestamp } = JSON.parse(cached);
         console.log('[GuideDashboard] Loading from cache instantly:', timestamp);
         
+        // Set data IMMEDIATELY - user sees dashboard instantly
         setAssignments(data.assignments || []);
         setTodayReports(data.todayReports || []);
         setMapsAvailable(data.mapsAvailable || 0);
         
-        const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const isFresh = cacheAge < 5 * 60 * 1000;
-        
-        if (isFresh) {
-          setLoading(false);
-          console.log('[GuideDashboard] Using fresh cache, skipping fetch');
-          return;
-        }
+        // IMPORTANT: We do NOT skip the fetch!
+        // We just set loading to false so user doesn't see spinner while background fetch happens
       } catch (error) {
         console.error('[GuideDashboard] Cache error:', error);
       }
     }
 
+    // STEP 2: ALWAYS fetch fresh data (even if we have cache)
+
     try {
       const today = new Date().toISOString().split('T')[0];
+
+      // Variables to store fresh data for cache
+      let freshAssignments: Assignment[] = [];
+      let freshReports: any[] = [];
+      let freshMapsCount = 0;
 
       // Fetch ALL data in PARALLEL
       const results = await Promise.allSettled([
@@ -127,9 +129,11 @@ const GuideDashboard = () => {
           }));
 
           setAssignments(assignmentsWithTrips);
+          freshAssignments = assignmentsWithTrips; // Store for cache
 
           if (mapsResult.status === 'fulfilled' && !mapsResult.value.error) {
-            setMapsAvailable(mapsResult.value.data?.length || 0);
+            freshMapsCount = mapsResult.value.data?.length || 0;
+            setMapsAvailable(freshMapsCount);
           }
 
           // Fetch today's activities for ACTIVE trip only
@@ -164,18 +168,21 @@ const GuideDashboard = () => {
       }
 
       if (reportsResult.status === 'fulfilled' && !reportsResult.value.error) {
-        setTodayReports(reportsResult.value.data || []);
+        freshReports = reportsResult.value.data || [];
+        setTodayReports(freshReports);
       }
 
-      // Update cache
+      // Update cache with FRESH data (not old state)
       localStorage.setItem('cached_guide_dashboard', JSON.stringify({
         data: {
-          assignments: assignments,
-          todayReports: todayReports,
-          mapsAvailable: mapsAvailable,
+          assignments: freshAssignments,
+          todayReports: freshReports,
+          mapsAvailable: freshMapsCount,
         },
         timestamp: new Date().toISOString()
       }));
+      
+      console.log('[GuideDashboard] Fresh data fetched:', freshAssignments.length, 'assignments');
 
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -186,6 +193,8 @@ const GuideDashboard = () => {
           variant: "destructive",
         });
       }
+    } finally {
+      setLoading(false);
     }
   };
 

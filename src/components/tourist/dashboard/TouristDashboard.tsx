@@ -93,15 +93,8 @@ const TouristDashboard = () => {
         if (data.assignedGuide) setAssignedGuide(data.assignedGuide);
         if (data.newDocumentsCount !== undefined) setNewDocumentsCount(data.newDocumentsCount);
         
-        // Don't show loading if cache is fresh (< 5 min)
-        const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const isFresh = cacheAge < 5 * 60 * 1000; // 5 minutes
-        
-        if (isFresh) {
-          setLoading(false);
-          console.log('[TouristDashboard] Using fresh cache, skipping loading state');
-          return; // Skip fetch if cache is fresh
-        }
+        // IMPORTANT: We do NOT skip the fetch!
+        // Cache only provides instant UI, fetch ALWAYS runs for fresh data
       } catch (error) {
         console.error('[TouristDashboard] Cache error:', error);
       }
@@ -111,6 +104,13 @@ const TouristDashboard = () => {
     setLoading(true);
     
     try {
+      // Variables to store fresh data for cache (declare at top of try block)
+      let freshGroupMemberCount = 0;
+      let freshTodayActivities: any[] = [];
+      let freshDocumentStats = { total: 0, cached: 0 };
+      let freshNewDocumentsCount = 0;
+      let freshAssignedGuide: GuideInfo | null = null;
+
       // Fetch ALL data in PARALLEL with Promise.allSettled
       const results = await Promise.allSettled([
         // Fetch 1: Group members
@@ -214,7 +214,10 @@ const TouristDashboard = () => {
               // Process group member count
               if (countResult.status === 'fulfilled' && !countResult.value.error) {
                 const count = countResult.value.count;
-                if (count !== null) setGroupMemberCount(count);
+                if (count !== null) {
+                  freshGroupMemberCount = count;
+                  setGroupMemberCount(count);
+                }
               }
 
               // Process today's activities
@@ -227,7 +230,8 @@ const TouristDashboard = () => {
                     .eq('day_id', itineraryDays[0].id)
                     .order('display_order');
                   
-                  setTodayActivities(activities || []);
+                  freshTodayActivities = activities || [];
+                  setTodayActivities(freshTodayActivities);
                 }
               }
 
@@ -236,8 +240,10 @@ const TouristDashboard = () => {
               const cachedCount = cachedDocsResult.status === 'fulfilled' && !cachedDocsResult.value.error ? cachedDocsResult.value.count || 0 : 0;
               const newCount = newDocsResult.status === 'fulfilled' && !newDocsResult.value.error ? newDocsResult.value.count || 0 : 0;
               
-              setDocumentStats({ total: totalCount, cached: cachedCount });
-              setNewDocumentsCount(newCount);
+              freshDocumentStats = { total: totalCount, cached: cachedCount };
+              freshNewDocumentsCount = newCount;
+              setDocumentStats(freshDocumentStats);
+              setNewDocumentsCount(freshNewDocumentsCount);
 
               // Process guide info
               if (guideAssignResult.status === 'fulfilled' && !guideAssignResult.value.error) {
@@ -250,7 +256,10 @@ const TouristDashboard = () => {
                     .eq('id', guideUserId)
                     .single();
                   
-                  if (guideProfile) setAssignedGuide(guideProfile);
+                  if (guideProfile) {
+                    freshAssignedGuide = guideProfile;
+                    setAssignedGuide(guideProfile);
+                  }
                 }
               }
             }
@@ -262,21 +271,23 @@ const TouristDashboard = () => {
             }));
             setUserGroups(groupsInfo);
 
-            // STEP 3: Update cache with fresh data
+            // STEP 3: Update cache with FRESH data (not old state)
             const freshData = {
               currentTrip: activeTrip || null,
               userGroups: groupsInfo,
-              todayActivities: todayActivities,
-              groupMemberCount: groupMemberCount,
-              documentStats: documentStats,
-              assignedGuide: assignedGuide,
-              newDocumentsCount: newDocumentsCount
+              todayActivities: freshTodayActivities,
+              groupMemberCount: freshGroupMemberCount,
+              documentStats: freshDocumentStats,
+              assignedGuide: freshAssignedGuide,
+              newDocumentsCount: freshNewDocumentsCount
             };
 
             localStorage.setItem('cached_trip_data', JSON.stringify({
               data: freshData,
               timestamp: new Date().toISOString()
             }));
+            
+            console.log('[TouristDashboard] Fresh data fetched and cached');
           }
         }
       }
