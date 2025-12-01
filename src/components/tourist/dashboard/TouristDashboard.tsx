@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import DOMPurify from 'dompurify';
+import { getAllOfflineDocuments } from "@/lib/offlineStorage";
 
 interface UserTrip {
   id: string;
@@ -185,13 +186,13 @@ const TouristDashboard = () => {
                   .select('id', { count: 'exact', head: true })
                   .eq('trip_id', activeTrip.id),
                 
-                // Fetch 6: Cached documents
-                supabase
-                  .from('offline_cache_status')
-                  .select('resource_id', { count: 'exact', head: true })
-                  .eq('user_id', user!.id)
-                  .eq('resource_type', 'documents')
-                  .eq('trip_id', activeTrip.id),
+                // Fetch 6: Cached documents - read from IndexedDB
+                (async () => {
+                  if (!activeTrip) return { count: 0, error: null };
+                  const allOfflineDocs = await getAllOfflineDocuments();
+                  const cachedCount = allOfflineDocs.filter(doc => doc.tripId === activeTrip.id).length;
+                  return { count: cachedCount, error: null };
+                })(),
                 
                 // Fetch 7: New documents (last 7 days)
                 (async () => {
@@ -340,13 +341,9 @@ const TouristDashboard = () => {
         .select('id', { count: 'exact', head: true })
         .eq('trip_id', tripId);
 
-      // Cached documents for this user in offline_cache_status table
-      const { count: cachedCount } = await supabase
-        .from('offline_cache_status')
-        .select('resource_id', { count: 'exact', head: true })
-        .eq('user_id', user!.id)
-        .eq('resource_type', 'documents')
-        .eq('trip_id', tripId);
+      // Cached documents - read DIRECTLY from IndexedDB (source of truth)
+      const allOfflineDocs = await getAllOfflineDocuments();
+      const cachedCount = allOfflineDocs.filter(doc => doc.tripId === tripId).length;
 
       setDocumentStats({
         total: totalCount || 0,
