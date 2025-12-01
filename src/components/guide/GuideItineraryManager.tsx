@@ -402,13 +402,6 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Gestionare Itinerariu</h1>
-        <p className="text-muted-foreground">
-          {trip.nume} - {trip.destinatie}
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar with days */}
         <div className="lg:col-span-1 space-y-2">
@@ -441,7 +434,6 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                       month: 'short'
                     })}
                   </div>
-                  <div className="text-sm font-medium">{day.title}</div>
                   <div className="text-xs text-muted-foreground mt-2">
                     {activityCount} {activityCount === 1 ? 'activitate' : 'activități'}
                   </div>
@@ -466,7 +458,7 @@ const GuideItineraryManager: React.FC<GuideItineraryManagerProps> = ({ tripId })
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-2xl font-bold">
-                            {day?.title} - Ziua {day?.day_number}
+                            Ziua {day?.day_number}
                           </h2>
                           <p className="text-muted-foreground">
                             {day && new Date(day.date).toLocaleDateString('ro-RO', {
