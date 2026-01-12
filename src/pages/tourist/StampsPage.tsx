@@ -500,30 +500,42 @@ const StampsPage = () => {
         </div>
       )}
       
-      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl space-y-6">
-        {/* Header cu Progress */}
-        <Card className="bg-gradient-to-br from-primary/10 via-background to-background border-2">
-          <CardHeader>
-            <div className="flex items-center justify-between mb-4">
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Trophy className="w-6 h-6" />
-                Colecția Mea
-              </CardTitle>
-              <Badge variant="outline" className="text-lg px-4 py-1">
-                <Sparkles className="w-4 h-4 mr-1" />
-                {totalPoints} puncte
-              </Badge>
+      <div className="container mx-auto px-4 pt-6 pb-8 sm:pt-8 max-w-4xl space-y-6">
+        {/* Header cu Progress - redesigned */}
+        <Card className="bg-gradient-to-br from-amber-500/15 via-primary/5 to-background border-0 shadow-lg overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-400/5 to-transparent pointer-events-none" />
+          <CardHeader className="relative pb-6">
+            {/* Top row with title and points */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl sm:text-2xl font-bold">Colecția Mea</CardTitle>
+                  <p className="text-sm text-muted-foreground">Stamps din călătorie</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-sm px-3 py-1.5 shadow-md">
+                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  {totalPoints} puncte
+                </Badge>
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">Stamps Colectate</span>
-                <span className="font-bold">{totalCollected}/{totalStamps}</span>
+            {/* Progress section */}
+            <div className="space-y-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-border/50">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-sm">Stamps Colectate</span>
+                <span className="font-bold text-lg">{totalCollected} <span className="text-muted-foreground font-normal text-sm">/ {totalStamps}</span></span>
               </div>
-              <Progress value={progressPercentage} className="h-3" />
-              <p className="text-xs text-muted-foreground text-center">
-                {progressPercentage}% complet
-              </p>
+              <div className="relative">
+                <Progress value={progressPercentage} className="h-4 bg-muted/50" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-semibold drop-shadow-sm">{progressPercentage}%</span>
+                </div>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -757,44 +769,54 @@ const StampsPage = () => {
           </div>
         )}
 
-        {/* Collected Stamps (istoric) */}
+        {/* Collected Stamps (istoric) - redesigned */}
         {collectedStamps.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              Stamps Colectate ({collectedStamps.length})
-            </h3>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+                <CheckCircle2 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Stamps Colectate</h3>
+                <p className="text-sm text-muted-foreground">{collectedStamps.length} stamps în colecție</p>
+              </div>
+            </div>
             
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {collectedStamps.map((collected) => {
                 const stamp = collected.poi_stamps;
                 return (
-                  <Card key={collected.id} className="bg-muted/30 relative hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
+                  <Card key={collected.id} className="bg-gradient-to-br from-green-500/5 to-background border border-green-500/20 relative hover:shadow-lg hover:border-green-500/40 transition-all">
+                    <CardContent className="p-4">
                       {/* Delete Button */}
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="absolute top-1 right-1 h-7 w-7 text-muted-foreground hover:text-destructive"
+                        className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => setStampToDelete(collected)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
 
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl opacity-90">{stamp.stamp_icon}</div>
+                      <div className="flex items-start gap-3">
+                        <div className="text-4xl flex-shrink-0 drop-shadow-sm">{stamp.stamp_icon}</div>
                         
-                        <div className="flex-1 min-w-0 pr-8">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 min-w-0 pr-6">
+                          <div className="flex items-center gap-2 mb-2">
                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            <h5 className="font-medium text-sm truncate">{stamp.name}</h5>
+                            <h5 className="font-semibold text-sm truncate">{stamp.name}</h5>
                           </div>
                           
-                          <Badge className={`${getRarityColor(stamp.rarity)} text-xs`}>
-                            {getRarityLabel(stamp.rarity)}
-                          </Badge>
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <Badge className={`${getRarityColor(stamp.rarity)} text-xs shadow-sm`}>
+                              {getRarityLabel(stamp.rarity)}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              +{stamp.points_value} pts
+                            </Badge>
+                          </div>
                           
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(collected.collected_at).toLocaleDateString('ro-RO', {
                               day: 'numeric',
                               month: 'short',
