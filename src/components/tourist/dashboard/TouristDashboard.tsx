@@ -259,7 +259,7 @@ const TouristDashboard = () => {
                     .from('profiles')
                     .select('id, nume, prenume, telefon, email')
                     .eq('id', guideUserId)
-                    .single();
+                    .maybeSingle();
                   
                   if (guideProfile) {
                     freshAssignedGuide = guideProfile;
@@ -392,7 +392,7 @@ const TouristDashboard = () => {
         .from('profiles')
         .select('id, nume, prenume, telefon, email')
         .eq('id', guideUserId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('[GuideInfo] Profile query error:', profileError);
