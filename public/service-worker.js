@@ -100,6 +100,12 @@ self.addEventListener('fetch', (event) => {
 
 // Cache First Strategy
 async function cacheFirstStrategy(request) {
+  // Skip chrome-extension and other unsupported schemes
+  const url = new URL(request.url);
+  if (url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:' || url.protocol === 'safari-extension:') {
+    return fetch(request);
+  }
+
   const cachedResponse = await caches.match(request);
   
   if (cachedResponse) {
