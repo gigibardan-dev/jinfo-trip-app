@@ -500,7 +500,7 @@ const StampsPage = () => {
         </div>
       )}
       
-      <div className="container mx-auto px-4 pt-6 pb-8 sm:pt-8 max-w-4xl space-y-6">
+      <div className="container mx-auto px-4 pt-8 pb-8 sm:pt-10 max-w-4xl space-y-6">
         {/* Header cu Progress - redesigned */}
         <Card className="bg-gradient-to-br from-amber-500/15 via-primary/5 to-background border-0 shadow-lg overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-400/5 to-transparent pointer-events-none" />
