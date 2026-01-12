@@ -114,40 +114,44 @@ const StampsPage = () => {
         setLoading(true);
       }
 
-      // Fetch trip-ul activ al turistului
-      const { data: groupData, error: groupError } = await supabase
+      // Fetch trip-ul activ al turistului - take the first group if multiple
+      const { data: groupsData, error: groupError } = await supabase
         .from('group_members')
         .select('group_id')
         .eq('user_id', profile!.id)
-        .maybeSingle();
+        .limit(1);
 
       if (groupError) throw groupError;
 
-      if (!groupData) {
+      if (!groupsData || groupsData.length === 0) {
         console.log('[StampsPage] No group found for tourist');
         setAvailableStamps([]);
         setCollectedStamps([]);
         setLoading(false);
         return;
       }
+      
+      const groupData = groupsData[0];
 
-      // Fetch trip-ul pentru grup
-      const { data: tripData, error: tripError } = await supabase
+      // Fetch trip-ul pentru grup - take the first active trip if multiple
+      const { data: tripsData, error: tripError } = await supabase
         .from('trips')
         .select('id, nume, destinatie, status')
         .eq('group_id', groupData.group_id)
         .in('status', ['confirmed', 'active'])
-        .maybeSingle();
+        .limit(1);
 
       if (tripError) throw tripError;
 
-      if (!tripData) {
+      if (!tripsData || tripsData.length === 0) {
         console.log('[StampsPage] No active trip found for group');
         setAvailableStamps([]);
         setCollectedStamps([]);
         setLoading(false);
         return;
       }
+      
+      const tripData = tripsData[0];
 
       // Fetch toate stamps-urile pentru trip
       const { data: stamps, error: stampsError } = await supabase
@@ -292,26 +296,30 @@ const StampsPage = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      // Fetch trip-ul activ al turistului
-      const { data: groupData, error: groupError } = await supabase
+      // Fetch trip-ul activ al turistului - take the first group if multiple
+      const { data: groupsData, error: groupError } = await supabase
         .from('group_members')
         .select('group_id')
         .eq('user_id', profile!.id)
-        .maybeSingle();
+        .limit(1);
 
       if (groupError) throw groupError;
-      if (!groupData) return;
+      if (!groupsData || groupsData.length === 0) return;
+      
+      const groupData = groupsData[0];
 
-      // Fetch trip-ul pentru grup
-      const { data: tripData, error: tripError } = await supabase
+      // Fetch trip-ul pentru grup - take the first active trip if multiple
+      const { data: tripsData, error: tripError } = await supabase
         .from('trips')
         .select('id, nume, destinatie, status, group_id, tourist_groups(nume_grup)')
         .eq('group_id', groupData.group_id)
         .in('status', ['confirmed', 'active'])
-        .maybeSingle();
+        .limit(1);
 
       if (tripError) throw tripError;
-      if (!tripData) return;
+      if (!tripsData || tripsData.length === 0) return;
+      
+      const tripData = tripsData[0];
 
       // @ts-ignore - nested relation
       const fetchedGroupName = tripData.tourist_groups?.nume_grup || "Grupul tău";
