@@ -735,7 +735,10 @@ const TouristDashboard = () => {
           {/* Group Info */}
           <Card className="shadow-soft border-0">
             <CardHeader>
-              <CardTitle className="text-lg">Informații Grup</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Informații Grup
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -754,6 +757,9 @@ const TouristDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Spacer between Group Info and Stamps Collection */}
+          <div className="h-2" />
 
           {/* Stamps Collection Widget */}
           {stampsStats.total > 0 && (
