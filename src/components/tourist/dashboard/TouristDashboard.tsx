@@ -467,7 +467,7 @@ const TouristDashboard = () => {
     switch (type) {
       case "meal": return "🍽️";
       case "attraction": return "🏛️";
-      case "transport": return "🚢";
+      case "transport": return "✈️";
       case "accommodation": return "🏨";
       case "free_time": return "🎯";
       case "custom": return "📍";

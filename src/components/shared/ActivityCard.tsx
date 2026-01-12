@@ -37,7 +37,7 @@ export const ActivityCard = ({
     switch (type) {
       case "meal": return "🍽️";
       case "attraction": return "🏛️";
-      case "transport": return "🚢";
+      case "transport": return "✈️";
       case "accommodation": return "🏨";
       default: return "📍";
     }
