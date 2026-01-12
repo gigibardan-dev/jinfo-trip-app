@@ -96,10 +96,11 @@ const App = () => (
                     </ProtectedRoute>
                   } 
                 />
+                {/* SHARED ROUTES - All authenticated users */}
                 <Route 
                   path="/settings" 
                   element={
-                    <ProtectedRoute allowedRoles={['admin']}>
+                    <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
                       <SettingsPage />
                     </ProtectedRoute>
                   } 
