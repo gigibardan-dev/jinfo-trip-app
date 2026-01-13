@@ -1,21 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Download, Check } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
-import { toast } from "sonner";
 
 export const InstallPWAButton = () => {
-  const { isInstallable, isInstalled, installApp } = usePWAInstall(); // ✅ installApp nu handleInstallClick
+  const { isInstallable, isInstalled, installApp } = usePWAInstall();
 
   const onInstallClick = async () => {
-    await installApp(); // ✅ Folosește installApp
-    // Toast-ul e deja în hook, nu mai trebuie aici
+    await installApp();
   };
 
   if (isInstalled) {
     return (
-      <Button variant="outline" size="sm" disabled className="gap-2">
+      <Button variant="outline" size="sm" disabled className="gap-1 md:gap-2">
         <Check className="w-4 h-4" />
-        Aplicație Instalată
+        <span className="hidden sm:inline text-xs md:text-sm">Instalată</span>
       </Button>
     );
   }
@@ -26,13 +24,13 @@ export const InstallPWAButton = () => {
 
   return (
     <Button 
-      variant="default" 
+      variant="outline" 
       size="sm" 
       onClick={onInstallClick}
-      className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+      className="gap-1 md:gap-2"
     >
       <Download className="w-4 h-4" />
-      Instalează Aplicația
+      <span className="hidden sm:inline text-xs md:text-sm">Instalează</span>
     </Button>
   );
 };
