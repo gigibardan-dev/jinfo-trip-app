@@ -4,15 +4,11 @@ import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { toast } from "sonner";
 
 export const InstallPWAButton = () => {
-  const { isInstallable, isInstalled, handleInstallClick } = usePWAInstall();
+  const { isInstallable, isInstalled, installApp } = usePWAInstall(); // ✅ installApp nu handleInstallClick
 
   const onInstallClick = async () => {
-    const success = await handleInstallClick();
-    if (success) {
-      toast.success('✅ Aplicația a fost instalată!');
-    } else {
-      toast.info('Instalarea a fost anulată');
-    }
+    await installApp(); // ✅ Folosește installApp
+    // Toast-ul e deja în hook, nu mai trebuie aici
   };
 
   if (isInstalled) {
