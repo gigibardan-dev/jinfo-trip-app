@@ -36,9 +36,9 @@ export const InstallPromoBanner = () => {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom duration-500">
-      <div className="bg-gradient-to-r from-primary to-accent p-3 md:p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between gap-2 md:gap-3">
+    <div className="fixed left-0 right-0 bottom-16 md:bottom-0 z-[9999]">
+      <div className="bg-gradient-to-r from-primary to-accent px-2 py-3 md:px-4 md:py-4 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-3">
           <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
             <span className="text-xl md:text-2xl flex-shrink-0">💡</span>
             <div className="flex-1 min-w-0">
