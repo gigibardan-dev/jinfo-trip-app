@@ -4,27 +4,38 @@
   "description": "Aplicație PWA modernă pentru agenția de turism JinfoTours.ro cu funcționalitate offline completă",
   "start_url": "/",
   "scope": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0EA5E9",
   "orientation": "portrait-primary",
+  "lang": "ro",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "/placeholder.svg",
+      "src": "/icons/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/placeholder.svg",
+      "src": "/icons/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ],
   "categories": ["travel", "business", "productivity"],
@@ -34,14 +45,14 @@
       "short_name": "Dashboard",
       "description": "Open dashboard",
       "url": "/",
-      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+      "icons": [{ "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Documents",
       "short_name": "Docs",
       "description": "View documents",
       "url": "/documents",
-      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+      "icons": [{ "src": "/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }
