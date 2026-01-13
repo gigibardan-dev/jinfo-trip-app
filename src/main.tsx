@@ -3,10 +3,13 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import 'leaflet/dist/leaflet.css'
-import { registerServiceWorker, checkOnlineStatus } from './registerServiceWorker'
+import { registerServiceWorker, checkOnlineStatus, setupInstallPrompt } from './registerServiceWorker'
 
 // Register service worker for PWA offline support
 registerServiceWorker();
+
+// Setup PWA install prompt handler
+setupInstallPrompt();
 
 // Monitor online/offline status
 checkOnlineStatus();

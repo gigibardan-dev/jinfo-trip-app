@@ -108,3 +108,23 @@ export function checkOnlineStatus(): void {
     console.log('[SW] Gone offline - cached documents still accessible via IndexedDB');
   });
 }
+
+/**
+ * Setup PWA install prompt handler
+ * Captures beforeinstallprompt event for install button functionality
+ */
+export function setupInstallPrompt(): void {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    console.log('[PWA] beforeinstallprompt event captured - install button will be available');
+    
+    // Salvează event-ul pentru usePWAInstall hook
+    (window as any).deferredPrompt = e;
+    
+    // Dispatch custom event pentru a notifica hook-ul
+    window.dispatchEvent(new CustomEvent('pwa-installable'));
+  });
+
+  // Log pentru debugging
+  console.log('[PWA] Install prompt listener attached');
+}
