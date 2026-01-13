@@ -1,83 +1,81 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-/**
- * Hook pentru gestionarea instalării PWA
- */
-export function usePWAInstall() {
+export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true) {
-      setIsInstalled(true);
-      return;
+    // Check dacă e deja instalat
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSStandalone = (window.navigator as any).standalone === true;
+      const installed = isStandalone || isIOSStandalone;
+      setIsInstalled(installed);
+      console.log('[usePWAInstall] Is installed:', installed);
+    };
+    checkInstalled();
+
+    // Listener pentru custom event de la setupInstallPrompt
+    const handleInstallable = () => {
+      const prompt = (window as any).deferredPrompt;
+      if (prompt) {
+        console.log('[usePWAInstall] Detected window.deferredPrompt from setupInstallPrompt');
+        setDeferredPrompt(prompt);
+        setIsInstallable(true);
+      }
+    };
+    
+    window.addEventListener('pwa-installable', handleInstallable);
+    
+    // Check dacă deja există (pentru cazul când hook-ul se montează după event)
+    if ((window as any).deferredPrompt) {
+      console.log('[usePWAInstall] Found existing window.deferredPrompt on mount');
+      handleInstallable();
     }
 
-    // Listen for beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      const promptEvent = e as BeforeInstallPromptEvent;
-      setDeferredPrompt(promptEvent);
-      setIsInstallable(true);
-      console.log('[PWA] Install prompt available');
-    };
-
-    // Listen for app installed event
-    const handleAppInstalled = () => {
-      console.log('[PWA] App installed');
-      setIsInstalled(true);
-      setIsInstallable(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
+    // Cleanup
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('pwa-installable', handleInstallable);
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const installApp = async () => {
     if (!deferredPrompt) {
-      console.log('[PWA] No install prompt available');
-      return false;
+      console.log('[usePWAInstall] No deferred prompt available');
+      return;
     }
 
     try {
-      // Show install prompt
+      console.log('[usePWAInstall] Showing install prompt');
       await deferredPrompt.prompt();
-      
-      // Wait for user response
       const { outcome } = await deferredPrompt.userChoice;
       
-      console.log(`[PWA] User response: ${outcome}`);
+      console.log('[usePWAInstall] User choice:', outcome);
       
       if (outcome === 'accepted') {
-        setIsInstallable(false);
-        setDeferredPrompt(null);
-        return true;
+        setIsInstalled(true);
       }
       
-      return false;
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      
+      // Clear window reference
+      (window as any).deferredPrompt = null;
     } catch (error) {
-      console.error('[PWA] Install prompt error:', error);
-      return false;
+      console.error('[usePWAInstall] Install failed:', error);
     }
   };
 
   return {
     isInstallable,
     isInstalled,
-    handleInstallClick,
+    deferredPrompt,
+    installApp
   };
-}
+};
