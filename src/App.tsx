@@ -34,6 +34,8 @@ import Terms from "./pages/Terms";
 import StampsPage from "./pages/tourist/StampsPage";
 import Footer from "./components/shared/Footer";
 import { CookieConsent } from "@/components/shared/gdpr/CookieConsent";
+import { InstallPromoBanner } from "@/components/shared/pwa/InstallPromoBanner";
+
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,7 @@ const App = () => (
         <TooltipProvider>
           <div className="min-h-screen flex flex-col">
             <Toaster />
+            <InstallPromoBanner />
             <Sonner />
             <BrowserRouter>
             <div className="flex-1">
