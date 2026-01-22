@@ -49,8 +49,9 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Geocode search error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { 
         status: 500, 
         headers: { 
