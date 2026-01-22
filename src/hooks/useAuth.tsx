@@ -2,7 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
+import { clearAllOfflineDocuments } from '@/lib/offlineStorage';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -145,6 +145,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
+      
+      // Clear offline cached documents before logout (security measure)
+      try {
+        await clearAllOfflineDocuments();
+        console.log('[Auth] Offline documents cleared on logout');
+      } catch (cacheError) {
+        console.error('[Auth] Failed to clear offline cache:', cacheError);
+        // Continue with logout even if cache clear fails
+      }
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
