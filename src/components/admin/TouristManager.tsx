@@ -95,6 +95,8 @@ const TouristManager = () => {
   const [editingTourist, setEditingTourist] = useState<Tourist | null>(null);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const [selectedTouristForPromotion, setSelectedTouristForPromotion] = useState<Tourist | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedTouristForDeletion, setSelectedTouristForDeletion] = useState<Tourist | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -278,8 +280,19 @@ const TouristManager = () => {
 
         toast({
           title: "✅ Tourist creat cu succes!",
-          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei. Rămâi conectat ca administrator.`,
+          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
         });
+
+        // Forțează refresh pentru a asigura sesiunea admin
+        setShowDialog(false);
+        setEditingTourist(null);
+        resetForm();
+        
+        // Delay mic și apoi refresh pagină pentru a fixa sesiunea
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        return;
       }
 
       setShowDialog(false);
@@ -391,27 +404,41 @@ const TouristManager = () => {
     }
   };
 
-  const handleDelete = async (touristId: string) => {
-    if (!confirm("Ești sigur că vrei să ștergi acest turist?")) return;
+  const handleDelete = (tourist: Tourist) => {
+    setSelectedTouristForDeletion(tourist);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedTouristForDeletion) return;
 
     try {
-      const { error } = await supabase
+      // Update profile to inactive
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({ is_active: false })
-        .eq('id', touristId);
+        .eq('id', selectedTouristForDeletion.id);
 
-      if (error) throw error;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw profileError;
+      }
 
       toast({
-        title: "Succes",
-        description: "Turistul a fost dezactivat cu succes.",
+        title: "✅ Succes",
+        description: `${selectedTouristForDeletion.nume} ${selectedTouristForDeletion.prenume} a fost dezactivat cu succes.`,
       });
-      fetchTourists();
-    } catch (error) {
+
+      setShowDeleteDialog(false);
+      setSelectedTouristForDeletion(null);
+      
+      // Refresh list
+      await fetchTourists();
+    } catch (error: any) {
       console.error('Error deleting tourist:', error);
       toast({
         title: "Eroare",
-        description: "Nu s-a putut dezactiva turistul.",
+        description: error.message || "Nu s-a putut dezactiva turistul.",
         variant: "destructive",
       });
     }
@@ -794,7 +821,7 @@ const TouristManager = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => handleDelete(tourist.id)}
+                        onClick={() => handleDelete(tourist)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -898,7 +925,7 @@ const TouristManager = () => {
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        onClick={() => handleDelete(tourist.id)}
+                        onClick={() => handleDelete(tourist)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -932,6 +959,39 @@ const TouristManager = () => {
           </p>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Dezactivare Turist
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Ești sigur că vrei să dezactivezi contul pentru{" "}
+                <span className="font-semibold text-foreground">
+                  {selectedTouristForDeletion?.nume} {selectedTouristForDeletion?.prenume}
+                </span>
+                ?
+              </p>
+              <p className="text-destructive font-medium">
+                ⚠️ Această acțiune este ireversibilă. Turistul nu va mai putea accesa aplicația.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>Nu, anulează</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Da, dezactivează
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Promote to Admin Confirmation Dialog */}
       <AlertDialog open={showPromoteDialog} onOpenChange={setShowPromoteDialog}>
