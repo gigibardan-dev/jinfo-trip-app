@@ -217,81 +217,45 @@ const TouristManager = () => {
           description: "Turistul a fost actualizat cu succes.",
         });
       } else {
-        // Generează parolă temporară
-        const tempPassword = generateTemporaryPassword();
-        
-        // CRITICAL: Salvează session-ul admin ÎNAINTE de orice operație auth
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        const adminAccessToken = currentSession?.access_token;
-        const adminRefreshToken = currentSession?.refresh_token;
-
-        // Create new tourist cu intended_role
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: tempPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/reset-password`,
-            data: {
-              nume: formData.nume,
-              prenume: formData.prenume,
-              telefon: formData.telefon,
-              intended_role: 'tourist'
-            }
+        // IMPORTANT: crearea user-ului se face prin Edge Function (service role)
+        // ca să NU ne afecteze sesiunea curentă (admin).
+        const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+          body: {
+            email: formData.email,
+            nume: formData.nume,
+            prenume: formData.prenume,
+            telefon: formData.telefon,
+            intended_role: 'tourist',
+            avatar_url: formData.avatar_url,
+            group_ids: formData.group_ids,
           }
         });
 
-        // CRITICAL: Restaurează IMEDIAT sesiunea admin înainte de orice altceva
-        if (adminAccessToken && adminRefreshToken) {
-          await supabase.auth.setSession({
-            access_token: adminAccessToken,
-            refresh_token: adminRefreshToken
-          });
-        }
+        if (createError) throw createError;
+        if (!createData?.userId) throw new Error('Nu s-a putut crea user-ul (userId lipsă).');
 
-        if (authError) throw authError;
+        // Trimite email de reset password (nu schimbă sesiunea admin)
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          formData.email,
+          { redirectTo: `${window.location.origin}/reset-password` }
+        );
 
-        if (authData.user) {
-          // Așteaptă ca trigger să creeze profilul
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Update profile cu avatar
-          if (formData.avatar_url) {
-            await supabase
-              .from('profiles')
-              .update({ avatar_url: formData.avatar_url })
-              .eq('id', authData.user.id);
-          }
-
-          // Add group memberships
-          await updateGroupMemberships(authData.user.id);
-
-          // Trimite email de reset password
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-            formData.email,
-            {
-              redirectTo: `${window.location.origin}/reset-password`
-            }
-          );
-
-          if (resetError) {
-            console.error('Error sending reset email:', resetError);
-          }
+        if (resetError) {
+          console.error('Error sending reset email:', resetError);
         }
 
         toast({
-          title: "✅ Tourist creat cu succes!",
+          title: "✅ Turist creat cu succes",
           description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
         });
 
-        // Forțează refresh pentru a asigura sesiunea admin
-        setShowDialog(false);
-        setEditingTourist(null);
-        resetForm();
-        
-        // Delay mic și apoi refresh pagină pentru a fixa sesiunea
+        // Lasă confirmarea vizibilă ~1s și rămâi pe /tourists (fără refresh)
         setTimeout(() => {
-          window.location.reload();
-        }, 500);
+          setShowDialog(false);
+          setEditingTourist(null);
+          resetForm();
+          fetchTourists();
+        }, 1100);
         return;
       }
 
@@ -413,16 +377,15 @@ const TouristManager = () => {
     if (!selectedTouristForDeletion) return;
 
     try {
-      // Update profile to inactive
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ is_active: false })
-        .eq('id', selectedTouristForDeletion.id);
+      const { data, error } = await supabase.functions.invoke('admin-set-user-active', {
+        body: {
+          userId: selectedTouristForDeletion.id,
+          isActive: false,
+        }
+      });
 
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-        throw profileError;
-      }
+      if (error) throw error;
+      if (!data?.success) throw new Error('Dezactivarea nu a fost confirmată de server.');
 
       toast({
         title: "✅ Succes",
@@ -431,9 +394,9 @@ const TouristManager = () => {
 
       setShowDeleteDialog(false);
       setSelectedTouristForDeletion(null);
-      
-      // Refresh list
-      await fetchTourists();
+
+      // Scoate turistul din listă (comportament de "ștergere" pentru UI)
+      setTourists((prev) => prev.filter((t) => t.id !== selectedTouristForDeletion.id));
     } catch (error: any) {
       console.error('Error deleting tourist:', error);
       toast({
@@ -446,18 +409,22 @@ const TouristManager = () => {
 
   const handleToggleStatus = async (touristId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: !currentStatus })
-        .eq('id', touristId);
+      const { data, error } = await supabase.functions.invoke('admin-set-user-active', {
+        body: {
+          userId: touristId,
+          isActive: !currentStatus,
+        }
+      });
 
       if (error) throw error;
+      if (!data?.success) throw new Error('Actualizarea statusului nu a fost confirmată de server.');
 
       toast({
         title: "Succes",
         description: `Turistul a fost ${!currentStatus ? 'activat' : 'dezactivat'} cu succes.`,
       });
-      fetchTourists();
+
+      setTourists((prev) => prev.map((t) => (t.id === touristId ? { ...t, is_active: !currentStatus } : t)));
     } catch (error) {
       console.error('Error toggling status:', error);
       toast({
