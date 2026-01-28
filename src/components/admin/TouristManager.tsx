@@ -218,8 +218,10 @@ const TouristManager = () => {
         // Generează parolă temporară
         const tempPassword = generateTemporaryPassword();
         
-        // Salvează session-ul admin
+        // CRITICAL: Salvează session-ul admin ÎNAINTE de orice operație auth
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const adminAccessToken = currentSession?.access_token;
+        const adminRefreshToken = currentSession?.refresh_token;
 
         // Create new tourist cu intended_role
         const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -231,10 +233,18 @@ const TouristManager = () => {
               nume: formData.nume,
               prenume: formData.prenume,
               telefon: formData.telefon,
-              intended_role: 'tourist' // ✅ Trigger-ul va folosi asta!
+              intended_role: 'tourist'
             }
           }
         });
+
+        // CRITICAL: Restaurează IMEDIAT sesiunea admin înainte de orice altceva
+        if (adminAccessToken && adminRefreshToken) {
+          await supabase.auth.setSession({
+            access_token: adminAccessToken,
+            refresh_token: adminRefreshToken
+          });
+        }
 
         if (authError) throw authError;
 
@@ -264,19 +274,11 @@ const TouristManager = () => {
           if (resetError) {
             console.error('Error sending reset email:', resetError);
           }
-
-          // CRITICAL: Restore admin session
-          if (currentSession) {
-            await supabase.auth.setSession({
-              access_token: currentSession.access_token,
-              refresh_token: currentSession.refresh_token
-            });
-          }
         }
 
         toast({
-          title: "Tourist creat cu succes!",
-          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
+          title: "✅ Tourist creat cu succes!",
+          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei. Rămâi conectat ca administrator.`,
         });
       }
 
