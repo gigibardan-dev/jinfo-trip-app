@@ -13,6 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,7 +40,8 @@ import {
   EyeOff,
   LayoutGrid,
   List,
-  Shield
+  Shield,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,9 +105,11 @@ const TouristManager = () => {
   const [selectedTouristForPromotion, setSelectedTouristForPromotion] = useState<Tourist | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedTouristForDeletion, setSelectedTouristForDeletion] = useState<Tourist | null>(null);
+  const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
+  const [selectedTouristForHardDeletion, setSelectedTouristForHardDeletion] = useState<Tourist | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('active');
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [formData, setFormData] = useState<TouristFormData>({
     email: "",
@@ -120,11 +130,11 @@ const TouristManager = () => {
       fetchTourists();
       fetchGroups();
     }
-  }, [user, profile]);
+  }, [user, profile, filterStatus]);
 
   const fetchTourists = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select(`
           *,
@@ -136,6 +146,15 @@ const TouristManager = () => {
         `)
         .eq('role', 'tourist')
         .order('created_at', { ascending: false });
+
+      // Apply status filter at database level
+      if (filterStatus === 'active') {
+        query = query.eq('is_active', true);
+      } else if (filterStatus === 'inactive') {
+        query = query.eq('is_active', false);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTourists(data || []);
@@ -373,6 +392,11 @@ const TouristManager = () => {
     setShowDeleteDialog(true);
   };
 
+  const handleHardDelete = (tourist: Tourist) => {
+    setSelectedTouristForHardDeletion(tourist);
+    setShowHardDeleteDialog(true);
+  };
+
   const confirmDelete = async () => {
     if (!selectedTouristForDeletion) return;
 
@@ -407,6 +431,35 @@ const TouristManager = () => {
     }
   };
 
+  const confirmHardDelete = async () => {
+    if (!selectedTouristForHardDeletion) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user-permanently', {
+        body: { userId: selectedTouristForHardDeletion.id }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Ștergerea permanentă a eșuat');
+
+      toast({
+        title: "✅ Șters definitiv",
+        description: `${selectedTouristForHardDeletion.nume} ${selectedTouristForHardDeletion.prenume} a fost șters complet din sistem.`,
+      });
+
+      setShowHardDeleteDialog(false);
+      setSelectedTouristForHardDeletion(null);
+      fetchTourists();
+    } catch (error: any) {
+      console.error('Error hard deleting tourist:', error);
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut șterge turistul.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleToggleStatus = async (touristId: string, currentStatus: boolean) => {
     try {
       const { data, error } = await supabase.functions.invoke('admin-set-user-active', {
@@ -424,7 +477,8 @@ const TouristManager = () => {
         description: `Turistul a fost ${!currentStatus ? 'activat' : 'dezactivat'} cu succes.`,
       });
 
-      setTourists((prev) => prev.map((t) => (t.id === touristId ? { ...t, is_active: !currentStatus } : t)));
+      // Refetch to get updated list based on current filter
+      fetchTourists();
     } catch (error) {
       console.error('Error toggling status:', error);
       toast({
@@ -457,11 +511,7 @@ const TouristManager = () => {
     const matchesGroup = filterGroup === 'all' || 
       tourist.group_memberships?.some(gm => gm.group_id === filterGroup);
     
-    const matchesStatus = filterStatus === 'all' || 
-      (filterStatus === 'active' && tourist.is_active) ||
-      (filterStatus === 'inactive' && !tourist.is_active);
-    
-    return matchesSearch && matchesGroup && matchesStatus;
+    return matchesSearch && matchesGroup;
   });
 
   const getInitials = (nume: string, prenume: string) => {
@@ -711,6 +761,16 @@ const TouristManager = () => {
         </div>
       </div>
 
+      {/* Inactive tourists banner */}
+      {filterStatus === 'inactive' && filteredTourists.length > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            <strong>⚠️ Vizualizezi turiști dezactivați.</strong> Acești turiști nu pot accesa aplicația. 
+            Apasă "Reactivează Cont" pentru a le reda accesul.
+          </p>
+        </div>
+      )}
+
       {/* Tourists View */}
       {viewMode === 'cards' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -768,6 +828,19 @@ const TouristManager = () => {
                   </div>
 
                   <div className="space-y-2 pt-2">
+                    {/* Reactivation button for inactive tourists */}
+                    {!tourist.is_active && (
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Reactivează Cont
+                      </Button>
+                    )}
+
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -778,29 +851,53 @@ const TouristManager = () => {
                         <Edit className="w-3 h-3 mr-1" />
                         Editează
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
-                      >
-                        {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleDelete(tourist)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handlePromoteToAdmin(tourist)}
-                        className="text-warning border-warning hover:bg-warning hover:text-warning-foreground"
-                      >
-                        <Shield className="w-3 h-3" />
-                      </Button>
+
+                      {tourist.is_active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                        >
+                          <UserMinus className="w-3 h-3" />
+                        </Button>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDelete(tourist)}>
+                            <UserMinus className="w-4 h-4 mr-2" />
+                            Dezactivează (reversibil)
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleHardDelete(tourist)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Șterge definitiv
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {tourist.is_active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePromoteToAdmin(tourist)}
+                          className="text-warning border-warning hover:bg-warning hover:text-warning-foreground"
+                        >
+                          <Shield className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -875,36 +972,68 @@ const TouristManager = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => handleEdit(tourist)}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
-                      >
-                        {tourist.is_active ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => handleDelete(tourist)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handlePromoteToAdmin(tourist)}
-                        className="text-warning hover:text-warning"
-                      >
-                        <Shield className="w-3 h-3" />
-                      </Button>
+                      {!tourist.is_active ? (
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Reactivează
+                        </Button>
+                      ) : (
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleEdit(tourist)}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleStatus(tourist.id, tourist.is_active)}
+                          >
+                            <UserMinus className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handlePromoteToAdmin(tourist)}
+                            className="text-warning hover:text-warning"
+                          >
+                            <Shield className="w-3 h-3" />
+                          </Button>
+                        </>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDelete(tourist)}>
+                            <UserMinus className="w-4 h-4 mr-2" />
+                            Dezactivează (reversibil)
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleHardDelete(tourist)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Șterge definitiv
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -927,12 +1056,12 @@ const TouristManager = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Soft Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <UserMinus className="w-5 h-5" />
               Dezactivare Turist
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -943,18 +1072,64 @@ const TouristManager = () => {
                 </span>
                 ?
               </p>
-              <p className="text-destructive font-medium">
-                ⚠️ Această acțiune este ireversibilă. Turistul nu va mai putea accesa aplicația.
-              </p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>ℹ️ Această acțiune este REVERSIBILĂ.</strong> Turistul nu va mai putea accesa aplicația, 
+                  dar contul rămâne în sistem și poate fi reactivat ulterior.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel>Nu, anulează</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-amber-600 text-white hover:bg-amber-700"
             >
               Da, dezactivează
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hard Delete Confirmation Dialog */}
+      <AlertDialog open={showHardDeleteDialog} onOpenChange={setShowHardDeleteDialog}>
+        <AlertDialogContent className="sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Ștergere Permanentă
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Ești sigur că vrei să ștergi <strong className="text-destructive">DEFINITIV</strong> contul pentru{" "}
+                <span className="font-semibold text-foreground">
+                  {selectedTouristForHardDeletion?.nume} {selectedTouristForHardDeletion?.prenume}
+                </span>
+                ?
+              </p>
+              
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
+                <p className="font-semibold text-destructive flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  ⚠️ ATENȚIE - ACȚIUNE IREVERSIBILĂ:
+                </p>
+                <ul className="text-sm text-destructive/90 space-y-1 ml-6 list-disc">
+                  <li>Contul va fi șters complet din sistem</li>
+                  <li>Email-ul devine disponibil pentru conturi noi</li>
+                  <li>Tot istoricul (stamps, memberships) va fi pierdut</li>
+                  <li>Nu există posibilitate de recuperare</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>Nu, anulează</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmHardDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Da, șterge definitiv
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
