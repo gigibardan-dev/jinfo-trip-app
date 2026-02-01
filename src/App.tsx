@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Analytics } from "@vercel/analytics/react";
 import { ProtectedRoute } from "@/components/shared/routing/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -240,6 +241,7 @@ const App = () => (
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>
+     <Analytics /> {/* ✅ Vercel Analytics */}
   </QueryClientProvider>
 );
 
