@@ -13,7 +13,7 @@ const generatePassword = (length = 16) => {
   return out;
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -53,12 +53,18 @@ serve(async (req) => {
     const avatar_url = typeof body?.avatar_url === "string" ? body.avatar_url.trim() : null;
     const intended_role = String(body?.intended_role ?? "tourist");
     const group_ids: string[] = Array.isArray(body?.group_ids) ? body.group_ids : [];
+    // ✅ FIX: Use password from request if provided, otherwise generate random
+    const password = typeof body?.password === "string" && body.password.trim().length >= 6 
+      ? body.password.trim() 
+      : null;
 
     if (!email) throw new Error("email is required");
     if (!nume) throw new Error("nume is required");
     if (!prenume) throw new Error("prenume is required");
+    if (!password) throw new Error("password is required and must be at least 6 characters");
 
-    const tempPassword = generatePassword();
+    // ✅ FIX: Use the password from admin, not random
+    const tempPassword = password;
 
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,

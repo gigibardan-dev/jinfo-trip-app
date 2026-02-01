@@ -236,47 +236,35 @@ const TouristManager = () => {
           description: "Turistul a fost actualizat cu succes.",
         });
       } else {
-        // IMPORTANT: crearea user-ului se face prin Edge Function (service role)
-        // ca să NU ne afecteze sesiunea curentă (admin).
-        const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
-          body: {
-            email: formData.email,
-            nume: formData.nume,
-            prenume: formData.prenume,
-            telefon: formData.telefon,
-            intended_role: 'tourist',
-            avatar_url: formData.avatar_url,
-            group_ids: formData.group_ids,
-          }
-        });
+  // IMPORTANT: crearea user-ului se face prin Edge Function (service role)
+  // ca să NU ne afecteze sesiunea curentă (admin).
+  const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+    body: {
+      email: formData.email,
+      nume: formData.nume,
+      prenume: formData.prenume,
+      telefon: formData.telefon,
+      intended_role: 'tourist',
+      avatar_url: formData.avatar_url,
+      group_ids: formData.group_ids,
+      password: formData.password, // ✅ FIX: Trimite parola setată de admin
+    }
+  });
 
-        if (createError) throw createError;
-        if (!createData?.userId) throw new Error('Nu s-a putut crea user-ul (userId lipsă).');
+  if (createError) throw createError;
+  if (!createData?.userId) throw new Error('Nu s-a putut crea user-ul (userId lipsă).');
 
-        // Trimite email de reset password (nu schimbă sesiunea admin)
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          formData.email,
-          { redirectTo: `${window.location.origin}/reset-password` }
-        );
+  toast({
+    title: "✅ Turist creat cu succes",
+    description: `${formData.nume} ${formData.prenume} poate să se logheze cu parola setată.`,
+  });
 
-        if (resetError) {
-          console.error('Error sending reset email:', resetError);
-        }
-
-        toast({
-          title: "✅ Turist creat cu succes",
-          description: `${formData.nume} ${formData.prenume} a primit email pentru setarea parolei.`,
-        });
-
-        // Lasă confirmarea vizibilă ~1s și rămâi pe /tourists (fără refresh)
-        setTimeout(() => {
-          setShowDialog(false);
-          setEditingTourist(null);
-          resetForm();
-          fetchTourists();
-        }, 1100);
-        return;
-      }
+  setShowDialog(false);
+  setEditingTourist(null);
+  resetForm();
+  fetchTourists();
+  return;
+}
 
       setShowDialog(false);
       setEditingTourist(null);
