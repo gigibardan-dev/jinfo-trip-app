@@ -135,7 +135,7 @@ const DocumentManager = ({ tripId }: { tripId?: string }) => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nume, prenume, email')
-        .eq('role', 'tourist')
+        .in('role', ['tourist', 'guide'])
         .order('nume');
 
       if (error) throw error;

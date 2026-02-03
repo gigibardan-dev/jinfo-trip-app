@@ -171,7 +171,7 @@ const DocumentUploader = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nume, prenume, email')
-        .eq('role', 'tourist')
+        .in('role', ['tourist', 'guide'])
         .eq('is_active', true)
         .order('nume');
 
