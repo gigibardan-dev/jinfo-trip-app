@@ -126,7 +126,7 @@ const TouristManager = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchTourists();
       fetchGroups();
     }
