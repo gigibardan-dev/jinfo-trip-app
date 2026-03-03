@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Phone, Camera, Upload } from "lucide-react";
+import { VIPBadge } from "@/components/badges/VIPBadge";
+import { SuperAdminBadge } from "@/components/badges/SuperAdminBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import Navigation from "@/components/shared/layout/Navigation";
 
