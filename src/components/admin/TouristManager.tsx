@@ -918,6 +918,17 @@ const TouristManager = () => {
                           <Shield className="w-3 h-3" />
                         </Button>
                       )}
+
+                      {isSuperAdmin && tourist.is_active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleVIP(tourist)}
+                          className={tourist.is_vip ? "text-purple-600 border-purple-300" : ""}
+                        >
+                          {tourist.is_vip ? <StarOff className="w-3 h-3" /> : <Star className="w-3 h-3" />}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
