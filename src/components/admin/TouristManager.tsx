@@ -481,6 +481,31 @@ const TouristManager = () => {
     }
   };
 
+  const isSuperAdmin = profile?.role === 'superadmin';
+
+  const handleToggleVIP = async (tourist: Tourist) => {
+    try {
+      if (tourist.is_vip) {
+        const { error } = await supabase.rpc('remove_vip_status', { tourist_id: tourist.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('upgrade_tourist_to_vip', { tourist_id: tourist.id });
+        if (error) throw error;
+      }
+      toast({
+        title: tourist.is_vip ? "Status VIP eliminat" : "✨ Turist promovat la VIP",
+        description: `${tourist.nume} ${tourist.prenume} ${tourist.is_vip ? 'nu mai este VIP' : 'este acum VIP'}.`,
+      });
+      fetchTourists();
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut actualiza statusul VIP.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       email: "",
