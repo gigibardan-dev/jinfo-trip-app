@@ -226,9 +226,13 @@ const ProfilePage = () => {
               {isUploading && (
                 <p className="text-sm text-muted-foreground">Se încarcă imaginea...</p>
               )}
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
-                {profile.role === "admin" ? "Administrator" : profile.role === "guide" ? "Ghid" : "Turist"}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
+                  {getRoleLabel()}
+                </span>
+                {profile.role === 'superadmin' && <SuperAdminBadge size="sm" showText />}
+                {profile.is_vip && <VIPBadge size="sm" />}
+              </div>
             </div>
 
 
