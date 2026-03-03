@@ -50,6 +50,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { VIPBadge } from "@/components/badges/VIPBadge";
 
 interface Tourist {
   id: string;
