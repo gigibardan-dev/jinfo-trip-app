@@ -60,6 +60,7 @@ interface Tourist {
   telefon?: string;
   avatar_url?: string;
   is_active: boolean;
+  is_vip?: boolean;
   role: string;
   created_at: string;
   group_memberships?: {
