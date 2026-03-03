@@ -3,18 +3,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Shield, 
   Search, 
   Mail,
   Phone,
-  Calendar
+  Calendar,
+  Plus,
+  UserMinus,
+  Eye,
+  EyeOff,
+  Crown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
+import { SuperAdminBadge } from "@/components/badges/SuperAdminBadge";
 
 interface Admin {
   id: string;
@@ -25,29 +44,51 @@ interface Admin {
   avatar_url?: string;
   is_active: boolean;
   created_at: string;
+  role: string;
+  show_superadmin_badge?: boolean;
+}
+
+interface AdminFormData {
+  email: string;
+  nume: string;
+  prenume: string;
+  telefon: string;
+  password: string;
 }
 
 const AdminManager = () => {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDowngradeDialog, setShowDowngradeDialog] = useState(false);
+  const [selectedAdminForDowngrade, setSelectedAdminForDowngrade] = useState<Admin | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState<AdminFormData>({
+    email: "",
+    nume: "",
+    prenume: "",
+    telefon: "",
+    password: ""
+  });
 
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
+  const isSuperAdmin = profile?.role === 'superadmin';
+
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchAdmins();
     }
   }, [user, profile]);
 
   const fetchAdmins = async () => {
     try {
-      // Get all users with admin role from user_roles table
       const { data: adminRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
-        .eq('role', 'admin');
+        .in('role', ['admin', 'superadmin']);
 
       if (rolesError) throw rolesError;
 
@@ -59,7 +100,6 @@ const AdminManager = () => {
 
       const adminIds = adminRoles.map(r => r.user_id);
 
-      // Get profiles for these admin users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -77,6 +117,82 @@ const AdminManager = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: formData.email,
+          nume: formData.nume,
+          prenume: formData.prenume,
+          telefon: formData.telefon,
+          intended_role: 'admin',
+          password: formData.password,
+        }
+      });
+
+      if (createError) throw createError;
+      if (!createData?.userId) throw new Error('Nu s-a putut crea administratorul.');
+
+      toast({
+        title: "✅ Administrator creat",
+        description: `${formData.nume} ${formData.prenume} poate să se logheze acum.`,
+      });
+
+      setShowCreateDialog(false);
+      setFormData({ email: "", nume: "", prenume: "", telefon: "", password: "" });
+      fetchAdmins();
+    } catch (error: any) {
+      console.error('Error creating admin:', error);
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut crea administratorul.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDowngrade = (admin: Admin) => {
+    setSelectedAdminForDowngrade(admin);
+    setShowDowngradeDialog(true);
+  };
+
+  const confirmDowngrade = async () => {
+    if (!selectedAdminForDowngrade) return;
+
+    try {
+      const { error } = await supabase.rpc('downgrade_admin_to_tourist', {
+        admin_user_id: selectedAdminForDowngrade.id
+      });
+
+      if (error) throw error;
+
+      // Also update user_roles
+      await supabase
+        .from('user_roles')
+        .update({ role: 'tourist' })
+        .eq('user_id', selectedAdminForDowngrade.id)
+        .eq('role', 'admin');
+
+      toast({
+        title: "Admin retrogradat",
+        description: `${selectedAdminForDowngrade.nume} ${selectedAdminForDowngrade.prenume} este acum turist.`,
+      });
+
+      setShowDowngradeDialog(false);
+      setSelectedAdminForDowngrade(null);
+      fetchAdmins();
+    } catch (error: any) {
+      console.error('Error downgrading admin:', error);
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut retrograda administratorul.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -105,6 +221,12 @@ const AdminManager = () => {
           <h2 className="text-2xl font-bold">Administratori</h2>
           <p className="text-muted-foreground">Lista utilizatorilor cu rol de administrator</p>
         </div>
+        {isSuperAdmin && (
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Admin Nou
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -148,7 +270,7 @@ const AdminManager = () => {
                   </Avatar>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold truncate">
                         {admin.nume} {admin.prenume}
                       </h3>
@@ -157,10 +279,16 @@ const AdminManager = () => {
                       )}
                     </div>
                     
-                    <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Administrator
-                    </Badge>
+                    <div className="flex items-center gap-2 mb-3">
+                      {admin.role === 'superadmin' ? (
+                        <SuperAdminBadge size="sm" showText />
+                      ) : (
+                        <Badge className="bg-primary/10 text-primary border-primary/20">
+                          <Shield className="w-3 h-3 mr-1" />
+                          Administrator
+                        </Badge>
+                      )}
+                    </div>
                     
                     <div className="space-y-1.5 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
@@ -182,6 +310,21 @@ const AdminManager = () => {
                         </span>
                       </div>
                     </div>
+
+                    {/* Downgrade button (only for superadmins, not on self or other superadmins) */}
+                    {isSuperAdmin && admin.role === 'admin' && admin.id !== user?.id && (
+                      <div className="mt-3 pt-3 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDowngrade(admin)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <UserMinus className="w-3 h-3 mr-1" />
+                          Retrogradează la turist
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -189,6 +332,101 @@ const AdminManager = () => {
           ))}
         </div>
       )}
+
+      {/* Create Admin Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Creează Administrator Nou</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateAdmin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-email">Email *</Label>
+              <Input
+                id="admin-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-nume">Nume *</Label>
+                <Input
+                  id="admin-nume"
+                  value={formData.nume}
+                  onChange={(e) => setFormData({...formData, nume: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-prenume">Prenume *</Label>
+                <Input
+                  id="admin-prenume"
+                  value={formData.prenume}
+                  onChange={(e) => setFormData({...formData, prenume: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-telefon">Telefon</Label>
+              <Input
+                id="admin-telefon"
+                value={formData.telefon}
+                onChange={(e) => setFormData({...formData, telefon: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Parolă *</Label>
+              <div className="relative">
+                <Input
+                  id="admin-password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Anulează
+              </Button>
+              <Button type="submit">Creează Admin</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Downgrade Confirmation Dialog */}
+      <AlertDialog open={showDowngradeDialog} onOpenChange={setShowDowngradeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Retrogradare Administrator</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ești sigur că vrei să retrogradezi pe{" "}
+              <strong>{selectedAdminForDowngrade?.nume} {selectedAdminForDowngrade?.prenume}</strong>{" "}
+              la rol de turist? Această acțiune va elimina toate privilegiile de administrator.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDowngrade} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Da, retrogradează
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
