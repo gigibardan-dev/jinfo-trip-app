@@ -30,6 +30,7 @@ const ProfilePage = () => {
 
   const getUserRole = (): "admin" | "tourist" | "guide" => {
     if (!profile?.role) return "tourist";
+    if (profile.role === 'superadmin') return "admin";
     return profile.role as "admin" | "tourist" | "guide";
   };
 
