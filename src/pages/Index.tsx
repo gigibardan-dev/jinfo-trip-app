@@ -11,13 +11,13 @@ import GuideDashboard from "@/components/guide/GuideDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | "guide" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | "guide" | "superadmin" | null>(null);
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (profile?.role) {
-      setSelectedRole(profile.role);
+      setSelectedRole(profile.role as any);
     }
   }, [profile]);
 
