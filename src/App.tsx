@@ -222,7 +222,7 @@ const App = () => (
                   <Route
                     path="/maps"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
+                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist', 'superadmin']}>
                         <MapsPage />
                       </ProtectedRoute>
                     }
