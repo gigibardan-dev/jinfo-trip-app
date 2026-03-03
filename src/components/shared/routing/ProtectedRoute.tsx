@@ -1,11 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: Array<'admin' | 'guide' | 'tourist'>;
+  allowedRoles: Array<'admin' | 'guide' | 'tourist' | 'superadmin'>;
   requireAuth?: boolean;
 }
 
@@ -32,23 +31,23 @@ export const ProtectedRoute = ({
   }
 
   // Check if user has required role
-  if (profile && !allowedRoles.includes(profile.role as any)) {
-    // Show toast notification using useEffect to avoid rendering issues
-    setTimeout(() => {
-      toast({
-        title: "Acces interzis",
-        description: "Nu ai permisiuni pentru această pagină.",
-        variant: "destructive",
-      });
-    }, 100);
-
-    // Redirect based on role
-    const redirectPath = 
-      profile.role === 'guide' ? '/' : 
-      profile.role === 'admin' ? '/' : 
-      '/';
+  // SuperAdmin has access to all admin routes automatically
+  if (profile) {
+    const userRole = profile.role as string;
+    const hasAccess = allowedRoles.includes(userRole as any) || 
+      (userRole === 'superadmin' && allowedRoles.includes('admin'));
     
-    return <Navigate to={redirectPath} replace />;
+    if (!hasAccess) {
+      setTimeout(() => {
+        toast({
+          title: "Acces interzis",
+          description: "Nu ai permisiuni pentru această pagină.",
+          variant: "destructive",
+        });
+      }, 100);
+
+      return <Navigate to="/" replace />;
+    }
   }
 
   // User is authorized
