@@ -812,9 +812,12 @@ const TouristManager = () => {
                       </div>
                     </div>
                   </div>
-                  <Badge variant={tourist.is_active ? "default" : "secondary"}>
-                    {tourist.is_active ? "Activ" : "Inactiv"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {tourist.is_vip && <VIPBadge size="sm" />}
+                    <Badge variant={tourist.is_active ? "default" : "secondary"}>
+                      {tourist.is_active ? "Activ" : "Inactiv"}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               
