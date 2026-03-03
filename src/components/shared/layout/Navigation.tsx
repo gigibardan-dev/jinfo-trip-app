@@ -147,6 +147,9 @@ const Navigation = ({ userRole = "admin" }: NavigationProps) => {
                     size="sm"
                     className="text-primary-foreground hover:bg-primary-foreground/10"
                   >
+                    {profile?.role === 'superadmin' && (
+                      <Crown className="w-4 h-4 mr-1 text-amber-400" />
+                    )}
                     <span className="hidden sm:inline mr-1 font-semibold">
                       {profile?.nume ? `${profile.nume} ${profile.prenume}` : "User"}
                     </span>
