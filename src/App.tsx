@@ -214,7 +214,7 @@ const App = () => (
                   <Route
                     path="/profile"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
+                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist', 'superadmin']}>
                         <ProfilePage />
                       </ProtectedRoute>
                     }
