@@ -41,7 +41,9 @@ import {
   LayoutGrid,
   List,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Star,
+  StarOff
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
