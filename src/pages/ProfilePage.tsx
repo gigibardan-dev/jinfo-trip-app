@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Phone, Camera, Upload } from "lucide-react";
+import { VIPBadge } from "@/components/badges/VIPBadge";
+import { SuperAdminBadge } from "@/components/badges/SuperAdminBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import Navigation from "@/components/shared/layout/Navigation";
 
@@ -28,6 +30,7 @@ const ProfilePage = () => {
 
   const getUserRole = (): "admin" | "tourist" | "guide" => {
     if (!profile?.role) return "tourist";
+    if (profile.role === 'superadmin') return "admin";
     return profile.role as "admin" | "tourist" | "guide";
   };
 
@@ -163,12 +166,23 @@ const ProfilePage = () => {
 
   const getRoleBadgeColor = () => {
     switch (profile.role) {
+      case "superadmin":
+        return "bg-amber-500/20 text-amber-700";
       case "admin":
         return "bg-destructive text-destructive-foreground";
       case "guide":
         return "bg-accent text-accent-foreground";
       default:
         return "bg-primary text-primary-foreground";
+    }
+  };
+
+  const getRoleLabel = () => {
+    switch (profile.role) {
+      case "superadmin": return "SuperAdmin";
+      case "admin": return "Administrator";
+      case "guide": return "Ghid";
+      default: return "Turist";
     }
   };
 
@@ -212,9 +226,13 @@ const ProfilePage = () => {
               {isUploading && (
                 <p className="text-sm text-muted-foreground">Se încarcă imaginea...</p>
               )}
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
-                {profile.role === "admin" ? "Administrator" : profile.role === "guide" ? "Ghid" : "Turist"}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor()}`}>
+                  {getRoleLabel()}
+                </span>
+                {profile.role === 'superadmin' && <SuperAdminBadge size="sm" showText />}
+                {profile.is_vip && <VIPBadge size="sm" />}
+              </div>
             </div>
 
 

@@ -41,13 +41,16 @@ import {
   LayoutGrid,
   List,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Star,
+  StarOff
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { VIPBadge } from "@/components/badges/VIPBadge";
 
 interface Tourist {
   id: string;
@@ -57,6 +60,7 @@ interface Tourist {
   telefon?: string;
   avatar_url?: string;
   is_active: boolean;
+  is_vip?: boolean;
   role: string;
   created_at: string;
   group_memberships?: {
@@ -126,7 +130,7 @@ const TouristManager = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchTourists();
       fetchGroups();
     }
@@ -477,6 +481,31 @@ const TouristManager = () => {
     }
   };
 
+  const isSuperAdmin = profile?.role === 'superadmin';
+
+  const handleToggleVIP = async (tourist: Tourist) => {
+    try {
+      if (tourist.is_vip) {
+        const { error } = await supabase.rpc('remove_vip_status', { tourist_id: tourist.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.rpc('upgrade_tourist_to_vip', { tourist_id: tourist.id });
+        if (error) throw error;
+      }
+      toast({
+        title: tourist.is_vip ? "Status VIP eliminat" : "✨ Turist promovat la VIP",
+        description: `${tourist.nume} ${tourist.prenume} ${tourist.is_vip ? 'nu mai este VIP' : 'este acum VIP'}.`,
+      });
+      fetchTourists();
+    } catch (error: any) {
+      toast({
+        title: "Eroare",
+        description: error.message || "Nu s-a putut actualiza statusul VIP.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       email: "",
@@ -783,9 +812,12 @@ const TouristManager = () => {
                       </div>
                     </div>
                   </div>
-                  <Badge variant={tourist.is_active ? "default" : "secondary"}>
-                    {tourist.is_active ? "Activ" : "Inactiv"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {tourist.is_vip && <VIPBadge size="sm" />}
+                    <Badge variant={tourist.is_active ? "default" : "secondary"}>
+                      {tourist.is_active ? "Activ" : "Inactiv"}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               
@@ -884,6 +916,17 @@ const TouristManager = () => {
                           className="text-warning border-warning hover:bg-warning hover:text-warning-foreground"
                         >
                           <Shield className="w-3 h-3" />
+                        </Button>
+                      )}
+
+                      {isSuperAdmin && tourist.is_active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleVIP(tourist)}
+                          className={tourist.is_vip ? "text-purple-600 border-purple-300" : ""}
+                        >
+                          {tourist.is_vip ? <StarOff className="w-3 h-3" /> : <Star className="w-3 h-3" />}
                         </Button>
                       )}
                     </div>

@@ -11,13 +11,13 @@ import GuideDashboard from "@/components/guide/GuideDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | "guide" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "tourist" | "guide" | "superadmin" | null>(null);
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (profile?.role) {
-      setSelectedRole(profile.role);
+      setSelectedRole(profile.role as any);
     }
   }, [profile]);
 
@@ -98,11 +98,11 @@ const Index = () => {
 
  return (
   <div className="min-h-screen bg-gradient-ocean">
-    <Navigation userRole={selectedRole || "tourist"} />
+    <Navigation userRole={selectedRole === "superadmin" ? "admin" : (selectedRole || "tourist")} />
     
     {/* Spacer pentru top nav (h-14) + padding bottom pentru bottom nav */}
     <div className="pt-14 pb-20 px-2">
-      {selectedRole === "admin" ? (
+      {selectedRole === "admin" || selectedRole === "superadmin" ? (
         <AdminDashboard />
       ) : selectedRole === "guide" ? (
         <GuideDashboard />

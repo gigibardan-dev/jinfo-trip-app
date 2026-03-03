@@ -304,11 +304,14 @@ export type Database = {
           is_offline_priority: boolean
           metadata: Json | null
           nume: string
+          privacy_level: string | null
           target_user_id: string | null
           trip_id: string
           upload_date: string
           uploaded_by_admin_id: string
+          vip_trip_id: string | null
           visibility_type: Database["public"]["Enums"]["visibility_type"]
+          visible_to_user_ids: string[] | null
         }
         Insert: {
           descriere?: string | null
@@ -322,11 +325,14 @@ export type Database = {
           is_offline_priority?: boolean
           metadata?: Json | null
           nume: string
+          privacy_level?: string | null
           target_user_id?: string | null
           trip_id: string
           upload_date?: string
           uploaded_by_admin_id: string
+          vip_trip_id?: string | null
           visibility_type: Database["public"]["Enums"]["visibility_type"]
+          visible_to_user_ids?: string[] | null
         }
         Update: {
           descriere?: string | null
@@ -340,11 +346,14 @@ export type Database = {
           is_offline_priority?: boolean
           metadata?: Json | null
           nume?: string
+          privacy_level?: string | null
           target_user_id?: string | null
           trip_id?: string
           upload_date?: string
           uploaded_by_admin_id?: string
+          vip_trip_id?: string | null
           visibility_type?: Database["public"]["Enums"]["visibility_type"]
+          visible_to_user_ids?: string[] | null
         }
         Relationships: [
           {
@@ -366,6 +375,13 @@ export type Database = {
             columns: ["uploaded_by_admin_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_vip_trip_id_fkey"
+            columns: ["vip_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
             referencedColumns: ["id"]
           },
         ]
@@ -821,43 +837,70 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          created_by_superadmin_id: string | null
           email: string
           id: string
           is_active: boolean
+          is_vip: boolean | null
+          managed_by_superadmin_id: string | null
           metadata: Json | null
           nume: string
           prenume: string
           role: Database["public"]["Enums"]["user_role"]
+          show_superadmin_badge: boolean | null
           telefon: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          created_by_superadmin_id?: string | null
           email: string
           id: string
           is_active?: boolean
+          is_vip?: boolean | null
+          managed_by_superadmin_id?: string | null
           metadata?: Json | null
           nume: string
           prenume: string
           role?: Database["public"]["Enums"]["user_role"]
+          show_superadmin_badge?: boolean | null
           telefon?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          created_by_superadmin_id?: string | null
           email?: string
           id?: string
           is_active?: boolean
+          is_vip?: boolean | null
+          managed_by_superadmin_id?: string | null
           metadata?: Json | null
           nume?: string
           prenume?: string
           role?: Database["public"]["Enums"]["user_role"]
+          show_superadmin_badge?: boolean | null
           telefon?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_created_by_superadmin_id_fkey"
+            columns: ["created_by_superadmin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_managed_by_superadmin_id_fkey"
+            columns: ["managed_by_superadmin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tourist_badges: {
         Row: {
@@ -965,6 +1008,7 @@ export type Database = {
           is_active: boolean
           metadata: Json | null
           nume_grup: string
+          privacy_level: string | null
           updated_at: string
         }
         Insert: {
@@ -975,6 +1019,7 @@ export type Database = {
           is_active?: boolean
           metadata?: Json | null
           nume_grup: string
+          privacy_level?: string | null
           updated_at?: string
         }
         Update: {
@@ -985,6 +1030,7 @@ export type Database = {
           is_active?: boolean
           metadata?: Json | null
           nume_grup?: string
+          privacy_level?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1008,9 +1054,11 @@ export type Database = {
           end_date: string
           group_id: string | null
           id: string
+          managed_by_superadmin_id: string | null
           metadata: Json | null
           nume: string
           oras: string | null
+          privacy_level: string | null
           start_date: string
           status: Database["public"]["Enums"]["trip_status"]
           tara: string
@@ -1026,9 +1074,11 @@ export type Database = {
           end_date: string
           group_id?: string | null
           id?: string
+          managed_by_superadmin_id?: string | null
           metadata?: Json | null
           nume: string
           oras?: string | null
+          privacy_level?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["trip_status"]
           tara: string
@@ -1044,9 +1094,11 @@ export type Database = {
           end_date?: string
           group_id?: string | null
           id?: string
+          managed_by_superadmin_id?: string | null
           metadata?: Json | null
           nume?: string
           oras?: string | null
+          privacy_level?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["trip_status"]
           tara?: string
@@ -1065,6 +1117,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "tourist_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_managed_by_superadmin_id_fkey"
+            columns: ["managed_by_superadmin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1098,6 +1157,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      downgrade_admin_to_tourist: {
+        Args: { admin_user_id: string }
+        Returns: undefined
+      }
       get_group_member_basic_info: {
         Args: { member_user_id: string }
         Returns: {
@@ -1128,6 +1191,12 @@ export type Database = {
         Returns: boolean
       }
       is_guide: { Args: never; Returns: boolean }
+      is_superadmin: { Args: { user_id: string }; Returns: boolean }
+      remove_vip_status: { Args: { tourist_id: string }; Returns: undefined }
+      upgrade_tourist_to_vip: {
+        Args: { tourist_id: string }
+        Returns: undefined
+      }
       user_in_group: { Args: { group_uuid: string }; Returns: boolean }
     }
     Enums: {
@@ -1153,7 +1222,7 @@ export type Database = {
       stamp_rarity: "common" | "rare" | "legendary"
       target_type: "broadcast" | "group" | "individual"
       trip_status: "draft" | "confirmed" | "active" | "completed" | "cancelled"
-      user_role: "admin" | "tourist" | "guide"
+      user_role: "admin" | "tourist" | "guide" | "superadmin"
       visibility_type: "group" | "individual"
     }
     CompositeTypes: {
@@ -1306,7 +1375,7 @@ export const Constants = {
       stamp_rarity: ["common", "rare", "legendary"],
       target_type: ["broadcast", "group", "individual"],
       trip_status: ["draft", "confirmed", "active", "completed", "cancelled"],
-      user_role: ["admin", "tourist", "guide"],
+      user_role: ["admin", "tourist", "guide", "superadmin"],
       visibility_type: ["group", "individual"],
     },
   },

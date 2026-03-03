@@ -78,7 +78,7 @@ const App = () => (
                   <Route
                     path="/trips"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                         <TripsPage />
                       </ProtectedRoute>
                     }
@@ -86,7 +86,7 @@ const App = () => (
                   <Route
                     path="/tourists"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                         <TouristsPage />
                       </ProtectedRoute>
                     }
@@ -94,7 +94,7 @@ const App = () => (
                   <Route
                     path="/guides"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                         <GuidesPage />
                       </ProtectedRoute>
                     }
@@ -102,7 +102,7 @@ const App = () => (
                   <Route
                     path="/admin-documents"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                         <DocumentsPage />
                       </ProtectedRoute>
                     }
@@ -110,7 +110,7 @@ const App = () => (
                   <Route
                     path="/communications"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
                         <CommunicationsPage />
                       </ProtectedRoute>
                     }
@@ -119,7 +119,7 @@ const App = () => (
                   <Route
                     path="/settings"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
+                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist', 'superadmin']}>
                         <SettingsPage />
                       </ProtectedRoute>
                     }
@@ -214,7 +214,7 @@ const App = () => (
                   <Route
                     path="/profile"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
+                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist', 'superadmin']}>
                         <ProfilePage />
                       </ProtectedRoute>
                     }
@@ -222,7 +222,7 @@ const App = () => (
                   <Route
                     path="/maps"
                     element={
-                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist']}>
+                      <ProtectedRoute allowedRoles={['admin', 'guide', 'tourist', 'superadmin']}>
                         <MapsPage />
                       </ProtectedRoute>
                     }
