@@ -166,12 +166,23 @@ const ProfilePage = () => {
 
   const getRoleBadgeColor = () => {
     switch (profile.role) {
+      case "superadmin":
+        return "bg-amber-500/20 text-amber-700";
       case "admin":
         return "bg-destructive text-destructive-foreground";
       case "guide":
         return "bg-accent text-accent-foreground";
       default:
         return "bg-primary text-primary-foreground";
+    }
+  };
+
+  const getRoleLabel = () => {
+    switch (profile.role) {
+      case "superadmin": return "SuperAdmin";
+      case "admin": return "Administrator";
+      case "guide": return "Ghid";
+      default: return "Turist";
     }
   };
 
