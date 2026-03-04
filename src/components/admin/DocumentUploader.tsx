@@ -81,6 +81,10 @@ interface DocumentFormData {
   target_user_id: string;
   trip_id: string;
   file: File | null;
+  privacy_level: 'standard' | 'vip';
+  vip_assignment_type: 'individual' | 'circuit';
+  selected_vip_tourists: string[];
+  selected_vip_trip_id: string;
 }
 
 const DocumentUploader = () => {
