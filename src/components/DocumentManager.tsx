@@ -309,7 +309,7 @@ const DocumentManager = ({ tripId }: { tripId?: string }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Documente</h2>
-        {profile?.role === 'admin' && (
+        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
               <Button onClick={() => { resetForm(); setEditingDocument(null); setSelectedFile(null); }}>
@@ -542,7 +542,7 @@ const DocumentManager = ({ tripId }: { tripId?: string }) => {
                   </Button>
                 </div>
 
-                {profile?.role === 'admin' && (
+                {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                   <div className="flex gap-2 pt-2 border-t">
                     <Button size="sm" variant="ghost" onClick={() => handleEdit(document)}>
                       <Edit className="w-4 h-4" />
@@ -568,7 +568,7 @@ const DocumentManager = ({ tripId }: { tripId?: string }) => {
           <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Niciun document găsit</h3>
           <p className="text-muted-foreground mb-4">
-            {profile?.role === 'admin' 
+            {(profile?.role === 'admin' || profile?.role === 'superadmin') 
               ? 'Începe prin a încărca primul document.' 
               : 'Nu există documente disponibile momentan.'
             }

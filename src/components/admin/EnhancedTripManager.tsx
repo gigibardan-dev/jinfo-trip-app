@@ -596,7 +596,7 @@ const EnhancedCircuitManager = () => {
           <p className="text-muted-foreground">Creează și gestionează circuitele turistice</p>
         </div>
         
-        {profile?.role === 'admin' && (
+        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>
               <Button onClick={() => { resetForm(); setEditingTrip(null); }} className="bg-gradient-hero">
@@ -1008,7 +1008,7 @@ const EnhancedCircuitManager = () => {
                   />
                 )}
 
-                {profile?.role === 'admin' && (
+                {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                   <div className="flex gap-2 pt-2 flex-wrap">
                     <Button 
                       size="sm" 
@@ -1053,7 +1053,7 @@ const EnhancedCircuitManager = () => {
           <p className="text-muted-foreground mb-4">
             {searchTerm || filterStatus !== 'all' 
               ? 'Încearcă să modifici filtrele de căutare.'
-              : profile?.role === 'admin' 
+              : (profile?.role === 'admin' || profile?.role === 'superadmin') 
                 ? 'Începe prin a crea primul circuit.' 
                 : 'Nu există circuite disponibile momentan.'
             }

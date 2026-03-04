@@ -600,7 +600,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                         {format(parseISO(selectedDay.date), 'EEEE, dd MMMM yyyy', { locale: ro })}
                       </p>
                     </div>
-                    {profile?.role === 'admin' && (
+                    {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                       <div className="flex gap-2">
                         <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>
                           <DialogTrigger asChild>
@@ -751,7 +751,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                   </div>
                 </CardHeader>
                 
-                {profile?.role === 'admin' && (
+                {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                   <CardContent className="border-b">
                     <div>
                       <Label className="text-sm font-medium">Template-uri Rapide</Label>
@@ -823,7 +823,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                                     >
                                       <div className="flex gap-3">
                                         {/* Drag Handle */}
-                                        {profile?.role === 'admin' && (
+                                        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                           <div 
                                             {...provided.dragHandleProps}
                                             className="flex items-center text-muted-foreground hover:text-foreground cursor-grab"
@@ -900,7 +900,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                                               )}
                                             </div>
                                             
-                                            {profile?.role === 'admin' && (
+                                            {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                                               <div className="flex gap-1 ml-4">
                                                 <Button 
                                                   size="sm" 
@@ -939,7 +939,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
                       <p className="text-muted-foreground mb-4">
                         Adaugă prima activitate pentru această zi
                       </p>
-                      {profile?.role === 'admin' && (
+                      {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
                         <Button onClick={() => setShowActivityDialog(true)}>
                           <Plus className="w-4 h-4 mr-2" />
                           Adaugă Activitate
@@ -965,7 +965,7 @@ const ItineraryManager = ({ tripId, tripName, startDate, endDate }: ItineraryMan
       </div>
 
       {/* ADMIN: Stamps Management Section */}
-      {profile?.role === 'admin' && (
+      {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
         <Card className="mt-8">
           <CardHeader>
             <div className="flex items-center gap-2">
