@@ -387,11 +387,44 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
               </div>
 
               {groups.length === 0 && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
+                <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                  <p className="text-sm text-muted-foreground">
                     <strong>Info:</strong> Nu există grupuri active. 
                     <br />Poți crea circuitul ca schiță și îl vei putea asigna la un grup mai târziu.
                   </p>
+                </div>
+              )}
+
+              {/* VIP Toggle - Only for SuperAdmin */}
+              {profile?.role === 'superadmin' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="vip-circuit" className="flex items-center gap-2 text-base">
+                        <Star className="w-5 h-5 text-purple-600 fill-purple-600" />
+                        <span className="font-semibold text-purple-900 dark:text-purple-300">Circuit VIP</span>
+                      </Label>
+                      <p className="text-sm text-purple-700 dark:text-purple-400 mt-1">
+                        Circuitele VIP sunt vizibile doar pentru SuperAdmini și turiștii VIP asignați
+                      </p>
+                    </div>
+                    <Switch
+                      id="vip-circuit"
+                      checked={formData.privacy_level === 'vip'}
+                      onCheckedChange={(checked) => setFormData({ ...formData, privacy_level: checked ? 'vip' : 'standard' })}
+                    />
+                  </div>
+
+                  {formData.privacy_level === 'vip' && (
+                    <div className="pl-4 border-l-2 border-purple-400 space-y-2">
+                      <p className="text-sm font-medium text-purple-900 dark:text-purple-300">Funcții VIP:</p>
+                      <ul className="text-sm text-purple-700 dark:text-purple-400 space-y-1">
+                        <li>✓ Invizibil pentru adminii obișnuiți</li>
+                        <li>✓ Poți uploada documente VIP exclusive</li>
+                        <li>✓ Asignare turiști VIP specifici</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
