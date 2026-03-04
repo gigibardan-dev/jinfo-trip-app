@@ -472,16 +472,31 @@ const DocumentUploader = () => {
     setFormData({
       nume: "",
       descriere: "",
-    document_category: "identity",
-    visibility_type: "group",
+      document_category: "identity",
+      visibility_type: "group",
       is_mandatory: false,
       is_offline_priority: false,
       expiry_date: "",
       target_user_id: "",
       trip_id: "",
-      file: null
+      file: null,
+      privacy_level: "standard",
+      vip_assignment_type: "individual",
+      selected_vip_tourists: [],
+      selected_vip_trip_id: ""
     });
   };
+
+  const toggleVipTourist = (touristId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selected_vip_tourists: prev.selected_vip_tourists.includes(touristId)
+        ? prev.selected_vip_tourists.filter(id => id !== touristId)
+        : [...prev.selected_vip_tourists, touristId]
+    }));
+  };
+
+  const isSuperAdmin = profile?.role === 'superadmin';
 
   const getCategoryLabel = (category: string) => {
     const cat = documentCategories.find(c => c.value === category);
