@@ -89,7 +89,8 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
         start_date: trip.start_date,
         end_date: trip.end_date,
         group_id: trip.group_id,
-        status: trip.status
+        status: trip.status,
+        privacy_level: ((trip as any).privacy_level as 'standard' | 'vip') || 'standard'
       });
       setMapConfig(trip.offline_map_configs || null);
     } else {
