@@ -13,11 +13,11 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Upload, 
-  FileText, 
-  Download, 
-  Trash2, 
+import {
+  Upload,
+  FileText,
+  Download,
+  Trash2,
   Eye,
   Calendar,
   Users,
@@ -235,7 +235,7 @@ const DocumentUploader = () => {
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.file) {
       toast({
         title: "Eroare",
@@ -252,7 +252,7 @@ const DocumentUploader = () => {
       // Generate unique file name
       const fileName = `${Date.now()}_${formData.file.name}`;
       const filePath = `${formData.trip_id}/${fileName}`;
-      
+
       // Update progress to show upload starting
       setUploadProgress(20);
 
@@ -265,12 +265,12 @@ const DocumentUploader = () => {
         });
 
       if (uploadError) throw uploadError;
-      
+
       setUploadProgress(60);
 
       // Store only the file path (not public URL since bucket is private)
       setUploadProgress(80);
-      
+
       const documentData: any = {
         nume: formData.nume,
         descriere: formData.descriere,
@@ -343,7 +343,7 @@ const DocumentUploader = () => {
           filePath = decodeURIComponent(urlParts[1]);
         }
       }
-      
+
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
@@ -380,7 +380,7 @@ const DocumentUploader = () => {
   const handleView = async (doc: Document) => {
     try {
       const fileType = doc.file_type.toLowerCase();
-      
+
       // Extract path from URL if it's a full URL (old format)
       let filePath = doc.file_url;
       if (filePath.includes('supabase.co/storage')) {
@@ -389,16 +389,16 @@ const DocumentUploader = () => {
           filePath = decodeURIComponent(urlParts[1]);
         }
       }
-      
+
       // Get signed URL for secure viewing
       const { data, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(filePath, 300); // 5 minutes for viewing
 
       if (error) throw error;
-      
+
       const viewUrl = data.signedUrl;
-      
+
       if (fileType.includes('image') || fileType.includes('pdf')) {
         window.open(viewUrl, '_blank');
       } else {
@@ -406,7 +406,7 @@ const DocumentUploader = () => {
         handleDownload(doc);
         return;
       }
-      
+
       toast({
         title: "Document deschis",
         description: `Se vizualizează ${doc.nume}`,
@@ -431,7 +431,7 @@ const DocumentUploader = () => {
           filePath = decodeURIComponent(urlParts[1]);
         }
       }
-      
+
       // Get signed URL for secure download
       const { data, error } = await supabase.storage
         .from('documents')
@@ -445,7 +445,7 @@ const DocumentUploader = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "Descărcare inițiată",
         description: `Se descarcă ${doc.nume}`,
@@ -460,7 +460,7 @@ const DocumentUploader = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "Descărcare inițiată",
         description: `Se descarcă ${doc.nume}`,
@@ -534,10 +534,14 @@ const DocumentUploader = () => {
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = (doc.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (doc.descriere && doc.descriere.toLowerCase().includes(searchTerm.toLowerCase()));
+      (doc.descriere && doc.descriere.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = filterCategory === 'all' || doc.document_category === filterCategory;
     const matchesTrip = filterTrip === 'all' || doc.trip_id === filterTrip;
-    return matchesSearch && matchesCategory && matchesTrip;
+
+    // ADAUGĂ ASTA - Admin normal NU vede documente VIP
+    const matchesPrivacy = profile?.role === 'superadmin' || (doc as any).privacy_level !== 'vip';
+
+    return matchesSearch && matchesCategory && matchesTrip && matchesPrivacy;
   });
 
   if (loading) {
@@ -552,7 +556,7 @@ const DocumentUploader = () => {
           <h2 className="text-2xl font-bold">Upload & Gestionare Documente</h2>
           <p className="text-muted-foreground">Încarcă și organizează documentele pentru călătorii</p>
         </div>
-        
+
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
             <Button onClick={resetForm} className="bg-gradient-hero">
@@ -564,7 +568,7 @@ const DocumentUploader = () => {
             <DialogHeader>
               <DialogTitle>Upload Document Nou</DialogTitle>
             </DialogHeader>
-            
+
             <form onSubmit={handleFileUpload} className="space-y-4">
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
@@ -572,7 +576,7 @@ const DocumentUploader = () => {
                   <TabsTrigger value="settings">Setări</TabsTrigger>
                   <TabsTrigger value="upload">Fișier</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="basic" className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="nume">Nume Document *</Label>
@@ -682,7 +686,7 @@ const DocumentUploader = () => {
                         onCheckedChange={(checked) => setFormData({ ...formData, is_mandatory: checked })}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <Label htmlFor="is_offline_priority">Prioritate Offline</Label>
                       <Switch
@@ -700,8 +704,8 @@ const DocumentUploader = () => {
                         <Star className="w-4 h-4 text-purple-600" />
                         Nivel Confidențialitate
                       </Label>
-                      <RadioGroup 
-                        value={formData.privacy_level} 
+                      <RadioGroup
+                        value={formData.privacy_level}
                         onValueChange={(v: 'standard' | 'vip') => setFormData({ ...formData, privacy_level: v })}
                       >
                         <div className="flex items-center space-x-2">
@@ -723,8 +727,8 @@ const DocumentUploader = () => {
                       {formData.privacy_level === 'vip' && (
                         <div className="space-y-4 pl-4 border-l-2 border-purple-500">
                           <Label>Tip Asignare VIP</Label>
-                          <RadioGroup 
-                            value={formData.vip_assignment_type} 
+                          <RadioGroup
+                            value={formData.vip_assignment_type}
                             onValueChange={(v: 'individual' | 'circuit') => setFormData({ ...formData, vip_assignment_type: v })}
                           >
                             <div className="flex items-center space-x-2">
@@ -774,8 +778,8 @@ const DocumentUploader = () => {
                           {formData.vip_assignment_type === 'circuit' && (
                             <div className="space-y-2">
                               <Label>Selectează Circuit VIP</Label>
-                              <Select 
-                                value={formData.selected_vip_trip_id} 
+                              <Select
+                                value={formData.selected_vip_trip_id}
                                 onValueChange={(value) => setFormData({ ...formData, selected_vip_trip_id: value })}
                               >
                                 <SelectTrigger>
@@ -852,7 +856,7 @@ const DocumentUploader = () => {
             className="max-w-sm"
           />
         </div>
-        
+
         <div className="flex gap-2">
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-[180px]">
@@ -895,7 +899,7 @@ const DocumentUploader = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <CardTitle className="text-base truncate">{document.nume}</CardTitle>
-                      {(document as any).privacy_level === 'vip' && (
+                      {(document as any).privacy_level === 'vip' && profile?.role === 'superadmin' && (
                         <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 gap-1 text-xs">
                           <Star className="w-3 h-3 fill-purple-700 dark:fill-purple-300" />
                           VIP
@@ -921,7 +925,7 @@ const DocumentUploader = () => {
                 </div>
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
@@ -969,26 +973,26 @@ const DocumentUploader = () => {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     className="flex-1"
                     onClick={() => handleView(document)}
                   >
                     <Eye className="w-3 h-3 mr-1" />
                     Vizualizează
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => handleDownload(document)}
                     title="Descarcă document"
                   >
                     <Download className="w-3 h-3" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleDelete(document.id, document.file_url)}
                     className="text-destructive hover:text-destructive"
                     title="Șterge document"
