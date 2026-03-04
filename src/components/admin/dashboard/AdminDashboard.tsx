@@ -31,11 +31,14 @@ type ActiveView = 'dashboard' | 'tourists' | 'documents' | 'groups';
 const AdminDashboard = () => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [stats, setStats] = useState({
     activeTrips: 0,
     tourists: 0,
     documents: 0,
-    guides: 0
+    guides: 0,
+    vipTrips: 0,
+    vipTourists: 0
   });
   const [recentTrips, setRecentTrips] = useState<any[]>([]);
   const [expiringDocuments, setExpiringDocuments] = useState<any[]>([]);
