@@ -16,9 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  Shield, 
-  Search, 
+import {
+  Shield,
+  Search,
   Mail,
   Phone,
   Calendar,
@@ -85,25 +85,11 @@ const AdminManager = () => {
 
   const fetchAdmins = async () => {
     try {
-      const { data: adminRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .in('role', ['admin', 'superadmin']);
-
-      if (rolesError) throw rolesError;
-
-      if (!adminRoles || adminRoles.length === 0) {
-        setAdmins([]);
-        setLoading(false);
-        return;
-      }
-
-      const adminIds = adminRoles.map(r => r.user_id);
-
+      // Citește DIRECT din profiles.role (sursa de adevăr pentru tine)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', adminIds)
+        .in('role', ['admin', 'superadmin'])
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -197,11 +183,11 @@ const AdminManager = () => {
   };
 
   const filteredAdmins = admins.filter(admin => {
-    const matchesSearch = 
+    const matchesSearch =
       (admin.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (admin.prenume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (admin.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -268,7 +254,7 @@ const AdminManager = () => {
                       {getInitials(admin.nume, admin.prenume)}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold truncate">
@@ -278,7 +264,7 @@ const AdminManager = () => {
                         <Badge variant="outline" className="text-xs shrink-0">Tu</Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-2 mb-3">
                       {admin.role === 'superadmin' ? (
                         <SuperAdminBadge size="sm" showText />
@@ -289,20 +275,20 @@ const AdminManager = () => {
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="space-y-1.5 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Mail className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{admin.email}</span>
                       </div>
-                      
+
                       {admin.telefon && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-3.5 h-3.5 shrink-0" />
                           <span>{admin.telefon}</span>
                         </div>
                       )}
-                      
+
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 shrink-0" />
                         <span>
@@ -346,7 +332,7 @@ const AdminManager = () => {
                 id="admin-email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
@@ -356,7 +342,7 @@ const AdminManager = () => {
                 <Input
                   id="admin-nume"
                   value={formData.nume}
-                  onChange={(e) => setFormData({...formData, nume: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, nume: e.target.value })}
                   required
                 />
               </div>
@@ -365,7 +351,7 @@ const AdminManager = () => {
                 <Input
                   id="admin-prenume"
                   value={formData.prenume}
-                  onChange={(e) => setFormData({...formData, prenume: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, prenume: e.target.value })}
                   required
                 />
               </div>
@@ -375,7 +361,7 @@ const AdminManager = () => {
               <Input
                 id="admin-telefon"
                 value={formData.telefon}
-                onChange={(e) => setFormData({...formData, telefon: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -385,7 +371,7 @@ const AdminManager = () => {
                   id="admin-password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   minLength={6}
                 />

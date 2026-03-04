@@ -95,7 +95,7 @@ const GroupManager = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchGroups();
       fetchAvailableTourists();
     }
