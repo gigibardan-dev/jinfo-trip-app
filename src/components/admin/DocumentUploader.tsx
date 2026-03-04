@@ -271,11 +271,11 @@ const DocumentUploader = () => {
       // Store only the file path (not public URL since bucket is private)
       setUploadProgress(80);
       
-      const documentData = {
+      const documentData: any = {
         nume: formData.nume,
         descriere: formData.descriere,
         file_type: formData.file.type,
-        file_url: filePath, // Store just the path
+        file_url: filePath,
         file_size: formData.file.size,
         document_category: formData.document_category,
         visibility_type: formData.visibility_type,
@@ -284,8 +284,23 @@ const DocumentUploader = () => {
         expiry_date: formData.expiry_date || null,
         target_user_id: formData.visibility_type === 'individual' ? formData.target_user_id : null,
         trip_id: formData.trip_id,
-        uploaded_by_admin_id: user!.id
+        uploaded_by_admin_id: user!.id,
+        privacy_level: formData.privacy_level,
       };
+
+      // Add VIP-specific fields
+      if (formData.privacy_level === 'vip') {
+        if (formData.vip_assignment_type === 'individual') {
+          documentData.visible_to_user_ids = formData.selected_vip_tourists;
+          documentData.vip_trip_id = null;
+        } else {
+          documentData.visible_to_user_ids = [];
+          documentData.vip_trip_id = formData.selected_vip_trip_id || null;
+        }
+      } else {
+        documentData.visible_to_user_ids = [];
+        documentData.vip_trip_id = null;
+      }
 
       const { error } = await supabase
         .from('documents')
