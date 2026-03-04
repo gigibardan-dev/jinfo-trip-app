@@ -135,10 +135,14 @@ const DocumentUploader = () => {
   ] as const;
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchDocuments();
       fetchTrips();
       fetchTourists();
+      if (profile?.role === 'superadmin') {
+        fetchVipTourists();
+        fetchVipTrips();
+      }
     }
   }, [user, profile]);
 
