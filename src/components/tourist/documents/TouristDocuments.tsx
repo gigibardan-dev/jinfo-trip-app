@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  FileText, 
-  Download, 
-  Calendar, 
-  AlertTriangle, 
+import {
+  FileText,
+  Download,
+  Calendar,
+  AlertTriangle,
   Clock,
   Users,
   User,
@@ -118,7 +118,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
         .from('documents')
         .select(`
           *,
-          trips(nume, destinatie)
+          trips!documents_trip_id_fkey(nume, destinatie)
         `)
         .in('trip_id', tripIds)
         .or(`visibility_type.eq.group,and(visibility_type.eq.individual,target_user_id.eq.${user!.id})`)
@@ -197,7 +197,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.nume.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (doc.descriere && doc.descriere.toLowerCase().includes(searchTerm.toLowerCase()));
+      (doc.descriere && doc.descriere.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = filterCategory === 'all' || doc.document_category === filterCategory;
     const matchesTrip = filterTrip === 'all' || doc.trip_id === filterTrip;
     const matchesType = filterType === 'all' || doc.visibility_type === filterType;
@@ -208,8 +208,8 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
     mandatory: filteredDocuments.filter(doc => doc.is_mandatory),
     expiring: filteredDocuments.filter(doc => doc.expiry_date && isExpiringSoon(doc.expiry_date)),
     expired: filteredDocuments.filter(doc => doc.expiry_date && isExpired(doc.expiry_date)),
-    regular: filteredDocuments.filter(doc => 
-      !doc.is_mandatory && 
+    regular: filteredDocuments.filter(doc =>
+      !doc.is_mandatory &&
       (!doc.expiry_date || (!isExpiringSoon(doc.expiry_date) && !isExpired(doc.expiry_date)))
     )
   };
@@ -241,7 +241,7 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
             />
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-[180px]">
@@ -363,11 +363,11 @@ const TouristDocuments = ({ onOfflineSaved }: TouristDocumentsProps) => {
   );
 };
 
-const DocumentCard = ({ 
-  document, 
+const DocumentCard = ({
+  document,
   onOfflineSaved
-}: { 
-  document: TouristDocument; 
+}: {
+  document: TouristDocument;
   onOfflineSaved?: () => void;
 }) => {
 
@@ -386,9 +386,9 @@ const DocumentCard = ({
     document.file_size,
     document.file_url,
     document.upload_date,
-    document.trip_id 
+    document.trip_id
   );
-  
+
   const handleDownloadOffline = async () => {
     const success = await downloadOffline();
     if (success && onOfflineSaved) {
@@ -408,11 +408,10 @@ const DocumentCard = ({
   const isExpiredDoc = document.expiry_date && isExpired(document.expiry_date);
 
   return (
-    <Card className={`shadow-soft border-0 hover:shadow-medium transition-all ${
-      document.is_mandatory ? 'border-l-4 border-l-destructive' : 
-      isExpiredDoc ? 'border-l-4 border-l-destructive bg-destructive/5' :
-      isExpiring ? 'border-l-4 border-l-warning bg-warning/5' : ''
-    }`}>
+    <Card className={`shadow-soft border-0 hover:shadow-medium transition-all ${document.is_mandatory ? 'border-l-4 border-l-destructive' :
+        isExpiredDoc ? 'border-l-4 border-l-destructive bg-destructive/5' :
+          isExpiring ? 'border-l-4 border-l-warning bg-warning/5' : ''
+      }`}>
       <CardHeader className="pb-3 px-3 sm:px-6">
         <div className="flex justify-between items-start">
           <div className="flex-1">
@@ -424,7 +423,7 @@ const DocumentCard = ({
               <Badge variant="secondary">
                 {getCategoryLabel(document.document_category)}
               </Badge>
-              
+
               {document.visibility_type === 'individual' ? (
                 <Badge variant="outline" className="text-xs">
                   <User className="w-3 h-3 mr-1" />
@@ -472,17 +471,16 @@ const DocumentCard = ({
               {document.trips.nume} - {document.trips.destinatie}
             </div>
           )}
-          
+
           <div className="flex justify-between">
             <span>Mărime: {formatFileSizeCard(document.file_size)}</span>
             <span>Încărcat: {new Date(document.upload_date).toLocaleDateString('ro-RO')}</span>
           </div>
 
           {document.expiry_date && (
-            <div className={`flex items-center gap-1 ${
-              isExpiredDoc ? 'text-destructive font-medium' :
-              isExpiring ? 'text-warning font-medium' : ''
-            }`}>
+            <div className={`flex items-center gap-1 ${isExpiredDoc ? 'text-destructive font-medium' :
+                isExpiring ? 'text-warning font-medium' : ''
+              }`}>
               <Clock className="w-3 h-3" />
               Expiră: {new Date(document.expiry_date).toLocaleDateString('ro-RO')}
               {isExpiredDoc && ' (EXPIRAT)'}
@@ -494,8 +492,8 @@ const DocumentCard = ({
         <div className="flex flex-col gap-2 pt-2">
           {/* Vizualizare Online/Offline */}
           {isOffline ? (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="default"
               onClick={viewDocument}
               className="w-full bg-success hover:bg-success/90"
@@ -504,8 +502,8 @@ const DocumentCard = ({
               Vizualizează Offline
             </Button>
           ) : (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={viewDocument}
               className="w-full"
             >
@@ -515,8 +513,8 @@ const DocumentCard = ({
           )}
 
           {/* Descarcă */}
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={downloadDocument}
             className="w-full"
@@ -527,8 +525,8 @@ const DocumentCard = ({
 
           {/* Offline Controls */}
           {!isOffline ? (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="secondary"
               onClick={handleDownloadOffline}
               disabled={isDownloading}
@@ -544,8 +542,8 @@ const DocumentCard = ({
               )}
             </Button>
           ) : (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="ghost"
               onClick={removeOffline}
               className="w-full text-muted-foreground hover:text-destructive"

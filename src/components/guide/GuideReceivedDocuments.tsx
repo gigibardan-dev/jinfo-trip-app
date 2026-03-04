@@ -102,7 +102,7 @@ const GuideReceivedDocuments = ({ onOfflineSaved }: GuideReceivedDocumentsProps)
         .from('documents')
         .select(`
           *,
-          trips(nume, destinatie)
+          trips!documents_trip_id_fkey(nume, destinatie)
         `)
         .in('trip_id', tripIds)
         .or(`visibility_type.eq.group,and(visibility_type.eq.individual,target_user_id.eq.${user!.id})`)
