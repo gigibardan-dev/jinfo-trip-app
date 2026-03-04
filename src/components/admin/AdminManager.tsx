@@ -151,18 +151,28 @@ const AdminManager = () => {
     if (!selectedAdminForDowngrade) return;
 
     try {
+      // 1. Downgrade în profiles
       const { error } = await supabase.rpc('downgrade_admin_to_tourist', {
         admin_user_id: selectedAdminForDowngrade.id
       });
 
       if (error) throw error;
 
-      // Also update user_roles
+      // 2. FIX: Sincronizează user_roles
+      // Șterge toate rolurile vechi
       await supabase
         .from('user_roles')
-        .update({ role: 'tourist' })
-        .eq('user_id', selectedAdminForDowngrade.id)
-        .eq('role', 'admin');
+        .delete()
+        .eq('user_id', selectedAdminForDowngrade.id);
+
+      // Inserează rolul nou de tourist
+      await supabase
+        .from('user_roles')
+        .insert({
+          user_id: selectedAdminForDowngrade.id,
+          role: 'tourist',
+          assigned_by: user?.id
+        });
 
       toast({
         title: "Admin retrogradat",
