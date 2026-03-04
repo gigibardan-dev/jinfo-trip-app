@@ -180,12 +180,14 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
         descriere: formData.descriere.trim(),
         start_date: formData.start_date,
         end_date: formData.end_date,
-        group_id: formData.group_id || null, // Allow null group_id for drafts
+        group_id: formData.group_id || null,
         status: formData.status,
         created_by_admin_id: user!.id,
         budget_estimat: null,
         cover_image_url: null,
-        metadata: null
+        metadata: null,
+        privacy_level: formData.privacy_level,
+        managed_by_superadmin_id: formData.privacy_level === 'vip' ? user!.id : null
       };
 
       if (trip) {
