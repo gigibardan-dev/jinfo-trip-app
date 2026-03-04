@@ -229,6 +229,18 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
         </div>
       </div>
 
+      {/* VIP Filter - SuperAdmin only */}
+      {profile?.role === 'superadmin' && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Star className="w-4 h-4 text-purple-600" />
+            <span>VIP: <strong className="text-purple-600">{vipCount}</strong></span>
+            <span className="mx-1">|</span>
+            <span>Standard: <strong>{standardCount}</strong></span>
+          </div>
+        </div>
+      )}
+
       {/* Trips Grid */}
       <div className={viewMode === 'grid' ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredTrips.map((trip) => (
