@@ -72,7 +72,7 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
   });
   const [activeTab, setActiveTab] = useState<string>("basic");
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
