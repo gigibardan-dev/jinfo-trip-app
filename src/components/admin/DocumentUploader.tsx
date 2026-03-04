@@ -893,7 +893,15 @@ const DocumentUploader = () => {
                 <div className="flex items-center space-x-2">
                   <FileText className="w-5 h-5 text-primary" />
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">{document.nume}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <CardTitle className="text-base truncate">{document.nume}</CardTitle>
+                      {(document as any).privacy_level === 'vip' && (
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 gap-1 text-xs">
+                          <Star className="w-3 h-3 fill-purple-700 dark:fill-purple-300" />
+                          VIP
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {document.trips?.nume} - {document.trips?.destinatie}
                     </p>
