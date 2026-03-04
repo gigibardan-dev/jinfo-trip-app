@@ -15,9 +15,11 @@ import {
   MapPin,
   Plus,
   ArrowLeft,
-  UserCheck
+  UserCheck,
+  Star
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 // Import componentele pentru navigare
 import TouristManager from "../TouristManager";
