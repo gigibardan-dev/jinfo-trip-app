@@ -46,6 +46,7 @@ interface TripFormData {
   end_date: string;
   group_id: string;
   status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  privacy_level: 'standard' | 'vip';
 }
 
 interface TripEditorProps {
