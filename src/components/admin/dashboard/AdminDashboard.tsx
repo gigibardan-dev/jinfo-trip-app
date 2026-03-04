@@ -125,9 +125,23 @@ const AdminDashboard = () => {
           .gte('expiry_date', new Date().toISOString().split('T')[0])
           .order('expiry_date', { ascending: true })
           .limit(5),
+
+        // Fetch 7: VIP trips count
+        supabase
+          .from('trips')
+          .select('id', { count: 'exact' })
+          .eq('privacy_level', 'vip'),
+
+        // Fetch 8: VIP tourists count
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact' })
+          .eq('role', 'tourist')
+          .eq('is_vip', true)
+          .eq('is_active', true),
       ]);
 
-      const [tripsResult, touristsResult, documentsResult, guidesResult, recentTripsResult, expiringDocsResult] = results;
+      const [tripsResult, touristsResult, documentsResult, guidesResult, recentTripsResult, expiringDocsResult, vipTripsResult, vipTouristsResult] = results;
 
       // Process results
       const statsData = {
@@ -135,6 +149,8 @@ const AdminDashboard = () => {
         tourists: touristsResult.status === 'fulfilled' && !touristsResult.value.error ? touristsResult.value.data?.length || 0 : 0,
         documents: documentsResult.status === 'fulfilled' && !documentsResult.value.error ? documentsResult.value.data?.length || 0 : 0,
         guides: guidesResult.status === 'fulfilled' && !guidesResult.value.error ? guidesResult.value.data?.length || 0 : 0,
+        vipTrips: vipTripsResult.status === 'fulfilled' && !vipTripsResult.value.error ? vipTripsResult.value.data?.length || 0 : 0,
+        vipTourists: vipTouristsResult.status === 'fulfilled' && !vipTouristsResult.value.error ? vipTouristsResult.value.data?.length || 0 : 0,
       };
 
       const recentTripsData = recentTripsResult.status === 'fulfilled' && !recentTripsResult.value.error ? recentTripsResult.value.data || [] : [];
