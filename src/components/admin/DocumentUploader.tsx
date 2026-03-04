@@ -151,10 +151,10 @@ const DocumentUploader = () => {
       const { data, error } = await supabase
         .from('documents')
         .select(`
-          *,
-          trips(nume, destinatie),
-          profiles!documents_target_user_id_fkey(nume, prenume)
-        `)
+            *,
+            trips!documents_trip_id_fkey(nume, destinatie),
+            profiles!documents_target_user_id_fkey(nume, prenume)
+          `)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
