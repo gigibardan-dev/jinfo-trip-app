@@ -15,9 +15,11 @@ import {
   MapPin,
   Plus,
   ArrowLeft,
-  UserCheck
+  UserCheck,
+  Star
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 // Import componentele pentru navigare
 import TouristManager from "../TouristManager";
@@ -29,11 +31,14 @@ type ActiveView = 'dashboard' | 'tourists' | 'documents' | 'groups';
 const AdminDashboard = () => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [stats, setStats] = useState({
     activeTrips: 0,
     tourists: 0,
     documents: 0,
-    guides: 0
+    guides: 0,
+    vipTrips: 0,
+    vipTourists: 0
   });
   const [recentTrips, setRecentTrips] = useState<any[]>([]);
   const [expiringDocuments, setExpiringDocuments] = useState<any[]>([]);
@@ -120,9 +125,23 @@ const AdminDashboard = () => {
           .gte('expiry_date', new Date().toISOString().split('T')[0])
           .order('expiry_date', { ascending: true })
           .limit(5),
+
+        // Fetch 7: VIP trips count
+        supabase
+          .from('trips')
+          .select('id', { count: 'exact' })
+          .eq('privacy_level', 'vip'),
+
+        // Fetch 8: VIP tourists count
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact' })
+          .eq('role', 'tourist')
+          .eq('is_vip', true)
+          .eq('is_active', true),
       ]);
 
-      const [tripsResult, touristsResult, documentsResult, guidesResult, recentTripsResult, expiringDocsResult] = results;
+      const [tripsResult, touristsResult, documentsResult, guidesResult, recentTripsResult, expiringDocsResult, vipTripsResult, vipTouristsResult] = results;
 
       // Process results
       const statsData = {
@@ -130,6 +149,8 @@ const AdminDashboard = () => {
         tourists: touristsResult.status === 'fulfilled' && !touristsResult.value.error ? touristsResult.value.data?.length || 0 : 0,
         documents: documentsResult.status === 'fulfilled' && !documentsResult.value.error ? documentsResult.value.data?.length || 0 : 0,
         guides: guidesResult.status === 'fulfilled' && !guidesResult.value.error ? guidesResult.value.data?.length || 0 : 0,
+        vipTrips: vipTripsResult.status === 'fulfilled' && !vipTripsResult.value.error ? vipTripsResult.value.data?.length || 0 : 0,
+        vipTourists: vipTouristsResult.status === 'fulfilled' && !vipTouristsResult.value.error ? vipTouristsResult.value.data?.length || 0 : 0,
       };
 
       const recentTripsData = recentTripsResult.status === 'fulfilled' && !recentTripsResult.value.error ? recentTripsResult.value.data || [] : [];
@@ -343,6 +364,38 @@ const AdminDashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* VIP Stats - SuperAdmin only */}
+      {profile?.role === 'superadmin' && (
+        <Card className="shadow-soft border-0 border-l-4 border-l-purple-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-purple-500" />
+              Statistici VIP
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Circuite VIP</span>
+                <p className="text-2xl font-bold text-purple-600">{stats.vipTrips}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Turiști VIP</span>
+                <p className="text-2xl font-bold text-purple-600">{stats.vipTourists}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Circuite Standard</span>
+                <p className="text-2xl font-bold">{stats.activeTrips}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Total Circuite</span>
+                <p className="text-2xl font-bold">{stats.activeTrips + stats.vipTrips}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

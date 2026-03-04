@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Users, Plus, Edit, Trash2, Route, Eye, Settings } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Edit, Trash2, Route, Eye, Settings, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -132,6 +132,10 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
     return matchesSearch && matchesStatus;
   });
 
+  // VIP stats for superadmin
+  const vipCount = trips.filter(t => (t as any).privacy_level === 'vip').length;
+  const standardCount = trips.filter(t => (t as any).privacy_level !== 'vip').length;
+
   // Statistics
   const stats = {
     total: trips.length,
@@ -225,15 +229,33 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
         </div>
       </div>
 
+      {/* VIP Filter - SuperAdmin only */}
+      {profile?.role === 'superadmin' && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Star className="w-4 h-4 text-purple-600" />
+            <span>VIP: <strong className="text-purple-600">{vipCount}</strong></span>
+            <span className="mx-1">|</span>
+            <span>Standard: <strong>{standardCount}</strong></span>
+          </div>
+        </div>
+      )}
+
       {/* Trips Grid */}
       <div className={viewMode === 'grid' ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredTrips.map((trip) => (
-          <Card key={trip.id} className="group hover:shadow-soft transition-all duration-300 border-border/20">            
+          <Card key={trip.id} className={`group hover:shadow-soft transition-all duration-300 border-border/20 ${(trip as any).privacy_level === 'vip' ? 'border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/10' : ''}`}>            
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
                     {trip.nume}
+                    {(trip as any).privacy_level === 'vip' && (
+                      <Badge className="bg-purple-600 hover:bg-purple-700 gap-1 text-xs">
+                        <Star className="w-3 h-3 fill-white" />
+                        VIP
+                      </Badge>
+                    )}
                   </CardTitle>
                   <div className="flex items-center text-sm text-muted-foreground mt-1">
                     <MapPin className="w-4 h-4 mr-1" />

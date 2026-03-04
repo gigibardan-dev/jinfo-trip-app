@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Upload, 
   FileText, 
@@ -18,10 +21,12 @@ import {
   Eye,
   Calendar,
   Users,
+  User,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Filter
+  Filter,
+  Star
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +81,10 @@ interface DocumentFormData {
   target_user_id: string;
   trip_id: string;
   file: File | null;
+  privacy_level: 'standard' | 'vip';
+  vip_assignment_type: 'individual' | 'circuit';
+  selected_vip_tourists: string[];
+  selected_vip_trip_id: string;
 }
 
 const DocumentUploader = () => {
@@ -99,8 +108,14 @@ const DocumentUploader = () => {
     expiry_date: "",
     target_user_id: "",
     trip_id: "",
-    file: null
+    file: null,
+    privacy_level: "standard",
+    vip_assignment_type: "individual",
+    selected_vip_tourists: [],
+    selected_vip_trip_id: ""
   });
+  const [vipTourists, setVipTourists] = useState<Tourist[]>([]);
+  const [vipTrips, setVipTrips] = useState<Trip[]>([]);
 
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -120,10 +135,14 @@ const DocumentUploader = () => {
   ] as const;
 
   useEffect(() => {
-    if (user && profile?.role === 'admin') {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
       fetchDocuments();
       fetchTrips();
       fetchTourists();
+      if (profile?.role === 'superadmin') {
+        fetchVipTourists();
+        fetchVipTrips();
+      }
     }
   }, [user, profile]);
 
@@ -182,6 +201,38 @@ const DocumentUploader = () => {
     }
   };
 
+  const fetchVipTourists = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nume, prenume, email')
+        .eq('role', 'tourist')
+        .eq('is_vip', true)
+        .eq('is_active', true)
+        .order('nume');
+
+      if (error) throw error;
+      setVipTourists(data || []);
+    } catch (error) {
+      console.error('Error fetching VIP tourists:', error);
+    }
+  };
+
+  const fetchVipTrips = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('id, nume, destinatie')
+        .eq('privacy_level', 'vip')
+        .order('nume');
+
+      if (error) throw error;
+      setVipTrips(data || []);
+    } catch (error) {
+      console.error('Error fetching VIP trips:', error);
+    }
+  };
+
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -220,11 +271,11 @@ const DocumentUploader = () => {
       // Store only the file path (not public URL since bucket is private)
       setUploadProgress(80);
       
-      const documentData = {
+      const documentData: any = {
         nume: formData.nume,
         descriere: formData.descriere,
         file_type: formData.file.type,
-        file_url: filePath, // Store just the path
+        file_url: filePath,
         file_size: formData.file.size,
         document_category: formData.document_category,
         visibility_type: formData.visibility_type,
@@ -233,8 +284,23 @@ const DocumentUploader = () => {
         expiry_date: formData.expiry_date || null,
         target_user_id: formData.visibility_type === 'individual' ? formData.target_user_id : null,
         trip_id: formData.trip_id,
-        uploaded_by_admin_id: user!.id
+        uploaded_by_admin_id: user!.id,
+        privacy_level: formData.privacy_level,
       };
+
+      // Add VIP-specific fields
+      if (formData.privacy_level === 'vip') {
+        if (formData.vip_assignment_type === 'individual') {
+          documentData.visible_to_user_ids = formData.selected_vip_tourists;
+          documentData.vip_trip_id = null;
+        } else {
+          documentData.visible_to_user_ids = [];
+          documentData.vip_trip_id = formData.selected_vip_trip_id || null;
+        }
+      } else {
+        documentData.visible_to_user_ids = [];
+        documentData.vip_trip_id = null;
+      }
 
       const { error } = await supabase
         .from('documents')
@@ -406,16 +472,31 @@ const DocumentUploader = () => {
     setFormData({
       nume: "",
       descriere: "",
-    document_category: "identity",
-    visibility_type: "group",
+      document_category: "identity",
+      visibility_type: "group",
       is_mandatory: false,
       is_offline_priority: false,
       expiry_date: "",
       target_user_id: "",
       trip_id: "",
-      file: null
+      file: null,
+      privacy_level: "standard",
+      vip_assignment_type: "individual",
+      selected_vip_tourists: [],
+      selected_vip_trip_id: ""
     });
   };
+
+  const toggleVipTourist = (touristId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selected_vip_tourists: prev.selected_vip_tourists.includes(touristId)
+        ? prev.selected_vip_tourists.filter(id => id !== touristId)
+        : [...prev.selected_vip_tourists, touristId]
+    }));
+  };
+
+  const isSuperAdmin = profile?.role === 'superadmin';
 
   const getCategoryLabel = (category: string) => {
     const cat = documentCategories.find(c => c.value === category);
@@ -611,6 +692,114 @@ const DocumentUploader = () => {
                       />
                     </div>
                   </div>
+
+                  {/* VIP Privacy Level - Only for SuperAdmin */}
+                  {isSuperAdmin && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                      <Label className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-purple-600" />
+                        Nivel Confidențialitate
+                      </Label>
+                      <RadioGroup 
+                        value={formData.privacy_level} 
+                        onValueChange={(v: 'standard' | 'vip') => setFormData({ ...formData, privacy_level: v })}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="standard" id="privacy-standard" />
+                          <Label htmlFor="privacy-standard" className="cursor-pointer flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Standard - Vizibil pentru toți turiștii
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="vip" id="privacy-vip" />
+                          <Label htmlFor="privacy-vip" className="cursor-pointer flex items-center gap-2">
+                            <Star className="w-4 h-4 text-purple-500" />
+                            <span className="text-purple-700 dark:text-purple-300 font-medium">VIP - Acces restricționat</span>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+
+                      {formData.privacy_level === 'vip' && (
+                        <div className="space-y-4 pl-4 border-l-2 border-purple-500">
+                          <Label>Tip Asignare VIP</Label>
+                          <RadioGroup 
+                            value={formData.vip_assignment_type} 
+                            onValueChange={(v: 'individual' | 'circuit') => setFormData({ ...formData, vip_assignment_type: v })}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="individual" id="vip-individual" />
+                              <Label htmlFor="vip-individual" className="cursor-pointer flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Individual - Selectează turiști VIP specifici
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="circuit" id="vip-circuit" />
+                              <Label htmlFor="vip-circuit" className="cursor-pointer flex items-center gap-2">
+                                <Users className="w-4 h-4" />
+                                Circuit - Toți turiștii dintr-un circuit VIP
+                              </Label>
+                            </div>
+                          </RadioGroup>
+
+                          {formData.vip_assignment_type === 'individual' && (
+                            <div className="space-y-2">
+                              <Label>Selectează Turiști VIP ({formData.selected_vip_tourists.length} selectați)</Label>
+                              <ScrollArea className="h-[200px] border rounded-md p-4">
+                                <div className="space-y-3">
+                                  {vipTourists.map((tourist) => (
+                                    <div key={tourist.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`vip-tourist-${tourist.id}`}
+                                        checked={formData.selected_vip_tourists.includes(tourist.id)}
+                                        onCheckedChange={() => toggleVipTourist(tourist.id)}
+                                      />
+                                      <Label htmlFor={`vip-tourist-${tourist.id}`} className="flex-1 cursor-pointer">
+                                        <p className="font-medium">{tourist.nume} {tourist.prenume}</p>
+                                        <p className="text-sm text-muted-foreground">{tourist.email}</p>
+                                      </Label>
+                                    </div>
+                                  ))}
+                                  {vipTourists.length === 0 && (
+                                    <p className="text-center text-muted-foreground py-4">
+                                      Nu există turiști VIP disponibili
+                                    </p>
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </div>
+                          )}
+
+                          {formData.vip_assignment_type === 'circuit' && (
+                            <div className="space-y-2">
+                              <Label>Selectează Circuit VIP</Label>
+                              <Select 
+                                value={formData.selected_vip_trip_id} 
+                                onValueChange={(value) => setFormData({ ...formData, selected_vip_trip_id: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selectează un circuit VIP" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {vipTrips.map((trip) => (
+                                    <SelectItem key={trip.id} value={trip.id}>
+                                      {trip.nume} - {trip.destinatie}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {vipTrips.length === 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                  Nu există circuite VIP. Creează mai întâi un circuit VIP.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="upload" className="space-y-4">
@@ -704,7 +893,15 @@ const DocumentUploader = () => {
                 <div className="flex items-center space-x-2">
                   <FileText className="w-5 h-5 text-primary" />
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">{document.nume}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <CardTitle className="text-base truncate">{document.nume}</CardTitle>
+                      {(document as any).privacy_level === 'vip' && (
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 gap-1 text-xs">
+                          <Star className="w-3 h-3 fill-purple-700 dark:fill-purple-300" />
+                          VIP
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {document.trips?.nume} - {document.trips?.destinatie}
                     </p>

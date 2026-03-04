@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Route } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Route, Star } from "lucide-react";
 import ItineraryManager from "@/components/ItineraryManager";
 import TripMapConfig from "./TripMapConfig";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +46,7 @@ interface TripFormData {
   end_date: string;
   group_id: string;
   status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  privacy_level: 'standard' | 'vip';
 }
 
 interface TripEditorProps {
@@ -65,11 +67,12 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
     start_date: "",
     end_date: "",
     group_id: "",
-    status: "draft"
+    status: "draft",
+    privacy_level: "standard"
   });
   const [activeTab, setActiveTab] = useState<string>("basic");
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -86,7 +89,8 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
         start_date: trip.start_date,
         end_date: trip.end_date,
         group_id: trip.group_id,
-        status: trip.status
+        status: trip.status,
+        privacy_level: ((trip as any).privacy_level as 'standard' | 'vip') || 'standard'
       });
       setMapConfig(trip.offline_map_configs || null);
     } else {
@@ -176,12 +180,14 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
         descriere: formData.descriere.trim(),
         start_date: formData.start_date,
         end_date: formData.end_date,
-        group_id: formData.group_id || null, // Allow null group_id for drafts
+        group_id: formData.group_id || null,
         status: formData.status,
         created_by_admin_id: user!.id,
         budget_estimat: null,
         cover_image_url: null,
-        metadata: null
+        metadata: null,
+        privacy_level: formData.privacy_level,
+        managed_by_superadmin_id: formData.privacy_level === 'vip' ? user!.id : null
       };
 
       if (trip) {
@@ -238,7 +244,8 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
       start_date: "",
       end_date: "",
       group_id: "",
-      status: "draft"
+      status: "draft",
+      privacy_level: "standard"
     });
     setMapConfig(null);
     setActiveTab("basic");
@@ -380,11 +387,44 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
               </div>
 
               {groups.length === 0 && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
+                <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                  <p className="text-sm text-muted-foreground">
                     <strong>Info:</strong> Nu există grupuri active. 
                     <br />Poți crea circuitul ca schiță și îl vei putea asigna la un grup mai târziu.
                   </p>
+                </div>
+              )}
+
+              {/* VIP Toggle - Only for SuperAdmin */}
+              {profile?.role === 'superadmin' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="vip-circuit" className="flex items-center gap-2 text-base">
+                        <Star className="w-5 h-5 text-purple-600 fill-purple-600" />
+                        <span className="font-semibold text-purple-900 dark:text-purple-300">Circuit VIP</span>
+                      </Label>
+                      <p className="text-sm text-purple-700 dark:text-purple-400 mt-1">
+                        Circuitele VIP sunt vizibile doar pentru SuperAdmini și turiștii VIP asignați
+                      </p>
+                    </div>
+                    <Switch
+                      id="vip-circuit"
+                      checked={formData.privacy_level === 'vip'}
+                      onCheckedChange={(checked) => setFormData({ ...formData, privacy_level: checked ? 'vip' : 'standard' })}
+                    />
+                  </div>
+
+                  {formData.privacy_level === 'vip' && (
+                    <div className="pl-4 border-l-2 border-purple-400 space-y-2">
+                      <p className="text-sm font-medium text-purple-900 dark:text-purple-300">Funcții VIP:</p>
+                      <ul className="text-sm text-purple-700 dark:text-purple-400 space-y-1">
+                        <li>✓ Invizibil pentru adminii obișnuiți</li>
+                        <li>✓ Poți uploada documente VIP exclusive</li>
+                        <li>✓ Asignare turiști VIP specifici</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
