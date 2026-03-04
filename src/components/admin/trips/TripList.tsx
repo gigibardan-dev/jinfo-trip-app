@@ -50,9 +50,14 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('🔍 Profile Debug:', {
+      user: user?.id,
+      role: profile?.role,
+      email: user?.email
+    });
     if (user) {
       fetchTrips();
-      
+
       // Real-time updates
       const channel = supabase
         .channel('trips_changes')
@@ -126,8 +131,8 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
 
   const filteredTrips = trips.filter(trip => {
     const matchesSearch = (trip.nume || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (trip.destinatie || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (trip.tara || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (trip.destinatie || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (trip.tara || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -156,7 +161,7 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
           <h2 className="text-2xl font-bold">Gestionare Circuite</h2>
           <p className="text-muted-foreground">Creează și gestionează circuitele turistice</p>
         </div>
-        
+
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <Button onClick={onCreateNew} className="bg-gradient-hero">
             <Plus className="w-4 h-4 mr-2" />
@@ -203,7 +208,7 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
             className="max-w-sm"
           />
         </div>
-        
+
         <div className="flex gap-2">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[150px]">
@@ -244,7 +249,7 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
       {/* Trips Grid */}
       <div className={viewMode === 'grid' ? "grid gap-6 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
         {filteredTrips.map((trip) => (
-          <Card key={trip.id} className={`group hover:shadow-soft transition-all duration-300 border-border/20 ${(trip as any).privacy_level === 'vip' ? 'border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/10' : ''}`}>            
+          <Card key={trip.id} className={`group hover:shadow-soft transition-all duration-300 border-border/20 ${(trip as any).privacy_level === 'vip' ? 'border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/10' : ''}`}>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -270,56 +275,57 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
                 </Badge>
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center text-sm">
                   <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                  {new Date(trip.start_date).toLocaleDateString('ro-RO')} - 
+                  {new Date(trip.start_date).toLocaleDateString('ro-RO')} -
                   {new Date(trip.end_date).toLocaleDateString('ro-RO')}
                 </div>
-                
+
                 <div className="flex items-center text-sm">
                   <Users className="w-4 h-4 mr-2 text-muted-foreground" />
                   {trip.tourist_groups?.nume_grup || 'Grup nespecificat'}
                 </div>
 
                 {trip.descriere && (
-                  <div 
+                  <div
                     className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(trip.descriere) }}
                   />
                 )}
 
-                {profile?.role === 'admin' && (
-                  <div className="flex gap-2 pt-2 flex-wrap">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => onItinerary(trip)}
-                      className="flex-1"
-                    >
-                      <Route className="w-4 h-4 mr-1" />
-                      Itinerariu
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => onEdit(trip)} className="flex-1">
-                      <Edit className="w-4 h-4 mr-1" />
-                      Editează
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => onDuplicate(trip)} className="flex-1">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Duplică
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => onDelete(trip.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                {(profile?.role === 'admin' || profile?.role === 'superadmin')
+                  && (
+                    <div className="flex gap-2 pt-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onItinerary(trip)}
+                        className="flex-1"
+                      >
+                        <Route className="w-4 h-4 mr-1" />
+                        Itinerariu
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onEdit(trip)} className="flex-1">
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editează
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onDuplicate(trip)} className="flex-1">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Duplică
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onDelete(trip.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
               </div>
             </CardContent>
           </Card>
@@ -331,10 +337,10 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
           <Route className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Niciun circuit găsit</h3>
           <p className="text-muted-foreground mb-4">
-            {searchTerm || filterStatus !== 'all' 
+            {searchTerm || filterStatus !== 'all'
               ? 'Încearcă să modifici filtrele de căutare.'
-              : profile?.role === 'admin' 
-                ? 'Începe prin a crea primul circuit.' 
+              : (profile?.role === 'admin' || profile?.role === 'superadmin')
+                ? 'Începe prin a crea primul circuit.'
                 : 'Nu există circuite disponibile momentan.'
             }
           </p>
