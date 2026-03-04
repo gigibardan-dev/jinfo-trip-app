@@ -201,6 +201,38 @@ const DocumentUploader = () => {
     }
   };
 
+  const fetchVipTourists = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nume, prenume, email')
+        .eq('role', 'tourist')
+        .eq('is_vip', true)
+        .eq('is_active', true)
+        .order('nume');
+
+      if (error) throw error;
+      setVipTourists(data || []);
+    } catch (error) {
+      console.error('Error fetching VIP tourists:', error);
+    }
+  };
+
+  const fetchVipTrips = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('id, nume, destinatie')
+        .eq('privacy_level', 'vip')
+        .order('nume');
+
+      if (error) throw error;
+      setVipTrips(data || []);
+    } catch (error) {
+      console.error('Error fetching VIP trips:', error);
+    }
+  };
+
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
