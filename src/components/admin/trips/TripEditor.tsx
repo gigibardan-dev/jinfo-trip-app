@@ -244,7 +244,8 @@ const TripEditor = ({ trip, open, onOpenChange, onSave }: TripEditorProps) => {
       start_date: "",
       end_date: "",
       group_id: "",
-      status: "draft"
+      status: "draft",
+      privacy_level: "standard"
     });
     setMapConfig(null);
     setActiveTab("basic");
