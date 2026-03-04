@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
   Copy,
   UserPlus,
   UserMinus,
@@ -87,7 +87,7 @@ const GroupManager = () => {
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [formData, setFormData] = useState<GroupFormData>({
     nume_grup: "",
-    
+
     is_active: true
   });
 
@@ -95,7 +95,7 @@ const GroupManager = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {
+    if (user && (profile?.role === 'admin' || profile?.role === 'superadmin')) {  // ← VERIFICĂ ASTA!
       fetchGroups();
       fetchAvailableTourists();
     }
@@ -124,13 +124,13 @@ const GroupManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       // Calculate member count
       const groupsWithCount = data?.map(group => ({
         ...group,
         member_count: group.members?.length || 0
       })) || [];
-      
+
       setGroups(groupsWithCount);
     } catch (error) {
       console.error('Error fetching groups:', error);
@@ -166,7 +166,7 @@ const GroupManager = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const groupData = {
         ...formData,
@@ -181,7 +181,7 @@ const GroupManager = () => {
           .eq('id', editingGroup.id);
 
         if (error) throw error;
-        
+
         toast({
           title: "Succes",
           description: "Grupul a fost actualizat cu succes.",
@@ -192,7 +192,7 @@ const GroupManager = () => {
           .insert([groupData]);
 
         if (error) throw error;
-        
+
         toast({
           title: "Succes",
           description: "Grupul a fost creat cu succes.",
@@ -351,7 +351,7 @@ const GroupManager = () => {
   const resetForm = () => {
     setFormData({
       nume_grup: "",
-            is_active: true
+      is_active: true
     });
   };
 
@@ -361,7 +361,7 @@ const GroupManager = () => {
 
   const filteredGroups = groups.filter(group => {
     const matchesSearch = (group.nume_grup || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || 
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && group.is_active) ||
       (filterStatus === 'inactive' && !group.is_active);
 
@@ -385,7 +385,7 @@ const GroupManager = () => {
           <h2 className="text-2xl font-bold">Gestionare Grupuri</h2>
           <p className="text-muted-foreground">Organizează turiștii în grupuri pentru circuite</p>
         </div>
-        
+
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
             <Button onClick={() => { resetForm(); setEditingGroup(null); }} className="bg-gradient-hero">
@@ -399,7 +399,7 @@ const GroupManager = () => {
                 {editingGroup ? 'Editează Grupul' : 'Grup Nou'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nume_grup">Nume Grup *</Label>
@@ -412,7 +412,7 @@ const GroupManager = () => {
                 />
               </div>
 
-             
+
 
               <div className="flex items-center space-x-2">
                 <input
@@ -449,7 +449,7 @@ const GroupManager = () => {
             className="pl-10 max-w-sm"
           />
         </div>
-        
+
         <div className="flex gap-2 items-center">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[120px]">
@@ -508,7 +508,7 @@ const GroupManager = () => {
                   </Badge>
                 </div>
               </CardHeader>
-              
+
               <CardContent>
                 <div className="space-y-3">
                   {/* Invite Code */}
@@ -562,9 +562,9 @@ const GroupManager = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleViewMembers(group)}
                       className="flex-1"
                     >
@@ -578,9 +578,9 @@ const GroupManager = () => {
                     >
                       <Edit className="w-3 h-3" />
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleDelete(group.id)}
                       className="text-destructive hover:text-destructive"
                     >
@@ -670,9 +670,9 @@ const GroupManager = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleViewMembers(group)}
                       >
                         <Eye className="w-3 h-3" />
@@ -684,9 +684,9 @@ const GroupManager = () => {
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleDelete(group.id)}
                         className="text-destructive hover:text-destructive"
                       >
@@ -709,14 +709,14 @@ const GroupManager = () => {
               Membri - {selectedGroup?.nume_grup}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedGroup && (
             <Tabs defaultValue="members" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="members">Membri Actuali ({selectedGroup.member_count})</TabsTrigger>
                 <TabsTrigger value="add">Adaugă Membri</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="members" className="space-y-4">
                 {selectedGroup.members && selectedGroup.members.length > 0 ? (
                   <div className="grid gap-3">
@@ -767,7 +767,7 @@ const GroupManager = () => {
                   </div>
                 )}
               </TabsContent>
-              
+
               <TabsContent value="add" className="space-y-4">
                 <div className="grid gap-3">
                   {getUnassignedTourists(selectedGroup).map((tourist) => (

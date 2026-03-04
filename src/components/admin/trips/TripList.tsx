@@ -157,7 +157,7 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
           <p className="text-muted-foreground">Creează și gestionează circuitele turistice</p>
         </div>
         
-        {profile?.role === 'admin' && (
+        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <Button onClick={onCreateNew} className="bg-gradient-hero">
             <Plus className="w-4 h-4 mr-2" />
             Circuit Nou
