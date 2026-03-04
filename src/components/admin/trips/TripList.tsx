@@ -132,6 +132,10 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
     return matchesSearch && matchesStatus;
   });
 
+  // VIP stats for superadmin
+  const vipCount = trips.filter(t => (t as any).privacy_level === 'vip').length;
+  const standardCount = trips.filter(t => (t as any).privacy_level !== 'vip').length;
+
   // Statistics
   const stats = {
     total: trips.length,
