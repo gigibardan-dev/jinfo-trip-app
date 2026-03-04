@@ -108,8 +108,14 @@ const DocumentUploader = () => {
     expiry_date: "",
     target_user_id: "",
     trip_id: "",
-    file: null
+    file: null,
+    privacy_level: "standard",
+    vip_assignment_type: "individual",
+    selected_vip_tourists: [],
+    selected_vip_trip_id: ""
   });
+  const [vipTourists, setVipTourists] = useState<Tourist[]>([]);
+  const [vipTrips, setVipTrips] = useState<Trip[]>([]);
 
   const { user, profile } = useAuth();
   const { toast } = useToast();
