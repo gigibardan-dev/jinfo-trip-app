@@ -50,11 +50,6 @@ const TripList = ({ onCreateNew, onEdit, onItinerary, onDelete, onDuplicate }: T
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('🔍 Profile Debug:', {
-      user: user?.id,
-      role: profile?.role,
-      email: user?.email
-    });
     if (user) {
       fetchTrips();
 
