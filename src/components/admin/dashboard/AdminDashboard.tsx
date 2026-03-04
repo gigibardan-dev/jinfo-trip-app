@@ -365,6 +365,38 @@ const AdminDashboard = () => {
         ))}
       </div>
 
+      {/* VIP Stats - SuperAdmin only */}
+      {profile?.role === 'superadmin' && (
+        <Card className="shadow-soft border-0 border-l-4 border-l-purple-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-purple-500" />
+              Statistici VIP
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Circuite VIP</span>
+                <p className="text-2xl font-bold text-purple-600">{stats.vipTrips}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Turiști VIP</span>
+                <p className="text-2xl font-bold text-purple-600">{stats.vipTourists}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Circuite Standard</span>
+                <p className="text-2xl font-bold">{stats.activeTrips}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Total Circuite</span>
+                <p className="text-2xl font-bold">{stats.activeTrips + stats.vipTrips}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Trips */}
